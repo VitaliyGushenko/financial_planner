@@ -25,8 +25,9 @@ interface CalendarWeek {
   host: {
     '(document:keydown.arrowleft)': 'onArrowKey(-1)',
     '(document:keydown.arrowright)': 'onArrowKey(1)',
-    '(document:keydown.arrowup)': 'onArrowKey(-1)',
-    '(document:keydown.arrowdown)': 'onArrowKey(1)',
+    // Вертикаль в сетке календаря — неделя: ±7 дней.
+    '(document:keydown.arrowup)': 'onArrowKey(-7)',
+    '(document:keydown.arrowdown)': 'onArrowKey(7)',
   },
   templateUrl: './calendar.component.html',
   styleUrl: './calendar.component.less',
