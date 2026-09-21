@@ -1,0 +1,109 @@
+<div class="page-head">
+  <h1>Календарь остатков</h1>
+  <button class="btn btn-ghost btn-sm" (click)="goToday()">Сегодня</button>
+</div>
+
+<p class="muted intro">
+  Кликните на дату — покажет, сколько денег будет на счетах именно в этот день с учётом всех
+  запланированных доходов и расходов. Красным отмечены дни, когда остаток уходит в минус.
+</p>
+
+<div class="card">
+  <div class="cal-head">
+    <button class="btn btn-ghost btn-sm" (click)="prevMonth()" aria-label="Предыдущий месяц">‹</button>
+    <span class="cal-title">{{ monthTitle() }}</span>
+    <button class="btn btn-ghost btn-sm" (click)="nextMonth()" aria-label="Следующий месяц">›</button>
+    <span class="cal-totals">
+      @if (monthTotals().income || monthTotals().expense) {
+        <span class="positive">+{{ money(monthTotals().income) }}</span>
+        <span class="negative">−{{ money(monthTotals().expense) }}</span>
+      }
+    </span>
+  </div>
+
+  <div class="cal-grid cal-weekdays">
+    @for (label of weekdayLabels; track label) {
+      <div class="cal-weekday">{{ label }}</div>
+    }
+  </div>
+
+  @for (week of weeks(); track $index) {
+    <div class="cal-grid">
+      @for (cell of week.cells; track cell.key) {
+        <button
+          type="button"
+          class="cal-cell"
+          [class.in-month]="cell.inMonth"
+          [class.weekend]="cell.weekend"
+          [class.today]="cell.key === today"
+          [class.selected]="cell.key === selected()"
+          [class.negative]="(projection().days.get(cell.key)?.balance ?? 0) < 0"
+          [class.has-events]="eventsOf(cell.key).length > 0"
+          (click)="select(cell)"
+        >
+          <span class="cell-day">{{ cell.dayOfMonth }}</span>
+          @if (balanceOf(cell.key); as bal) {
+            <span class="cell-balance">{{ bal }}</span>
+          }
+          @if (eventsOf(cell.key).length > 0) {
+            <span class="cell-dots">
+              @for (event of eventsOf(cell.key).slice(0, 4); track event.id) {
+                <i class="dot" [class]="event.kind"></i>
+              }
+            </span>
+          }
+        </button>
+      }
+    </div>
+  }
+</div>
+
+@if (selectedDay(); as day) {
+  <div class="card day-panel">
+    <div class="day-panel-head">
+      <div>
+        <h2 class="card-title">{{ dayTitle(day.key) }}</h2>
+        <div class="muted small">
+          @if (day.past) {
+            Остаток на конец дня (по записанным операциям)
+          } @else {
+            Прогноз остатка на конец дня
+          }
+        </div>
+      </div>
+      <div class="day-balances">
+        <div class="day-balance-main" [class.negative]="day.balance < 0">{{ money(day.balance) }}</div>
+        <div class="muted small">утром: {{ money(day.startBalance) }}</div>
+      </div>
+    </div>
+
+    @if (day.events.length) {
+      <div class="rows">
+        @for (event of day.events; track event.id) {
+          <div class="row">
+            <span class="kind-dot" [class]="event.kind"></span>
+            <div class="row-main">
+              <div class="row-title">
+                {{ event.title }}
+                @if (event.source === 'recurring') {
+                  <span class="badge">план</span>
+                }
+              </div>
+              <div class="row-sub">{{ event.source === 'recurring' ? 'повторяющаяся операция' : 'операция' }}</div>
+            </div>
+            <span class="row-amount" [class]="event.kind === 'income' ? 'positive' : event.kind === 'expense' ? 'negative' : ''">
+              {{ event.kind === 'income' ? '+' : event.kind === 'expense' ? '−' : '' }}{{ money(event.amount) }}
+            </span>
+            @if (event.rule) {
+              <button class="btn btn-ghost btn-sm" (click)="recordEvent(day, event.id)" title="Создать реальную операцию из правила">
+                Записать
+              </button>
+            }
+          </div>
+        }
+      </div>
+    } @else {
+      <div class="empty-state">В этот день операций нет</div>
+    }
+  </div>
+}

@@ -1,0 +1,127 @@
+<div class="page-head">
+  <h1>Операции</h1>
+</div>
+
+<div class="card">
+  <h2 class="card-title">{{ editingId() ? 'Редактирование операции' : 'Новая операция' }}</h2>
+
+  @if (accounts().length === 0) {
+    <div class="empty-state">Сначала добавьте счёт в <a routerLink="/settings">настройках</a>.</div>
+  } @else {
+    <div class="seg kind-seg">
+      @for (kind of kinds; track kind) {
+        <button type="button" [class]="form.kind === kind ? 'active ' + kind : ''" (click)="form.kind = kind; onKindChange()">
+          {{ kindLabels[kind] }}
+        </button>
+      }
+    </div>
+
+    <form (ngSubmit)="save()" class="op-form">
+      <div class="form-row">
+        <div class="field amount-field">
+          <label for="amount">Сумма, ₽</label>
+          <input id="amount" name="amount" type="number" min="0" step="0.01" [(ngModel)]="form.amount" placeholder="0" />
+        </div>
+
+        <div class="field">
+          <label for="account">{{ form.kind === 'transfer' ? 'Списать со счёта' : 'Счёт' }}</label>
+          <select id="account" name="accountId" [(ngModel)]="form.accountId">
+            <option value="" disabled>— выберите —</option>
+            @for (acc of accounts(); track acc.id) {
+              <option [value]="acc.id">{{ acc.name }} ({{ acc.balance | number: '1.0-2' }} ₽)</option>
+            }
+          </select>
+        </div>
+
+        @if (form.kind === 'transfer') {
+          <div class="field">
+            <label for="toAccount">Зачислить на счёт</label>
+            <select id="toAccount" name="toAccountId" [(ngModel)]="form.toAccountId">
+              <option value="" disabled>— выберите —</option>
+              @for (acc of accounts(); track acc.id) {
+                <option [value]="acc.id">{{ acc.name }}</option>
+              }
+            </select>
+          </div>
+        } @else {
+          <div class="field">
+            <label for="category">Категория</label>
+            <select id="category" name="categoryId" [(ngModel)]="form.categoryId" (change)="onCategoryChange()">
+              <option value="" disabled>— выберите —</option>
+              @for (cat of formCategories(); track cat.id) {
+                <option [value]="cat.id">{{ cat.name }}</option>
+              }
+            </select>
+          </div>
+
+          @if (formSubcategories().length) {
+            <div class="field">
+              <label for="subcategory">Подкатегория</label>
+              <select id="subcategory" name="subcategoryId" [(ngModel)]="form.subcategoryId">
+                <option value="">— не указывать —</option>
+                @for (sub of formSubcategories(); track sub.id) {
+                  <option [value]="sub.id">{{ sub.name }}</option>
+                }
+              </select>
+            </div>
+          }
+        }
+
+        <div class="field">
+          <label for="date">Дата</label>
+          <input id="date" name="date" type="date" [(ngModel)]="form.date" />
+        </div>
+      </div>
+
+      <div class="form-row">
+        <div class="field note-field">
+          <label for="note">Заметка</label>
+          <input id="note" name="note" [(ngModel)]="form.note" placeholder="необязательно" />
+        </div>
+        <div class="field submit-field">
+          <button class="btn" type="submit">{{ editingId() ? 'Сохранить' : 'Добавить' }}</button>
+          @if (editingId()) {
+            <button class="btn btn-ghost" type="button" (click)="cancelEdit()">Отмена</button>
+          }
+        </div>
+      </div>
+
+      @if (formError()) {
+        <p class="form-error">{{ formError() }}</p>
+      }
+      @if (form.kind !== 'transfer' && form.date > (todayMarker)) {
+        <p class="form-notice">Дата в будущем: операция попадёт в календарь-прогноз и зачтётся к балансу, когда наступит.</p>
+      }
+    </form>
+  }
+</div>
+
+<div class="card">
+  <h2 class="card-title">Журнал</h2>
+  @if (transactions().length) {
+    <div class="rows">
+      @for (tx of transactions(); track tx.id) {
+        <div class="row" [class.editing]="editingId() === tx.id">
+          <span class="kind-dot" [class]="tx.kind"></span>
+          <div class="row-main">
+            <div class="row-title">
+              {{ categoryName(tx) }}
+              @if (tx.applied === false) {
+                <span class="badge">план</span>
+              }
+            </div>
+            <div class="row-sub">
+              {{ tx.date | date: 'dd.MM.yyyy' }}
+              · {{ accountName(tx.accountId) }}{{ tx.kind === 'transfer' ? ' → ' + accountName(tx.toAccountId) : '' }}{{ tx.note ? ' · ' + tx.note : '' }}
+            </div>
+          </div>
+          <span class="row-amount" [class]="amountClass(tx.kind)">{{ signed(tx) }}</span>
+          <button class="btn btn-ghost btn-sm" (click)="edit(tx)">Изменить</button>
+          <button class="btn btn-danger btn-sm" (click)="remove(tx)">✕</button>
+        </div>
+      }
+    </div>
+  } @else {
+    <div class="empty-state">Пока пусто. Добавьте первую операцию выше.</div>
+  }
+</div>

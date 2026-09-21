@@ -1,0 +1,92 @@
+.intro {
+  margin: -4px 0 14px;
+  max-width: 720px;
+}
+
+.grow {
+  flex: 2 1 200px;
+}
+
+.amount-field {
+  max-width: 150px;
+}
+
+.quick-actions {
+  margin-top: 12px;
+}
+
+.advice {
+  margin-top: 16px;
+  border-radius: 10px;
+  padding: 14px;
+
+  &.good {
+    background: var(--income-soft);
+  }
+
+  &.warn {
+    background: var(--warn-soft);
+  }
+
+  &.bad {
+    background: var(--expense-soft);
+  }
+}
+
+.advice-head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+
+  .advice-icon {
+    font-size: 22px;
+  }
+
+  .advice-date {
+    font-weight: 700;
+    font-size: 16px;
+  }
+}
+
+.advice-message {
+  margin: 8px 0 0;
+  font-size: 14px;
+}
+
+.deficit-card {
+  border-left: 4px solid var(--expense);
+  margin-bottom: 14px;
+
+  p {
+    margin: 0;
+  }
+}
+
+.goal {
+  padding: 12px 4px;
+  border-bottom: 1px solid var(--border);
+
+  &:last-child {
+    border-bottom: none;
+  }
+}
+
+.goal-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.goal-advice {
+  margin-top: 6px;
+  font-size: 13px;
+  color: var(--warn);
+  background: var(--warn-soft);
+  border-radius: 8px;
+  padding: 6px 10px;
+
+  &.ok {
+    color: var(--income);
+    background: var(--income-soft);
+  }
+}

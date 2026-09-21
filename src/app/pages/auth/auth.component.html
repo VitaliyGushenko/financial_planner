@@ -1,0 +1,61 @@
+<div class="auth-wrap">
+  <div class="auth-card card">
+    <div class="auth-logo">📊</div>
+    <h1>Планировщик финансов</h1>
+    <p class="muted">Учёт денег и планирование покупок</p>
+
+    @if (mode() !== 'reset') {
+      <div class="seg auth-seg">
+        <button type="button" [class.active]="mode() === 'login'" (click)="switchMode('login')">Вход</button>
+        <button type="button" [class.active]="mode() === 'register'" (click)="switchMode('register')">Регистрация</button>
+      </div>
+    }
+
+    <form (ngSubmit)="submit()">
+      @if (mode() === 'register') {
+        <div class="field">
+          <label for="displayName">Имя</label>
+          <input id="displayName" name="displayName" [(ngModel)]="displayName" autocomplete="name" placeholder="Как к вам обращаться" />
+        </div>
+      }
+
+      <div class="field">
+        <label for="email">Email</label>
+        <input id="email" name="email" type="email" required [(ngModel)]="email" autocomplete="email" placeholder="you@example.com" />
+      </div>
+
+      @if (mode() !== 'reset') {
+        <div class="field">
+          <label for="password">Пароль</label>
+          <input id="password" name="password" type="password" required [(ngModel)]="password" [autocomplete]="mode() === 'register' ? 'new-password' : 'current-password'" placeholder="Минимум 6 символов" />
+        </div>
+      } @else {
+        <p class="muted small">Введите email — пришлём ссылку для сброса пароля.</p>
+      }
+
+      @if (error()) {
+        <p class="form-error">{{ error() }}</p>
+      }
+      @if (notice()) {
+        <p class="form-notice">{{ notice() }}</p>
+      }
+
+      <button class="btn btn-block auth-submit" type="submit" [disabled]="busy()">
+        @if (busy()) {
+          <span class="spinner spinner-sm"></span>
+        } @else {
+          {{ title() }}
+        }
+      </button>
+    </form>
+
+    <div class="auth-links">
+      @if (mode() === 'login') {
+        <a href="javascript:void(0)" (click)="switchMode('reset')">Забыли пароль?</a>
+      }
+      @if (mode() !== 'login') {
+        <a href="javascript:void(0)" (click)="switchMode('login')">Уже есть аккаунт — войти</a>
+      }
+    </div>
+  </div>
+</div>

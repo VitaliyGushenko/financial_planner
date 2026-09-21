@@ -1,0 +1,102 @@
+<div class="page-head">
+  <h1>Дашборд</h1>
+  <div class="head-actions">
+    <a class="btn btn-sm" routerLink="/operations">+ Операция</a>
+    <a class="btn btn-ghost btn-sm" routerLink="/calendar">Календарь</a>
+  </div>
+</div>
+
+@if (deficitWarning()) {
+  <div class="deficit-banner">⚠ {{ deficitWarning() }}</div>
+}
+
+<div class="grid-2">
+  <div>
+    <div class="card total-card">
+      <div class="muted small">Всего на счетах</div>
+      <div class="total-value">{{ total() }}</div>
+    </div>
+
+    <div class="card">
+      <h2 class="card-title">Счета</h2>
+      @if (accounts().length) {
+        <div class="rows">
+          @for (acc of accounts(); track acc.id) {
+            <div class="row">
+              <span class="acc-icon">{{ acc.type === 'cash' ? '💵' : '💳' }}</span>
+              <div class="row-main">
+                <div class="row-title">{{ acc.name }}</div>
+                <div class="row-sub">{{ acc.type === 'cash' ? 'Наличные' : 'Карта' }}</div>
+              </div>
+              <span class="row-amount">{{ money(acc.balance) }}</span>
+            </div>
+          }
+        </div>
+      } @else {
+        <div class="empty-state">Счетов пока нет — <a routerLink="/settings">добавьте наличные или карту</a></div>
+      }
+    </div>
+
+    <div class="card">
+      <h2 class="card-title">Последние операции</h2>
+      @if (recent().length) {
+        <div class="rows">
+          @for (tx of recent(); track tx.id) {
+            <div class="row">
+              <div class="row-main">
+                <div class="row-title">{{ txTitle(tx) }}</div>
+                <div class="row-sub">{{ tx.date | date: 'dd.MM.yyyy' }} · {{ accountName(tx.accountId) }}{{ tx.note ? ' · ' + tx.note : '' }}</div>
+              </div>
+              <span class="row-amount" [class]="amountClass(tx.kind)">{{ signed(tx.amount, tx.kind) }}</span>
+            </div>
+          }
+        </div>
+      } @else {
+        <div class="empty-state">Операций пока нет</div>
+      }
+      <div class="card-footer"><a routerLink="/operations">Все операции →</a></div>
+    </div>
+  </div>
+
+  <div>
+    <div class="card">
+      <h2 class="card-title">Ближайшие 2 недели</h2>
+      @if (upcoming().length) {
+        <div class="rows">
+          @for (day of upcoming(); track day.key) {
+            <div class="upcoming-day">
+              <div class="day-head">
+                <span class="day-label">{{ day.label }}</span>
+                <span class="day-balance">→ {{ money(day.balanceAfter) }}</span>
+              </div>
+              @for (event of day.events; track event.id) {
+                <div class="row event-row">
+                  <div class="row-main">
+                    <div class="row-title">
+                      <span class="kind-dot" [class]="'kind-dot ' + event.kind"></span>
+                      {{ event.title }}
+                    </div>
+                    <div class="row-sub">{{ event.source === 'recurring' ? 'по плану' : 'плановая операция' }}</div>
+                  </div>
+                  <span class="row-amount" [class]="amountClass(event.kind)">{{ signed(event.amount, event.kind) }}</span>
+                  @if (event.source === 'recurring' && event.rule) {
+                    <button class="btn btn-ghost btn-sm" (click)="recordEvent(event, day.key)" title="Записать как реальную операцию">
+                      Записать
+                    </button>
+                  }
+                </div>
+              }
+            </div>
+          }
+        </div>
+      } @else {
+        <div class="empty-state">
+          Запланированных операций нет.<br />
+          <a routerLink="/recurring">Добавьте повторяющиеся</a> — зарплату, аренду, подписки,
+          и календарь покажет остаток на любую дату.
+        </div>
+      }
+      <div class="card-footer"><a routerLink="/planner">Планировать покупку →</a></div>
+    </div>
+  </div>
+</div>

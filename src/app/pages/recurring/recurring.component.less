@@ -1,0 +1,54 @@
+.intro {
+  margin: -4px 0 14px;
+  max-width: 640px;
+}
+
+.kind-seg {
+  margin-bottom: 14px;
+}
+
+.rec-form {
+  margin-top: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.amount-field {
+  max-width: 150px;
+}
+
+.every-field {
+  max-width: 110px;
+}
+
+.form-actions {
+  display: flex;
+  gap: 8px;
+}
+
+.row.editing {
+  background: var(--primary-soft);
+  border-radius: 8px;
+}
+
+.kind-dot {
+  flex: 0 0 auto;
+  display: inline-block;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: var(--muted);
+
+  &.income {
+    background: var(--income);
+  }
+
+  &.expense {
+    background: var(--expense);
+  }
+
+  &.transfer {
+    background: var(--transfer);
+  }
+}

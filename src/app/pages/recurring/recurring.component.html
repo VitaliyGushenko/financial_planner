@@ -1,0 +1,162 @@
+<div class="page-head">
+  <h1>Повторяющиеся операции</h1>
+</div>
+
+<p class="muted intro">
+  Зарплата, аренда, подписки — всё, что приходит регулярно. Эти правила участвуют в прогнозе:
+  календарь покажет остаток с их учётом, а советчик покупок подскажет лучшую дату.
+</p>
+
+<div class="card">
+  <h2 class="card-title">{{ editingId() ? 'Редактирование правила' : 'Новое правило' }}</h2>
+
+  @if (accounts().length === 0) {
+    <div class="empty-state">Сначала добавьте счёт в <a routerLink="/settings">настройках</a>.</div>
+  } @else {
+    <div class="seg kind-seg">
+      @for (kind of kinds; track kind) {
+        <button type="button" [class]="form.kind === kind ? 'active ' + kind : ''" (click)="form.kind = kind; onKindChange()">
+          {{ kind === 'expense' ? 'Расход' : kind === 'income' ? 'Доход' : 'Перевод' }}
+        </button>
+      }
+    </div>
+
+    <form (ngSubmit)="save()" class="rec-form">
+      <div class="form-row">
+        <div class="field">
+          <label for="title">Название</label>
+          <input id="title" name="title" [(ngModel)]="form.title" placeholder="например, Зарплата" />
+        </div>
+        <div class="field amount-field">
+          <label for="amount">Сумма, ₽</label>
+          <input id="amount" name="amount" type="number" min="0" step="0.01" [(ngModel)]="form.amount" placeholder="0" />
+        </div>
+        <div class="field">
+          <label for="account">{{ form.kind === 'transfer' ? 'Списать со счёта' : 'Счёт' }}</label>
+          <select id="account" name="accountId" [(ngModel)]="form.accountId">
+            <option value="" disabled>— выберите —</option>
+            @for (acc of accounts(); track acc.id) {
+              <option [value]="acc.id">{{ acc.name }}</option>
+            }
+          </select>
+        </div>
+        @if (form.kind === 'transfer') {
+          <div class="field">
+            <label for="toAccount">Зачислить на счёт</label>
+            <select id="toAccount" name="toAccountId" [(ngModel)]="form.toAccountId">
+              <option value="" disabled>— выберите —</option>
+              @for (acc of accounts(); track acc.id) {
+                <option [value]="acc.id">{{ acc.name }}</option>
+              }
+            </select>
+          </div>
+        } @else {
+          <div class="field">
+            <label for="category">Категория</label>
+            <select id="category" name="categoryId" [(ngModel)]="form.categoryId" (change)="onCategoryChange()">
+              <option value="" disabled>— выберите —</option>
+              @for (cat of formCategories(); track cat.id) {
+                <option [value]="cat.id">{{ cat.name }}</option>
+              }
+            </select>
+          </div>
+          @if (formSubcategories().length) {
+            <div class="field">
+              <label for="subcategory">Подкатегория</label>
+              <select id="subcategory" name="subcategoryId" [(ngModel)]="form.subcategoryId">
+                <option value="">— не указывать —</option>
+                @for (sub of formSubcategories(); track sub.id) {
+                  <option [value]="sub.id">{{ sub.name }}</option>
+                }
+              </select>
+            </div>
+          }
+        }
+      </div>
+
+      <div class="form-row">
+        <div class="field">
+          <label for="frequency">Как часто</label>
+          <select id="frequency" name="frequency" [(ngModel)]="form.frequency">
+            @for (f of frequencies; track f) {
+              <option [value]="f">{{ frequencyLabels[f] }}</option>
+            }
+          </select>
+        </div>
+        @if (form.frequency === 'custom') {
+          <div class="field every-field">
+            <label for="every">Каждые</label>
+            <input id="every" name="every" type="number" min="1" step="1" [(ngModel)]="form.every" />
+          </div>
+          <div class="field">
+            <label for="customUnit">Единица</label>
+            <select id="customUnit" name="customUnit" [(ngModel)]="form.customUnit">
+              @for (u of units; track u) {
+                <option [value]="u">{{ unitLabels[u] }}</option>
+              }
+            </select>
+          </div>
+        }
+        <div class="field">
+          <label for="startDate">Первый платёж</label>
+          <input id="startDate" name="startDate" type="date" [(ngModel)]="form.startDate" />
+        </div>
+        <div class="field">
+          <label for="endDate">До (необязательно)</label>
+          <input id="endDate" name="endDate" type="date" [(ngModel)]="form.endDate" />
+        </div>
+        <div class="field">
+          <label for="note">Заметка</label>
+          <input id="note" name="note" [(ngModel)]="form.note" placeholder="необязательно" />
+        </div>
+      </div>
+
+      @if (formError()) {
+        <p class="form-error">{{ formError() }}</p>
+      }
+
+      <div class="form-actions">
+        <button class="btn" type="submit">{{ editingId() ? 'Сохранить' : 'Добавить правило' }}</button>
+        @if (editingId()) {
+          <button class="btn btn-ghost" type="button" (click)="cancelEdit()">Отмена</button>
+        }
+      </div>
+    </form>
+  }
+</div>
+
+<div class="card">
+  <h2 class="card-title">Правила</h2>
+  @if (rules().length) {
+    <div class="rows">
+      @for (rule of rules(); track rule.id) {
+        <div class="row" [class.editing]="editingId() === rule.id">
+          <span class="kind-dot" [class]="rule.kind"></span>
+          <div class="row-main">
+            <div class="row-title">{{ rule.title }}</div>
+            <div class="row-sub">
+              {{ frequencyOf(rule) }} · {{ accountName(rule.accountId) }}{{ rule.kind === 'transfer' ? ' → ' + accountName(rule.toAccountId) : '' }}
+              @if (categoryName(rule)) {
+                · {{ categoryName(rule) }}
+              }
+            </div>
+            <div class="row-sub">
+              @if (nextDate(rule); as next) {
+                далее: {{ formatDay(next) }}
+              } @else {
+                вхождений больше нет
+              }
+            </div>
+          </div>
+          <span class="row-amount" [class]="rule.kind === 'income' ? 'positive' : rule.kind === 'expense' ? 'negative' : ''">
+            {{ rule.kind === 'income' ? '+' : rule.kind === 'expense' ? '−' : '' }}{{ money(rule.amount) }}
+          </span>
+          <button class="btn btn-ghost btn-sm" (click)="edit(rule)">Изменить</button>
+          <button class="btn btn-danger btn-sm" (click)="remove(rule)">✕</button>
+        </div>
+      }
+    </div>
+  } @else {
+    <div class="empty-state">Правил ещё нет. Добавьте, например, зарплату «каждый месяц».</div>
+  }
+</div>

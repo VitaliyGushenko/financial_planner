@@ -1,0 +1,51 @@
+.kind-seg {
+  margin-bottom: 14px;
+}
+
+.op-form {
+  margin-top: 12px;
+}
+
+.amount-field {
+  max-width: 150px;
+}
+
+.note-field {
+  flex: 2 1 220px;
+}
+
+.submit-field {
+  flex: 0 0 auto;
+  flex-direction: row !important;
+  gap: 8px;
+}
+
+.row.editing {
+  background: var(--primary-soft);
+  border-radius: 8px;
+}
+
+.kind-dot {
+  flex: 0 0 auto;
+  display: inline-block;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: var(--muted);
+
+  &.income {
+    background: var(--income);
+  }
+
+  &.expense {
+    background: var(--expense);
+  }
+
+  &.transfer {
+    background: var(--transfer);
+  }
+}
+
+.badge {
+  margin-left: 6px;
+}

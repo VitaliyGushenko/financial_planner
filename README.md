@@ -1,27 +1,83 @@
-# FinancialPlanner
+# Планировщик финансов
 
-This project was generated with [Angular CLI](https://github.com/angular/angular-cli) version 17.1.1.
+Веб-приложение для учёта денег и планирования покупок: счета (наличные и карты), доходы и
+расходы с категориями/подкатегориями, повторяющиеся операции, календарь остатков на любую
+дату и советчик покупок.
 
-## Development server
+Стек: Angular 19 (standalone-компоненты, signals) + Firebase (Auth: email/пароль, Firestore),
+Less. Деплой — Firebase Hosting. Структура и паттерны повторяют проект [car-keeper](https://github.com/VitaliyGushenko/car-keeper).
 
-Run `ng serve` for a dev server. Navigate to `http://localhost:4200/`. The application will automatically reload if you change any of the source files.
+## Возможности
 
-## Code scaffolding
+- **Счета** — наличные и карты с текущим остатком; общий баланс считается автоматически.
+- **Операции** — доходы (зарплата, аванс, перевод…), расходы и переводы между своими счетами.
+  Категории и подкатегории настраиваются свободно (добавление/удаление в настройках).
+  Операцию можно записать будущей датой — она станет плановой.
+- **Повторяющиеся операции** — каждую неделю / месяц / год или свой интервал («каждые 10 дней»).
+- **Календарь остатков** — клик по любой дате показывает остаток на конец этого дня:
+  для будущего — прогноз с учётом всех планов, для прошлого — факт по записанным операциям.
+  Дни с отрицательным остатком подсвечены красным.
+- **Планировщик покупок** — «хочу купить X за Y»: приложение перебирает прогноз и подсказывает
+  первую дату, когда покупка не уведёт остаток в минус с учётом всех остальных трат;
+  цели можно сохранить и следить, когда по каждой можно покупать.
+- **Авторизация** Firebase (email/пароль), данные каждого пользователя — только его
+  (правила Firestore owner-only).
 
-Run `ng generate component component-name` to generate a new component. You can also use `ng generate directive|pipe|service|class|guard|interface|enum|module`.
+## Как устроена проекция остатков
 
-## Build
+Точка отсчёта — фактические балансы счетов «сейчас». Прошлые операции при записи сразу
+меняют баланс счёта; операции с будущей датой и вхождения повторяющихся правил участвуют
+в прогнозе. Когда наступает дата плановой операции, она доначисляется к балансу автоматически
+при следующем открытии приложения.
 
-Run `ng build` to build the project. The build artifacts will be stored in the `dist/` directory.
+- Будущее: `остаток(D) = сейчас + события из интервала (сегодня, D]`
+- Прошлое: `остаток(D) = сейчас − записанные операции из интервала (D, сейчас]`
 
-## Running unit tests
+Движок — чистые функции (`src/app/core/projection.ts`, `advisor.ts`) с unit-тестами.
 
-Run `ng test` to execute the unit tests via [Karma](https://karma-runner.github.io).
+## Запуск для разработки
 
-## Running end-to-end tests
+1. `npm install`
+2. В [Firebase Console](https://console.firebase.google.com/project/financial-planner-e1c41):
+   - создать **Firestore Database**;
+   - включить провайдер **Authentication → Email/Password**.
+3. `npm start` → <http://localhost:4200>
 
-Run `ng e2e` to execute the end-to-end tests via a platform of your choice. To use this command, you need to first add a package that implements end-to-end testing capabilities.
+## Тесты
 
-## Further help
+```bash
+npm run deploy:tests   # Karma + ChromeHeadless, один прогон
+```
 
-To get more help on the Angular CLI use `ng help` or go check out the [Angular CLI Overview and Command Reference](https://angular.io/cli) page.
+## Деплой
+
+```bash
+firebase login         # один раз
+npm run deploy         # сборка + hosting + правила Firestore
+```
+
+Или `deploy.cmd` / `./deploy.sh` (в bash-версии перед деплоем прогоняются тесты).
+
+Приложение: <https://financial-planner-e1c41.web.app>
+
+## Структура
+
+```
+src/app/
+  app.config.ts            # провайдеры Firebase (Auth, Firestore, Analytics)
+  core/
+    auth.service.ts        # email/пароль, автосоздание профиля + сид данных
+    auth.guard.ts          # authGuard / guestGuard
+    accounts|categories|transactions|recurring|goals.service.ts
+    projection.ts          # дневная карта остатков (чистые функции)
+    advisor.ts             # советчик покупок (чистые функции)
+    projection.service.ts  # общая проекция как computed из данных
+    seed.ts                # стартовые счета и категории
+    day-key.ts             # даты как строки «YYYY-MM-DD» (без TZ-болезней)
+  pages/
+    auth/ dashboard/ operations/ recurring/ calendar/ planner/ settings/
+firestore.rules            # доступ только владельцу данных
+```
+
+Данные в Firestore: `users/{uid}` + подколлекции `accounts`, `categories`, `transactions`,
+`recurring`, `goals`.

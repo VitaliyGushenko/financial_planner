@@ -1,0 +1,114 @@
+<div class="page-head">
+  <h1>Планировщик покупок</h1>
+</div>
+
+<p class="muted intro">
+  Хотите что-то купить, но лишних денег сейчас нет? Приложение посмотрит на все запланированные
+  доходы и расходы и подскажет дату, когда покупка не оставит вас в минусе.
+</p>
+
+<div class="grid-2">
+  <div class="card">
+    <h2 class="card-title">Хочу купить</h2>
+    <form (ngSubmit)="addGoal()">
+      <div class="form-row">
+        <div class="field grow">
+          <label for="title">Что хотим купить</label>
+          <input id="title" name="title" [(ngModel)]="quick.title" placeholder="например, Ноутбук" />
+        </div>
+        <div class="field amount-field">
+          <label for="amount">Сумма, ₽</label>
+          <input id="amount" name="amount" type="number" min="0" step="0.01" [(ngModel)]="quick.amount" placeholder="0" />
+        </div>
+        <div class="field">
+          <label for="deadline">Желаемый срок</label>
+          <input id="deadline" name="deadline" type="date" [(ngModel)]="quick.deadline" />
+        </div>
+      </div>
+
+      @if (quickError()) {
+        <p class="form-error">{{ quickError() }}</p>
+      }
+
+      <div class="quick-actions">
+        <button class="btn" type="submit">Добавить в цели</button>
+      </div>
+    </form>
+
+    @if (quickAdvice(); as advice) {
+      <div [class]="'advice ' + advice.tone">
+        <div class="advice-head">
+          @if (advice.canBuyNow) {
+            <span class="advice-icon">✅</span>
+          } @else if (advice.recommendedDate) {
+            <span class="advice-icon">📅</span>
+          } @else {
+            <span class="advice-icon">🚫</span>
+          }
+          <div>
+            @if (advice.recommendedDate) {
+              <div class="advice-date">
+                {{ advice.canBuyNow ? 'Можно покупать сегодня' : 'Оптимальная дата: ' + dateLabel(advice.recommendedDate) }}
+              </div>
+            } @else {
+              <div class="advice-date">Пока не получается накопить</div>
+            }
+          </div>
+        </div>
+        <p class="advice-message">{{ advice.message }}</p>
+      </div>
+    }
+  </div>
+
+  <div>
+    @if (deficitDays().length) {
+      <div class="card deficit-card">
+        <h2 class="card-title">⚠ Прогноз дефицита</h2>
+        <p>
+          Без новых трат остаток уходит в минус на
+          {{ deficitDays().length }} дн. — впервые
+          {{ dateLabel(deficitDays()[0]) }}.
+          Проверьте повторяющиеся расходы или добавьте доход.
+        </p>
+      </div>
+    }
+
+    <div class="card">
+      <h2 class="card-title">Цели ({{ goals().length }})</h2>
+      @if (goals().length) {
+        <div class="rows">
+          @for (goal of goals(); track goal.id) {
+            <div class="goal">
+              <div class="goal-head">
+                <div class="row-main">
+                  <div class="row-title">{{ goal.title }}</div>
+                  <div class="row-sub">
+                    {{ money(goal.amount) }}
+                    @if (goal.deadline) {
+                      · к {{ dateLabel(goal.deadline) }}
+                    }
+                  </div>
+                </div>
+                <button class="btn btn-ghost btn-sm" (click)="markDone(goal.id)" title="Куплено">✓</button>
+                <button class="btn btn-danger btn-sm" (click)="remove(goal.id)" title="Удалить">✕</button>
+              </div>
+              @if (adviceFor(goal.id); as advice) {
+                <div class="goal-advice" [class.ok]="advice.canBuyNow">
+                  @if (advice.canBuyNow) {
+                    Уже можно покупать — остаток не уйдёт в минус.
+                  } @else if (advice.recommendedDate) {
+                    Оптимально: {{ dateLabel(advice.recommendedDate) }} ({{ money(advice.minBalanceAfter) }} останется в худший день).
+                  } @else {
+                    Накопить безопасно не выходит — стоит пересмотреть планы.
+                  }
+                </div>
+              }
+            </div>
+          }
+        </div>
+      } @else {
+        <div class="empty-state">Целей пока нет. Заполните форму слева — покупка появится здесь, и за ней будет следить советчик.</div>
+      }
+    </div>
+  </div>
+</div>

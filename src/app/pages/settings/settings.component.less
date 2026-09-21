@@ -1,0 +1,89 @@
+.acc-icon {
+  font-size: 20px;
+}
+
+.account-edit {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+
+  input {
+    width: auto;
+    flex: 1;
+  }
+
+  input[type='number'] {
+    max-width: 130px;
+  }
+}
+
+.total-row {
+  border-top: 2px solid var(--border);
+}
+
+.add-account,
+.add-category {
+  margin-top: 14px;
+  padding-top: 14px;
+  border-top: 1px dashed var(--border);
+}
+
+.cat-row {
+  padding: 10px 4px;
+  border-bottom: 1px solid var(--border);
+
+  &:last-child {
+    border-bottom: none;
+  }
+}
+
+.cat-head {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+}
+
+.sub-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 6px;
+}
+
+.sub-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+
+  .chip-x {
+    border: none;
+    background: transparent;
+    color: inherit;
+    font-size: 13px;
+    line-height: 1;
+    cursor: pointer;
+    padding: 0 2px;
+    opacity: 0.7;
+
+    &:hover {
+      opacity: 1;
+    }
+  }
+}
+
+.sub-add {
+  display: flex;
+  gap: 8px;
+  margin-top: 8px;
+  margin-left: 2px;
+
+  input {
+    max-width: 240px;
+    padding: 6px 10px;
+    font-size: 13px;
+  }
+}
+
+.logout-block {
+  margin-top: 16px;
+}

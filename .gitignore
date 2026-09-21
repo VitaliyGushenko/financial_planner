@@ -40,3 +40,11 @@ testem.log
 # System files
 .DS_Store
 Thumbs.db
+
+# ZCode session files
+.zcode/
+
+# Firebase CLI cache and logs
+.firebase/
+firebase-debug.log
+*.log

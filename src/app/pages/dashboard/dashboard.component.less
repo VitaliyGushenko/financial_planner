@@ -1,0 +1,88 @@
+.head-actions {
+  display: flex;
+  gap: 8px;
+}
+
+.deficit-banner {
+  background: var(--expense-soft);
+  color: var(--expense);
+  border-radius: var(--radius);
+  padding: 10px 14px;
+  margin-bottom: 14px;
+  font-weight: 600;
+}
+
+.total-card {
+  margin-bottom: 14px;
+}
+
+.total-value {
+  font-size: 30px;
+  font-weight: 800;
+  margin-top: 2px;
+  font-variant-numeric: tabular-nums;
+}
+
+.acc-icon {
+  font-size: 20px;
+}
+
+.card-footer {
+  margin-top: 10px;
+  font-size: 14px;
+}
+
+.upcoming-day {
+  padding: 8px 0;
+  border-bottom: 1px solid var(--border);
+
+  &:last-child {
+    border-bottom: none;
+  }
+}
+
+.day-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 10px;
+
+  .day-label {
+    font-weight: 700;
+    font-size: 13px;
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+    color: var(--muted);
+  }
+
+  .day-balance {
+    font-size: 13px;
+    color: var(--muted);
+    font-variant-numeric: tabular-nums;
+  }
+}
+
+.event-row {
+  padding: 6px 0 6px 2px;
+}
+
+.kind-dot {
+  display: inline-block;
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  margin-right: 7px;
+  background: var(--muted);
+
+  &.income {
+    background: var(--income);
+  }
+
+  &.expense {
+    background: var(--expense);
+  }
+
+  &.transfer {
+    background: var(--transfer);
+  }
+}

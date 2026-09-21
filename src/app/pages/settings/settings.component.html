@@ -1,0 +1,150 @@
+<div class="page-head">
+  <h1>Настройки</h1>
+</div>
+
+<div class="card">
+  <h2 class="card-title">Счета</h2>
+  <p class="muted small">
+    Это ваши деньги «сейчас»: наличные и балансы карт. Баланс меняется от операций автоматически,
+    при необходимости его можно поправить вручную.
+  </p>
+
+  @if (accounts().length) {
+    <div class="rows">
+      @for (acc of accounts(); track acc.id) {
+        <div class="row">
+          <span class="acc-icon">{{ acc.type === 'cash' ? '💵' : '💳' }}</span>
+          @if (editingAccountId() === acc.id) {
+            <div class="row-main account-edit">
+              <input name="editName-{{ acc.id }}" [(ngModel)]="accountEdit.name" placeholder="Название" />
+              <input name="editBalance-{{ acc.id }}" type="number" step="0.01" [(ngModel)]="accountEdit.balance" />
+              <button class="btn btn-sm" (click)="saveAccountEdit()">Готово</button>
+            </div>
+          } @else {
+            <div class="row-main">
+              <div class="row-title">{{ acc.name }}</div>
+              <div class="row-sub">{{ acc.type === 'cash' ? 'Наличные' : 'Карта' }}</div>
+            </div>
+            <span class="row-amount" [class.negative]="acc.balance < 0">{{ acc.balance | number: '1.0-2' }} ₽</span>
+            <button class="btn btn-ghost btn-sm" (click)="startEditAccount(acc)">Изменить</button>
+            <button class="btn btn-danger btn-sm" (click)="removeAccount(acc)">✕</button>
+          }
+        </div>
+      }
+      <div class="row total-row">
+        <div class="row-main"><strong>Всего</strong></div>
+        <strong class="row-amount">{{ total() | number: '1.0-2' }} ₽</strong>
+      </div>
+    </div>
+  } @else {
+    <div class="empty-state">Счетов пока нет — добавьте первый ниже.</div>
+  }
+
+  <form (ngSubmit)="addAccount()" class="form-row add-account">
+    <div class="field">
+      <label for="accName">Новый счёт</label>
+      <input id="accName" name="accName" [(ngModel)]="accountForm.name" placeholder="например, Зарплатная карта" />
+    </div>
+    <div class="field">
+      <label for="accType">Тип</label>
+      <select id="accType" name="accType" [(ngModel)]="accountForm.type">
+        <option value="card">Карта</option>
+        <option value="cash">Наличные</option>
+      </select>
+    </div>
+    <div class="field">
+      <label for="accBalance">Начальный остаток, ₽</label>
+      <input id="accBalance" name="accBalance" type="number" step="0.01" [(ngModel)]="accountForm.balance" placeholder="0" />
+    </div>
+    <div class="field">
+      <label>&nbsp;</label>
+      <button class="btn" type="submit">Добавить</button>
+    </div>
+  </form>
+  @if (accountError()) {
+    <p class="form-error">{{ accountError() }}</p>
+  }
+</div>
+
+@for (section of categorySections(); track section.kind) {
+  <div class="card">
+    <h2 class="card-title">{{ section.title }}</h2>
+
+    @if (section.list().length) {
+      <div class="rows">
+        @for (cat of section.list(); track cat.id) {
+          <div class="cat-row">
+            <div class="cat-head">
+              <div class="row-main">
+                <div class="row-title">{{ cat.name }}</div>
+                @if (cat.subcategories.length) {
+                  <div class="sub-chips">
+                    @for (sub of cat.subcategories; track sub.id) {
+                      <span class="badge sub-chip">
+                        {{ sub.name }}
+                        <button class="chip-x" (click)="removeSubcategory(cat, sub.id)" title="Удалить подкатегорию">×</button>
+                      </span>
+                    }
+                  </div>
+                }
+              </div>
+              <button class="btn btn-danger btn-sm" (click)="removeCategory(cat)" title="Удалить категорию">Удалить</button>
+            </div>
+            <div class="sub-add">
+              <input
+                [name]="'sub-' + cat.id"
+                [value]="subInput(cat)"
+                (input)="setSubInput(cat, $any($event.target).value)"
+                placeholder="добавить подкатегорию"
+              />
+              <button class="btn btn-ghost btn-sm" (click)="addSubcategory(cat)">+ Подкатегория</button>
+            </div>
+          </div>
+        }
+      </div>
+    } @else {
+      <div class="empty-state">Категорий пока нет.</div>
+    }
+
+    <form (ngSubmit)="addCategory(section.kind)" class="form-row add-category">
+      <div class="field">
+        <label for="newCat-{{ section.kind }}">Новая категория</label>
+        <input
+          id="newCat-{{ section.kind }}"
+          [name]="'newCat-' + section.kind"
+          [value]="newCategory[section.kind]"
+          (input)="newCategory[section.kind] = $any($event.target).value"
+          placeholder="название"
+        />
+      </div>
+      <div class="field">
+        <label>&nbsp;</label>
+        <button class="btn" type="submit">Добавить</button>
+      </div>
+    </form>
+  </div>
+}
+
+<div class="card">
+  <h2 class="card-title">Профиль</h2>
+  <form (ngSubmit)="saveProfile()" class="form-row">
+    <div class="field">
+      <label for="displayName">Имя</label>
+      <input id="displayName" name="displayName" [(ngModel)]="displayName" placeholder="Как к вам обращаться" />
+    </div>
+    <div class="field">
+      <label for="emailField">Email</label>
+      <input id="emailField" name="emailField" [value]="email()" disabled />
+    </div>
+    <div class="field">
+      <label>&nbsp;</label>
+      <button class="btn" type="submit">Сохранить</button>
+    </div>
+  </form>
+  @if (profileSaved()) {
+    <p class="form-notice">Профиль сохранён</p>
+  }
+  <div class="logout-block">
+    <button class="btn btn-ghost" (click)="logout()">Выйти из аккаунта</button>
+  </div>
+</div>
