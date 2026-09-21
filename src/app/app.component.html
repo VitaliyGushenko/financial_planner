@@ -11,12 +11,22 @@
         <a routerLink="/operations" routerLinkActive="active">Операции</a>
         <a routerLink="/calendar" routerLinkActive="active">Календарь</a>
         <a routerLink="/planner" routerLinkActive="active">Покупки</a>
-        <a routerLink="/settings" routerLinkActive="active">Настройки</a>
       </nav>
       <div class="app-user">
-        <span class="app-username" title="Всего на счетах">{{ total() }}</span>
-        <span class="app-username" [title]="displayName()">{{ displayName() }}</span>
-        <button class="btn btn-ghost btn-sm" (click)="logout()">Выйти</button>
+        <span class="app-username total-chip" title="Всего на счетах">{{ total() }}</span>
+        <div class="user-menu">
+          <button type="button" class="user-btn" (click)="toggleMenu(); $event.stopPropagation()" [attr.aria-expanded]="menuOpen()">
+            <span class="name">{{ displayName() }}</span>
+            <span class="caret">▾</span>
+          </button>
+          @if (menuOpen()) {
+            <div class="user-dropdown" (click)="$event.stopPropagation()">
+              <a routerLink="/settings" (click)="closeMenu()">Настройки</a>
+              <div class="sep"></div>
+              <button type="button" class="logout" (click)="logout()">Выйти</button>
+            </div>
+          }
+        </div>
       </div>
     </div>
   </header>

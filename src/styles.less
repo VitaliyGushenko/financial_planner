@@ -525,6 +525,95 @@ body.modal-open {
   text-overflow: ellipsis;
 }
 
+.total-chip {
+  font-variant-numeric: tabular-nums;
+  font-weight: 600;
+}
+
+/* ----- Dropdown пользователя ----- */
+
+.user-menu {
+  position: relative;
+}
+
+.user-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  max-width: 200px;
+  padding: 6px 10px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--surface);
+  font: inherit;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text);
+  cursor: pointer;
+
+  &:hover {
+    background: var(--surface-2);
+  }
+
+  .name {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .caret {
+    font-size: 10px;
+    color: var(--muted);
+  }
+}
+
+.user-dropdown {
+  position: absolute;
+  right: 0;
+  top: calc(100% + 6px);
+  z-index: 40;
+  min-width: 180px;
+  padding: 6px;
+  display: flex;
+  flex-direction: column;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  box-shadow: 0 8px 24px rgba(10, 20, 30, 0.16);
+
+  a,
+  button {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 10px;
+    border: none;
+    border-radius: 7px;
+    background: transparent;
+    color: var(--text);
+    font: inherit;
+    text-align: left;
+    text-decoration: none;
+    cursor: pointer;
+    white-space: nowrap;
+  }
+
+  a:hover,
+  button:hover {
+    background: var(--surface-2);
+  }
+
+  .sep {
+    height: 1px;
+    background: var(--border);
+    margin: 4px 2px;
+  }
+
+  .logout {
+    color: var(--expense);
+  }
+}
+
 .app-main {
   max-width: 1100px;
   margin: 0 auto;
