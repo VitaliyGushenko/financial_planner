@@ -1,12 +1,15 @@
-import { Component, computed, inject } from '@angular/core';
+import { Component, computed, inject, signal } from '@angular/core';
 import { DatePipe } from '@angular/common';
 import { RouterLink } from '@angular/router';
 
 import { AccountsService } from '../../core/accounts.service';
 import { CategoriesService } from '../../core/categories.service';
 import { CurrencyService } from '../../core/currency.service';
+import { PendingService } from '../../core/pending.service';
 import { ProjectionService } from '../../core/projection.service';
 import { TransactionsService } from '../../core/transactions.service';
+import { RecurringService } from '../../core/recurring.service';
+import { PendingItem } from '../../core/pending';
 import { ProjectionEvent } from '../../core/projection';
 import { DayKey, formatDayKeyRelative } from '../../core/day-key';
 
@@ -28,12 +31,65 @@ export class DashboardComponent {
   private readonly categoriesService = inject(CategoriesService);
   private readonly transactionsService = inject(TransactionsService);
   private readonly projectionService = inject(ProjectionService);
+  private readonly pendingService = inject(PendingService);
+  private readonly recurringService = inject(RecurringService);
   private readonly currency = inject(CurrencyService);
 
   readonly total = computed(() => this.currency.format(this.accountsService.total()));
   readonly accounts = this.accountsService.accounts;
 
   readonly projection = this.projectionService.projection;
+
+  /** Платежи, ожидающие подтверждения. */
+  readonly pending = this.pendingService.items;
+  private readonly pendingAmounts = signal<Record<string, number>>({});
+
+  amountOf(item: PendingItem): number {
+    return this.pendingAmounts()[item.id] ?? item.amount;
+  }
+
+  setAmount(item: PendingItem, raw: string): void {
+    const value = Number(raw);
+    this.pendingAmounts.update((map) => ({
+      ...map,
+      [item.id]: Number.isFinite(value) && value > 0 ? value : item.amount,
+    }));
+  }
+
+  async confirmPending(item: PendingItem): Promise<void> {
+    const amount = this.amountOf(item);
+    if (item.txId) {
+      // Плановая разовая операция: фиксируем фактическую сумму.
+      await this.transactionsService.confirm(item.txId, amount);
+      return;
+    }
+    if (item.ruleId) {
+      const rule = this.recurringService.byId().get(item.ruleId);
+      if (!rule) {
+        return;
+      }
+      await this.transactionsService.add({
+        kind: rule.kind,
+        amount,
+        accountId: rule.accountId,
+        toAccountId: rule.toAccountId,
+        categoryId: rule.categoryId,
+        subcategoryId: rule.subcategoryId,
+        date: item.date,
+        note: rule.note || rule.title,
+        ruleId: rule.id,
+      });
+    }
+  }
+
+  /** Пропустить платёж правила / удалить плановую операцию. */
+  async skipPending(item: PendingItem): Promise<void> {
+    if (item.txId) {
+      await this.transactionsService.remove(item.txId);
+    } else if (item.ruleId) {
+      await this.recurringService.skipOccurrence(item.ruleId, item.date);
+    }
+  }
 
   /** Ближайшие 14 дней с событиями. */
   readonly upcoming = computed<UpcomingDay[]>(() => {
@@ -61,7 +117,7 @@ export class DashboardComponent {
     return first ? `Остаток уходит в минус ${formatDayKeyRelative(first, this.projection().today).toLowerCase()} — проверьте планирование` : '';
   });
 
-  readonly recent = computed(() => this.transactionsService.transactions().slice(0, 6));
+  readonly recent = computed(() => this.transactionsService.real().slice(0, 6));
 
   accountName(id: string | undefined): string {
     return (id && this.accountsService.byId().get(id)?.name) || '—';
@@ -100,14 +156,14 @@ export class DashboardComponent {
     }
     void this.transactionsService.recordFromRule(
       {
-        title: event.rule.title,
+        ruleId: event.rule.id,
         kind: event.rule.kind,
         amount: event.rule.amount,
         accountId: event.rule.accountId,
         toAccountId: event.rule.toAccountId,
         categoryId: event.rule.categoryId,
         subcategoryId: event.rule.subcategoryId,
-        note: event.rule.note,
+        note: event.rule.note || event.rule.title,
       },
       dateKey,
     );

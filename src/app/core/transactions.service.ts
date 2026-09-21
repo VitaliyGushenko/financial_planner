@@ -1,4 +1,4 @@
-import { Injectable, computed, effect } from '@angular/core';
+import { Injectable, computed, inject } from '@angular/core';
 import { Timestamp, doc, increment, serverTimestamp, setDoc, writeBatch } from '@angular/fire/firestore';
 
 import { Transaction, TransactionDraft } from './models';
@@ -9,7 +9,8 @@ import { UserCollectionService } from './user-collection.service';
 /**
  * Разовые операции. Прошлые (и сегодняшние) при записи сразу меняют
  * балансы счетов; будущие — нет, они живут в проекции (календарь,
- * советчик) и доначисляются к балансам, когда их дата наступает.
+ * советчик) и попадают в балансы только после подтверждения пользователем
+ * (карточка «Ожидают подтверждения» на дашборде).
  */
 @Injectable({ providedIn: 'root' })
 export class TransactionsService extends UserCollectionService<Transaction> {
@@ -22,19 +23,11 @@ export class TransactionsService extends UserCollectionService<Transaction> {
     [...this.items()].sort((a, b) => b.date.localeCompare(a.date) || this.byCreated(b) - this.byCreated(a)),
   );
 
+  /** Подтверждённые операции — то, что показывается в журнале. */
+  readonly real = computed(() => this.transactions().filter((t) => t.applied !== false));
+
   constructor() {
     super();
-    // Самолечение: плановые операции, чья дата наступила, при входе в приложение
-    // доначисляются к балансам и помечаются применёнными.
-    effect(() => {
-      if (!this.isReady) {
-        return;
-      }
-      const pending = this.items().filter((t) => !t.applied && t.date <= todayKey());
-      if (pending.length) {
-        void this.applyPending();
-      }
-    });
   }
 
   async add(draft: TransactionDraft): Promise<void> {
@@ -81,17 +74,20 @@ export class TransactionsService extends UserCollectionService<Transaction> {
     await batch.commit();
   }
 
-  /** Создаёт операцию из вхождения повторяющегося правила (кнопка «Записать» в календаре). */
-  async recordFromRule(rule: {
-    title?: string;
-    kind: TransactionDraft['kind'];
-    amount: number;
-    accountId: string;
-    toAccountId?: string;
-    categoryId?: string;
-    subcategoryId?: string;
-    note?: string;
-  }, dateKey: string): Promise<void> {
+  /** Создаёт операцию из вхождения повторяющегося правила (кнопка «Записать»/подтверждение). */
+  async recordFromRule(
+    rule: {
+      ruleId?: string;
+      kind: TransactionDraft['kind'];
+      amount: number;
+      accountId: string;
+      toAccountId?: string;
+      categoryId?: string;
+      subcategoryId?: string;
+      note?: string;
+    },
+    dateKey: string,
+  ): Promise<void> {
     await this.add({
       kind: rule.kind,
       amount: rule.amount,
@@ -101,19 +97,23 @@ export class TransactionsService extends UserCollectionService<Transaction> {
       subcategoryId: rule.subcategoryId,
       date: dateKey,
       note: rule.note,
+      ruleId: rule.ruleId,
     });
   }
 
-  private async applyPending(): Promise<void> {
-    const pending = this.items().filter((t) => !t.applied && t.date <= todayKey());
-    if (!pending.length || !this.isReady) {
+  /**
+   * Подтверждение плановой операции, чья дата наступила: фиксируем
+   * фактическую сумму и доначисляем её к балансам счетов.
+   */
+  async confirm(txId: string, actualAmount: number): Promise<void> {
+    const old = this.items().find((t) => t.id === txId);
+    if (!old || old.applied || !this.isReady) {
       return;
     }
+    const amount = round2(actualAmount);
     const batch = writeBatch(this.firestore);
-    for (const t of pending) {
-      batch.update(this.docRef(t.id), { applied: true });
-      this.applyDeltas(batch, t, +1);
-    }
+    batch.update(this.docRef(txId), { amount, applied: true });
+    this.applyDeltas(batch, { ...old, amount }, +1);
     await batch.commit();
   }
 

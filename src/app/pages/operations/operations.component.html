@@ -134,8 +134,9 @@
             </div>
           </div>
           <p class="muted small">
-            Операция запишется один раз, а правило будет автоматически показывать этот платёж
-            в календаре и учитывать его в прогнозах.
+            Платёж появится в календаре и прогнозах. Когда наступит дата, на дашборде появится
+            запрос подтверждения — с возможностью указать фактическую сумму. Только после
+            подтверждения платёж попадёт в журнал.
           </p>
         </div>
       }
@@ -160,18 +161,13 @@
         @for (tx of transactions(); track tx.id) {
           <div class="row">
             <span class="kind-dot" [class]="tx.kind"></span>
-            <div class="row-main">
-              <div class="row-title">
-                {{ categoryName(tx) }}
-                @if (tx.applied === false) {
-                  <span class="badge">план</span>
-                }
-              </div>
-              <div class="row-sub">
-                {{ tx.date | date: 'dd.MM.yyyy' }}
-                · {{ accountName(tx.accountId) }}{{ tx.kind === 'transfer' ? ' → ' + accountName(tx.toAccountId) : '' }}{{ tx.note ? ' · ' + tx.note : '' }}
-              </div>
+          <div class="row-main">
+            <div class="row-title">{{ categoryName(tx) }}</div>
+            <div class="row-sub">
+              {{ tx.date | date: 'dd.MM.yyyy' }}
+              · {{ accountName(tx.accountId) }}{{ tx.kind === 'transfer' ? ' → ' + accountName(tx.toAccountId) : '' }}{{ tx.note ? ' · ' + tx.note : '' }}
             </div>
+          </div>
             <span class="row-amount" [class]="amountClass(tx.kind)">{{ signed(tx) }}</span>
             <button class="btn btn-ghost btn-sm" (click)="edit(tx)">Изменить</button>
             <button class="btn btn-danger btn-sm" (click)="remove(tx)">✕</button>

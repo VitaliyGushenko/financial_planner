@@ -104,8 +104,12 @@
               {{ event.kind === 'income' ? '+' : event.kind === 'expense' ? '−' : '' }}{{ money(event.amount) }}
             </span>
             @if (event.rule) {
-              <button class="btn btn-ghost btn-sm" (click)="recordEvent(day, event.id)" title="Создать реальную операцию из правила">
+              <button class="btn btn-ghost btn-sm" (click)="recordEvent(day, event.id)" title="Подтвердить и записать операцию с плановой суммой">
                 Записать
+              </button>
+            } @else if (event.planned) {
+              <button class="btn btn-danger btn-sm" (click)="removePlanned(event.id)" title="Удалить план">
+                ✕
               </button>
             }
           </div>

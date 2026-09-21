@@ -206,17 +206,24 @@ export class CalendarComponent {
     }
     await this.transactionsService.recordFromRule(
       {
-        title: event.rule.title,
+        ruleId: event.rule.id,
         kind: event.rule.kind,
         amount: event.rule.amount,
         accountId: event.rule.accountId,
         toAccountId: event.rule.toAccountId,
         categoryId: event.rule.categoryId,
         subcategoryId: event.rule.subcategoryId,
-        note: event.rule.note,
+        note: event.rule.note || event.rule.title,
       },
       day.key,
     );
+  }
+
+  /** Удалить плановую (ещё не подтверждённую) операцию прямо из модалки дня. */
+  async removePlanned(txId: string): Promise<void> {
+    if (confirm('Удалить плановую операцию?')) {
+      await this.transactionsService.remove(txId);
+    }
   }
 
   accountBalance(accountId: string): string {

@@ -43,7 +43,8 @@ export interface Category {
 /**
  * Разовая операция. date — ключ дня «YYYY-MM-DD».
  * Будущие операции в балансы не входят и участвуют только в проекции;
- * applied = true означает, что операция уже изменяла балансы счетов.
+ * applied = true означает, что операция подтверждена и изменяла балансы счетов.
+ * ruleId — правило, из которого создана операция (для учёта подтверждений платежей).
  */
 export interface Transaction {
   id: string;
@@ -56,6 +57,7 @@ export interface Transaction {
   date: string;
   note?: string;
   applied?: boolean;
+  ruleId?: string;
   createdAt?: Timestamp | null;
 }
 
@@ -69,6 +71,7 @@ export interface TransactionDraft {
   subcategoryId?: string;
   date: string;
   note?: string;
+  ruleId?: string;
 }
 
 /** Правило повторяющейся операции (зарплата, аренда, подписка...). */
@@ -89,6 +92,8 @@ export interface RecurringRule {
   startDate: string;
   /** Ключ дня последнего вхождения или null — бессрочно. */
   endDate: string | null;
+  /** Даты вхождений, которые пользователь пропустил (деньги не пришли). */
+  skippedDates?: string[];
   note?: string;
   createdAt?: Timestamp | null;
 }

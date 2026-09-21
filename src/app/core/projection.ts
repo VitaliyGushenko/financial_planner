@@ -24,6 +24,8 @@ export interface ProjectionEvent {
   signedDelta: number;
   /** Для recurring — правило, чтобы можно было «записать» операцию из календаря. */
   rule?: RecurringRule;
+  /** Плановая (ещё не подтверждённая) разовая операция. */
+  planned?: boolean;
 }
 
 export interface DayProjection {
@@ -149,9 +151,10 @@ export function buildProjection(input: ProjectionInput): Projection {
   // --- События ---
 
   // Записанные операции: для прошлого и сегодняшнего дня (факт).
+  // Незаподтверждённые плановые (applied=false) фактом не считаются.
   const deltaByPastDay = new Map<DayKey, number>();
   for (const tx of input.transactions) {
-    if (tx.date < pastStart || tx.date > today) {
+    if (tx.date < pastStart || tx.date > today || tx.applied === false) {
       continue;
     }
     const delta = signedDeltaOf(tx.kind, tx.amount || 0);
@@ -179,6 +182,7 @@ export function buildProjection(input: ProjectionInput): Projection {
       title: describeTransaction(tx, categoryById, accountById),
       amount: Math.abs(tx.amount || 0),
       signedDelta: delta,
+      planned: tx.applied === false,
     });
   }
 

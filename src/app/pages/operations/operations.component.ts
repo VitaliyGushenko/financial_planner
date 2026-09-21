@@ -53,7 +53,8 @@ export class OperationsComponent {
   };
 
   readonly accounts = this.accountsService.accounts;
-  readonly transactions = this.transactionsService.transactions;
+  /** Журнал показывает только подтверждённые операции (плановые ждут своего дня). */
+  readonly transactions = this.transactionsService.real;
   readonly rules = this.recurringService.rules;
 
   /** Активный таб страницы: журнал операций или правила повторения. */
@@ -127,12 +128,14 @@ export class OperationsComponent {
     const editing = this.editingId();
     if (editing) {
       await this.transactionsService.update(editing, draft);
+    } else if (this.form.repeat) {
+      // «Повторять регулярно»: создаём только правило. Первый платёж появится
+      // в календаре, а в журнал попадёт после подтверждения на дашборде.
+      await this.recurringService.create(this.buildRuleDraft());
+      this.closeForm();
+      return;
     } else {
       await this.transactionsService.add(draft);
-    }
-    // Галочка «Повторять»: вместе с операцией создаём правило.
-    if (!editing && this.form.repeat) {
-      await this.recurringService.create(this.buildRuleDraft());
     }
     this.closeForm();
   }

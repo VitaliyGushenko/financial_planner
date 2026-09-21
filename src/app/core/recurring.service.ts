@@ -1,5 +1,5 @@
 import { Injectable, computed } from '@angular/core';
-import { Timestamp, addDoc, deleteDoc, serverTimestamp, updateDoc } from '@angular/fire/firestore';
+import { Timestamp, addDoc, arrayUnion, deleteDoc, serverTimestamp, updateDoc } from '@angular/fire/firestore';
 
 import { RecurringRule } from './models';
 import { DayKey, pluralRu } from './day-key';
@@ -53,6 +53,14 @@ export class RecurringService extends UserCollectionService<RecurringRule> {
       return;
     }
     await deleteDoc(this.docRef(id));
+  }
+
+  /** Отметить вхождение правила пропущенным: деньги не пришли, операция не нужна. */
+  async skipOccurrence(ruleId: string, dateKey: DayKey): Promise<void> {
+    if (!this.isReady) {
+      return;
+    }
+    await updateDoc(this.docRef(ruleId), { skippedDates: arrayUnion(dateKey) });
   }
 
   /** Следующие n вхождений правила начиная строго после afterKey. */
