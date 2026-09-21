@@ -3,7 +3,11 @@
   <button class="btn" (click)="openForm()">+ Новая операция</button>
 </div>
 
-<app-modal [open]="formOpen()" [title]="editingId() ? 'Редактирование операции' : 'Новая операция'" (closed)="closeForm()">
+<app-modal
+  [open]="formOpen()"
+  [title]="editingRuleId() ? 'Редактирование правила' : editingId() ? 'Редактирование операции' : 'Новая операция'"
+  (closed)="closeForm()"
+>
   @if (accounts().length === 0) {
     <div class="empty-state">Сначала добавьте счёт в <a routerLink="/settings" (click)="closeForm()">настройках</a>.</div>
   } @else {
@@ -67,27 +71,72 @@
         }
 
         <div class="field">
-          <label for="date">Дата</label>
+          <label for="date">{{ form.repeat || editingRuleId() ? 'Дата первого платежа' : 'Дата' }}</label>
           <input id="date" name="date" type="date" [(ngModel)]="form.date" />
         </div>
       </div>
 
+      @if (form.kind !== 'transfer' && form.date > (todayMarker) && !form.repeat && !editingRuleId()) {
+        <p class="form-notice">Дата в будущем: операция попадёт в календарь-прогноз и зачтётся к балансу, когда наступит.</p>
+      }
+
       <div class="form-row">
         <div class="field note-field">
-          <label for="note">Заметка</label>
-          <input id="note" name="note" [(ngModel)]="form.note" placeholder="необязательно" />
+          <label for="note">{{ form.repeat || editingRuleId() ? 'Название' : 'Заметка' }}</label>
+          <input id="note" name="note" [(ngModel)]="form.note" [placeholder]="form.repeat || editingRuleId() ? 'например, Зарплата' : 'необязательно'" />
         </div>
         <div class="field submit-field">
-          <button class="btn" type="submit">{{ editingId() ? 'Сохранить' : 'Добавить' }}</button>
+          <button class="btn" type="submit">{{ editingId() || editingRuleId() ? 'Сохранить' : 'Добавить' }}</button>
           <button class="btn btn-ghost" type="button" (click)="closeForm()">Отмена</button>
         </div>
       </div>
 
+      @if (!editingId() && !editingRuleId()) {
+        <label class="check repeat-check">
+          <input type="checkbox" name="repeat" [(ngModel)]="form.repeat" />
+          Повторять регулярно
+        </label>
+      }
+
+      @if (form.repeat || editingRuleId()) {
+        <div class="repeat-block">
+          <div class="form-row">
+            <div class="field">
+              <label for="frequency">Как часто</label>
+              <select id="frequency" name="frequency" [(ngModel)]="form.frequency">
+                @for (f of frequencies; track f) {
+                  <option [value]="f">{{ frequencyLabels[f] }}</option>
+                }
+              </select>
+            </div>
+            @if (form.frequency === 'custom') {
+              <div class="field every-field">
+                <label for="every">Каждые</label>
+                <input id="every" name="every" type="number" min="1" step="1" [(ngModel)]="form.every" />
+              </div>
+              <div class="field">
+                <label for="customUnit">Единица</label>
+                <select id="customUnit" name="customUnit" [(ngModel)]="form.customUnit">
+                  @for (u of units; track u) {
+                    <option [value]="u">{{ unitLabels[u] }}</option>
+                  }
+                </select>
+              </div>
+            }
+            <div class="field">
+              <label for="endDate">Повторять до (необязательно)</label>
+              <input id="endDate" name="endDate" type="date" [(ngModel)]="form.endDate" />
+            </div>
+          </div>
+          <p class="muted small">
+            Операция запишется один раз, а правило будет автоматически показывать этот платёж
+            в календаре и учитывать его в прогнозах.
+          </p>
+        </div>
+      }
+
       @if (formError()) {
         <p class="form-error">{{ formError() }}</p>
-      }
-      @if (form.kind !== 'transfer' && form.date > (todayMarker)) {
-        <p class="form-notice">Дата в будущем: операция попадёт в календарь-прогноз и зачтётся к балансу, когда наступит.</p>
       }
     </form>
   }
@@ -120,5 +169,44 @@
     </div>
   } @else {
     <div class="empty-state">Пока пусто. Нажмите «+ Новая операция».</div>
+  }
+</div>
+
+<div class="card">
+  <h2 class="card-title">Повторяющиеся</h2>
+  @if (rules().length) {
+    <div class="rows">
+      @for (rule of rules(); track rule.id) {
+        <div class="row">
+          <span class="kind-dot" [class]="rule.kind"></span>
+          <div class="row-main">
+            <div class="row-title">
+              {{ rule.title }}
+              <span class="badge">повтор</span>
+            </div>
+            <div class="row-sub">
+              {{ frequencyOf(rule) }} · {{ accountName(rule.accountId) }}{{ rule.kind === 'transfer' ? ' → ' + accountName(rule.toAccountId) : '' }}
+              @if (ruleCategoryName(rule)) {
+                · {{ ruleCategoryName(rule) }}
+              }
+            </div>
+            <div class="row-sub">
+              @if (nextDate(rule); as next) {
+                далее: {{ formatDay(next) }}
+              } @else {
+                вхождений больше нет
+              }
+            </div>
+          </div>
+          <span class="row-amount" [class]="amountClass(rule.kind)">
+            {{ rule.kind === 'income' ? '+' : rule.kind === 'expense' ? '−' : '' }}{{ money(rule.amount) }}
+          </span>
+          <button class="btn btn-ghost btn-sm" (click)="editRule(rule)">Изменить</button>
+          <button class="btn btn-danger btn-sm" (click)="removeRule(rule)">✕</button>
+        </div>
+      }
+    </div>
+  } @else {
+    <div class="empty-state">Регулярных платежей нет. При создании операции включите «Повторять регулярно» — например, для зарплаты или аренды.</div>
   }
 </div>

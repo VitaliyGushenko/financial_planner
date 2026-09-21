@@ -24,11 +24,6 @@ export const routes: Routes = [
         title: 'Операции — Планировщик финансов',
       },
       {
-        path: 'recurring',
-        loadComponent: () => import('./pages/recurring/recurring.component').then((m) => m.RecurringComponent),
-        title: 'Повторяющиеся — Планировщик финансов',
-      },
-      {
         path: 'calendar',
         loadComponent: () => import('./pages/calendar/calendar.component').then((m) => m.CalendarComponent),
         title: 'Календарь — Планировщик финансов',
@@ -45,5 +40,6 @@ export const routes: Routes = [
       },
     ],
   },
+  { path: 'recurring', redirectTo: 'operations' },
   { path: '**', redirectTo: '' },
 ];
