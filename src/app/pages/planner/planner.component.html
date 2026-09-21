@@ -126,11 +126,6 @@
     @if (quickError()) {
       <p class="form-error">{{ quickError() }}</p>
     }
-
-    <div class="quick-actions">
-      <button class="btn" type="submit">Добавить в цели</button>
-      <button class="btn btn-ghost" type="button" (click)="quickOpen.set(false)">Отмена</button>
-    </div>
   </form>
 
   @if (quickAdvice(); as advice) {
@@ -156,4 +151,9 @@
       <p class="advice-message">{{ advice.message }}</p>
     </div>
   }
+
+  <div class="form-actions">
+    <button class="btn" type="button" (click)="addGoal()">Добавить в цели</button>
+    <button class="btn btn-ghost" type="button" (click)="quickOpen.set(false)">Отмена</button>
+  </div>
 </app-modal>

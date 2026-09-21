@@ -56,6 +56,9 @@ export class OperationsComponent {
   readonly transactions = this.transactionsService.transactions;
   readonly rules = this.recurringService.rules;
 
+  /** Активный таб страницы: журнал операций или правила повторения. */
+  readonly tab = signal<'journal' | 'recurring'>('journal');
+
   form = {
     kind: 'expense' as OperationKind,
     amount: null as number | null,

@@ -3,6 +3,15 @@
   <button class="btn" (click)="openForm()">+ Новая операция</button>
 </div>
 
+<div class="tabs">
+  <button type="button" [class.active]="tab() === 'journal'" (click)="tab.set('journal')">
+    Операции ({{ transactions().length }})
+  </button>
+  <button type="button" [class.active]="tab() === 'recurring'" (click)="tab.set('recurring')">
+    Повторяющиеся ({{ rules().length }})
+  </button>
+</div>
+
 <app-modal
   [open]="formOpen()"
   [title]="editingRuleId() ? 'Редактирование правила' : editingId() ? 'Редактирование операции' : 'Новая операция'"
@@ -85,10 +94,6 @@
           <label for="note">{{ form.repeat || editingRuleId() ? 'Название' : 'Заметка' }}</label>
           <input id="note" name="note" [(ngModel)]="form.note" [placeholder]="form.repeat || editingRuleId() ? 'например, Зарплата' : 'необязательно'" />
         </div>
-        <div class="field submit-field">
-          <button class="btn" type="submit">{{ editingId() || editingRuleId() ? 'Сохранить' : 'Добавить' }}</button>
-          <button class="btn btn-ghost" type="button" (click)="closeForm()">Отмена</button>
-        </div>
       </div>
 
       @if (!editingId() && !editingRuleId()) {
@@ -138,75 +143,82 @@
       @if (formError()) {
         <p class="form-error">{{ formError() }}</p>
       }
+
+      <div class="form-actions">
+        <button class="btn" type="submit">{{ editingId() || editingRuleId() ? 'Сохранить' : 'Добавить' }}</button>
+        <button class="btn btn-ghost" type="button" (click)="closeForm()">Отмена</button>
+      </div>
     </form>
   }
 </app-modal>
 
-<div class="card">
-  <h2 class="card-title">Журнал</h2>
-  @if (transactions().length) {
-    <div class="rows">
-      @for (tx of transactions(); track tx.id) {
-        <div class="row">
-          <span class="kind-dot" [class]="tx.kind"></span>
-          <div class="row-main">
-            <div class="row-title">
-              {{ categoryName(tx) }}
-              @if (tx.applied === false) {
-                <span class="badge">план</span>
-              }
+@if (tab() === 'journal') {
+  <div class="card">
+    <h2 class="card-title">Журнал</h2>
+    @if (transactions().length) {
+      <div class="rows">
+        @for (tx of transactions(); track tx.id) {
+          <div class="row">
+            <span class="kind-dot" [class]="tx.kind"></span>
+            <div class="row-main">
+              <div class="row-title">
+                {{ categoryName(tx) }}
+                @if (tx.applied === false) {
+                  <span class="badge">план</span>
+                }
+              </div>
+              <div class="row-sub">
+                {{ tx.date | date: 'dd.MM.yyyy' }}
+                · {{ accountName(tx.accountId) }}{{ tx.kind === 'transfer' ? ' → ' + accountName(tx.toAccountId) : '' }}{{ tx.note ? ' · ' + tx.note : '' }}
+              </div>
             </div>
-            <div class="row-sub">
-              {{ tx.date | date: 'dd.MM.yyyy' }}
-              · {{ accountName(tx.accountId) }}{{ tx.kind === 'transfer' ? ' → ' + accountName(tx.toAccountId) : '' }}{{ tx.note ? ' · ' + tx.note : '' }}
-            </div>
+            <span class="row-amount" [class]="amountClass(tx.kind)">{{ signed(tx) }}</span>
+            <button class="btn btn-ghost btn-sm" (click)="edit(tx)">Изменить</button>
+            <button class="btn btn-danger btn-sm" (click)="remove(tx)">✕</button>
           </div>
-          <span class="row-amount" [class]="amountClass(tx.kind)">{{ signed(tx) }}</span>
-          <button class="btn btn-ghost btn-sm" (click)="edit(tx)">Изменить</button>
-          <button class="btn btn-danger btn-sm" (click)="remove(tx)">✕</button>
-        </div>
-      }
-    </div>
-  } @else {
-    <div class="empty-state">Пока пусто. Нажмите «+ Новая операция».</div>
-  }
-</div>
-
-<div class="card">
-  <h2 class="card-title">Повторяющиеся</h2>
-  @if (rules().length) {
-    <div class="rows">
-      @for (rule of rules(); track rule.id) {
-        <div class="row">
-          <span class="kind-dot" [class]="rule.kind"></span>
-          <div class="row-main">
-            <div class="row-title">
-              {{ rule.title }}
-              <span class="badge">повтор</span>
+        }
+      </div>
+    } @else {
+      <div class="empty-state">Пока пусто. Нажмите «+ Новая операция».</div>
+    }
+  </div>
+} @else {
+  <div class="card">
+    <h2 class="card-title">Повторяющиеся</h2>
+    @if (rules().length) {
+      <div class="rows">
+        @for (rule of rules(); track rule.id) {
+          <div class="row">
+            <span class="kind-dot" [class]="rule.kind"></span>
+            <div class="row-main">
+              <div class="row-title">
+                {{ rule.title }}
+                <span class="badge">повтор</span>
+              </div>
+              <div class="row-sub">
+                {{ frequencyOf(rule) }} · {{ accountName(rule.accountId) }}{{ rule.kind === 'transfer' ? ' → ' + accountName(rule.toAccountId) : '' }}
+                @if (ruleCategoryName(rule)) {
+                  · {{ ruleCategoryName(rule) }}
+                }
+              </div>
+              <div class="row-sub">
+                @if (nextDate(rule); as next) {
+                  далее: {{ formatDay(next) }}
+                } @else {
+                  вхождений больше нет
+                }
+              </div>
             </div>
-            <div class="row-sub">
-              {{ frequencyOf(rule) }} · {{ accountName(rule.accountId) }}{{ rule.kind === 'transfer' ? ' → ' + accountName(rule.toAccountId) : '' }}
-              @if (ruleCategoryName(rule)) {
-                · {{ ruleCategoryName(rule) }}
-              }
-            </div>
-            <div class="row-sub">
-              @if (nextDate(rule); as next) {
-                далее: {{ formatDay(next) }}
-              } @else {
-                вхождений больше нет
-              }
-            </div>
+            <span class="row-amount" [class]="amountClass(rule.kind)">
+              {{ rule.kind === 'income' ? '+' : rule.kind === 'expense' ? '−' : '' }}{{ money(rule.amount) }}
+            </span>
+            <button class="btn btn-ghost btn-sm" (click)="editRule(rule)">Изменить</button>
+            <button class="btn btn-danger btn-sm" (click)="removeRule(rule)">✕</button>
           </div>
-          <span class="row-amount" [class]="amountClass(rule.kind)">
-            {{ rule.kind === 'income' ? '+' : rule.kind === 'expense' ? '−' : '' }}{{ money(rule.amount) }}
-          </span>
-          <button class="btn btn-ghost btn-sm" (click)="editRule(rule)">Изменить</button>
-          <button class="btn btn-danger btn-sm" (click)="removeRule(rule)">✕</button>
-        </div>
-      }
-    </div>
-  } @else {
-    <div class="empty-state">Регулярных платежей нет. При создании операции включите «Повторять регулярно» — например, для зарплаты или аренды.</div>
-  }
-</div>
+        }
+      </div>
+    } @else {
+      <div class="empty-state">Регулярных платежей нет. При создании операции включите «Повторять регулярно» — например, для зарплаты или аренды.</div>
+    }
+  </div>
+}
