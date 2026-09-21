@@ -28,7 +28,7 @@
           <input id="title" name="title" [(ngModel)]="form.title" placeholder="например, Зарплата" />
         </div>
         <div class="field amount-field">
-          <label for="amount">Сумма, ₽</label>
+          <label for="amount">Сумма, {{ curr.symbol() }}</label>
           <input id="amount" name="amount" type="number" min="0" step="0.01" [(ngModel)]="form.amount" placeholder="0" />
         </div>
         <div class="field">

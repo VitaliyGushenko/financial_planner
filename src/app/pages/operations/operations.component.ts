@@ -1,17 +1,17 @@
-import { Component, computed, inject, signal } from '@angular/core';
+import { Component, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
-import { DatePipe, DecimalPipe } from '@angular/common';
+import { DatePipe } from '@angular/common';
 
 import { AccountsService } from '../../core/accounts.service';
 import { CategoriesService } from '../../core/categories.service';
+import { CurrencyService } from '../../core/currency.service';
 import { TransactionsService } from '../../core/transactions.service';
-import { Category, OperationKind, Transaction } from '../../core/models';
+import { Category, OperationKind, Subcategory, Transaction } from '../../core/models';
 import { todayKey } from '../../core/day-key';
-import { formatMoney } from '../../core/format';
 
 @Component({
   selector: 'app-operations',
-  imports: [FormsModule, DatePipe, DecimalPipe],
+  imports: [FormsModule, DatePipe],
   templateUrl: './operations.component.html',
   styleUrl: './operations.component.less',
 })
@@ -19,6 +19,7 @@ export class OperationsComponent {
   private readonly accountsService = inject(AccountsService);
   private readonly categoriesService = inject(CategoriesService);
   private readonly transactionsService = inject(TransactionsService);
+  readonly curr = inject(CurrencyService);
 
   readonly kinds: OperationKind[] = ['expense', 'income', 'transfer'];
   readonly kindLabels: Record<OperationKind, string> = {
@@ -45,13 +46,16 @@ export class OperationsComponent {
 
   readonly formError = signal('');
 
-  readonly formCategories = computed<Category[]>(() =>
-    this.form.kind === 'income' ? this.categoriesService.incomeCategories() : this.categoriesService.expenseCategories(),
-  );
+  // Обычные методы, а не computed: form.kind — не сигнал, computed бы закэшировал список.
+  formCategories(): Category[] {
+    return this.form.kind === 'income'
+      ? this.categoriesService.incomeCategories()
+      : this.categoriesService.expenseCategories();
+  }
 
-  readonly formSubcategories = computed(() =>
-    this.formCategories().find((c) => c.id === this.form.categoryId)?.subcategories ?? [],
-  );
+  formSubcategories(): Subcategory[] {
+    return this.formCategories().find((c) => c.id === this.form.categoryId)?.subcategories ?? [];
+  }
 
   readonly transactions = this.transactionsService.transactions;
 
@@ -172,7 +176,7 @@ export class OperationsComponent {
   }
 
   signed(tx: Transaction): string {
-    const value = formatMoney(tx.amount);
+    const value = this.curr.format(tx.amount);
     if (tx.kind === 'income') {
       return `+${value}`;
     }
@@ -180,6 +184,10 @@ export class OperationsComponent {
       return `−${value}`;
     }
     return value;
+  }
+
+  money(value: number): string {
+    return this.curr.format(value);
   }
 
   amountClass(kind: string): string {

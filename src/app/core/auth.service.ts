@@ -75,6 +75,15 @@ export class AuthService {
     await updateProfile(user, { displayName });
   }
 
+  /** Меняет валюту интерфейса (settings.currency). */
+  async updateCurrency(code: string): Promise<void> {
+    const user = this.user();
+    if (!user) {
+      throw new Error('Пользователь не авторизован');
+    }
+    await updateDoc(this.profileRef(user.uid), { 'settings.currency': code });
+  }
+
   /** Читает документ профиля; если его нет — создаёт вместе со стартовыми счетами и категориями. */
   private async attachProfile(user: User): Promise<void> {
     this.profileSub?.unsubscribe();

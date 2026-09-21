@@ -4,8 +4,10 @@
 </div>
 
 <p class="muted intro">
-  Кликните на дату — покажет, сколько денег будет на счетах именно в этот день с учётом всех
-  запланированных доходов и расходов. Красным отмечены дни, когда остаток уходит в минус.
+  Кликните на дату — покажет остаток на этот день и все операции. Точки в ячейке означают
+  запланированные события: <span class="legend income">зелёные — доходы</span>,
+  <span class="legend expense">красные — расходы</span>, <span class="legend transfer">сиреневые — переводы</span>.
+  Красный фон ячейки — в этот день остаток уходит в минус.
 </p>
 
 <div class="card">
@@ -42,13 +44,13 @@
           (click)="select(cell)"
         >
           <span class="cell-day">{{ cell.dayOfMonth }}</span>
-          @if (balanceOf(cell.key); as bal) {
-            <span class="cell-balance">{{ bal }}</span>
-          }
           @if (eventsOf(cell.key).length > 0) {
             <span class="cell-dots">
               @for (event of eventsOf(cell.key).slice(0, 4); track event.id) {
                 <i class="dot" [class]="event.kind"></i>
+              }
+              @if (eventsOf(cell.key).length > 4) {
+                <i class="more">+{{ eventsOf(cell.key).length - 4 }}</i>
               }
             </span>
           }

@@ -3,7 +3,7 @@ import { Router, RouterLink, RouterLinkActive, RouterOutlet } from '@angular/rou
 
 import { AuthService } from './core/auth.service';
 import { AccountsService } from './core/accounts.service';
-import { formatMoney } from './core/format';
+import { CurrencyService } from './core/currency.service';
 
 @Component({
   selector: 'app-root',
@@ -14,6 +14,7 @@ import { formatMoney } from './core/format';
 export class AppComponent {
   private readonly auth = inject(AuthService);
   private readonly accounts = inject(AccountsService);
+  private readonly currency = inject(CurrencyService);
   private readonly router = inject(Router);
 
   readonly isReady = this.auth.isReady;
@@ -21,7 +22,7 @@ export class AppComponent {
   readonly displayName = computed(
     () => this.auth.profile()?.displayName || this.auth.user()?.email || '',
   );
-  readonly total = computed(() => formatMoney(this.accounts.total()));
+  readonly total = computed(() => this.currency.format(this.accounts.total()));
 
   constructor() {
     // Выход (или потеря сессии) на защищённой странице — уводим на /auth.

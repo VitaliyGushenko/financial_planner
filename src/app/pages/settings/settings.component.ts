@@ -1,16 +1,16 @@
-import { Component, computed, inject, signal } from '@angular/core';
+import { Component, computed, effect, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
-import { DecimalPipe } from '@angular/common';
 
 import { AuthService } from '../../core/auth.service';
 import { AccountsService } from '../../core/accounts.service';
 import { CategoriesService } from '../../core/categories.service';
+import { CurrencyService } from '../../core/currency.service';
 import { Account, AccountType, Category, CategoryKind } from '../../core/models';
 import { round2 } from '../../core/money';
 
 @Component({
   selector: 'app-settings',
-  imports: [FormsModule, DecimalPipe],
+  imports: [FormsModule],
   templateUrl: './settings.component.html',
   styleUrl: './settings.component.less',
 })
@@ -18,6 +18,7 @@ export class SettingsComponent {
   private readonly auth = inject(AuthService);
   private readonly accountsService = inject(AccountsService);
   private readonly categoriesService = inject(CategoriesService);
+  readonly curr = inject(CurrencyService);
 
   readonly accounts = this.accountsService.accounts;
   readonly total = computed(() => this.accountsService.total());
@@ -66,7 +67,7 @@ export class SettingsComponent {
   async removeAccount(account: Account): Promise<void> {
     const note =
       account.balance !== 0
-        ? `На счёте «${account.name}» остаток ${account.balance} ₽. Удалить счёт?`
+        ? `На счёте «${account.name}» остаток ${this.money(account.balance)}. Удалить счёт?`
         : `Удалить счёт «${account.name}»?`;
     if (confirm(note)) {
       await this.accountsService.remove(account.id);
@@ -119,14 +120,35 @@ export class SettingsComponent {
 
   // ----- Профиль -----
 
-  displayName = this.auth.profile()?.displayName ?? '';
+  displayName = '';
+  currencyCode = 'RUB';
   readonly email = computed(() => this.auth.profile()?.email ?? '');
   readonly profileSaved = signal(false);
+  private profileApplied = false;
+
+  constructor() {
+    // Профиль приходит асинхронно — заполняем поля, как только он загрузился.
+    effect(() => {
+      const profile = this.auth.profile();
+      if (profile && !this.profileApplied) {
+        this.profileApplied = true;
+        this.displayName = profile.displayName ?? '';
+        this.currencyCode = profile.settings?.currency ?? 'RUB';
+      }
+    });
+  }
 
   async saveProfile(): Promise<void> {
-    await this.auth.updateDisplayName(this.displayName.trim());
+    if (this.displayName.trim()) {
+      await this.auth.updateDisplayName(this.displayName.trim());
+    }
+    await this.auth.updateCurrency(this.currencyCode);
     this.profileSaved.set(true);
     setTimeout(() => this.profileSaved.set(false), 2500);
+  }
+
+  money(value: number): string {
+    return this.curr.format(value);
   }
 
   logout(): void {

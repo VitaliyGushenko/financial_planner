@@ -33,9 +33,10 @@ export interface PurchaseAdvice {
 export function advisePurchase(
   projection: Projection,
   amount: number,
-  options: { deadline?: DayKey | null; buffer?: number } = {},
+  options: { deadline?: DayKey | null; buffer?: number; currency?: string } = {},
 ): PurchaseAdvice {
   const buffer = options.buffer ?? 0;
+  const currency = options.currency ?? 'RUB';
   const deadline = options.deadline ?? null;
 
   // Минимальный остаток от дня D до конца горизонта (суффиксные минимумы).
@@ -93,6 +94,7 @@ export function advisePurchase(
       withinDeadline,
       earliestAffordable,
       deficitDays,
+      currency,
     }),
     tone: canBuyNow ? 'good' : recommendedDate !== null ? 'warn' : 'bad',
   };
@@ -108,6 +110,7 @@ function buildMessage(parts: {
   withinDeadline: boolean | null;
   earliestAffordable: DayKey | null;
   deficitDays: DayKey[];
+  currency: string;
 }): string {
   const horizonDays = parts.projection.futureKeys.length;
   const deadlineLate =
@@ -119,13 +122,13 @@ function buildMessage(parts: {
   if (parts.canBuyNow) {
     message =
       `Покупку можно сделать уже сегодня: после неё остаток ни разу ` +
-      `не опустится ниже ${fmt(parts.minBalanceAfter ?? 0)} на горизонте прогноза.`;
+      `не опустится ниже ${fmt(parts.minBalanceAfter ?? 0, parts.currency)} на горизонте прогноза.`;
   } else if (parts.recommendedDate !== null) {
     message =
       `Оптимальная дата — ${formatDayKeyShort(parts.recommendedDate)} ` +
       `(${inDays(parts.projection.today, parts.recommendedDate)}). ` +
       `Покупка в этот день не уведёт остаток в минус с учётом всех запланированных ` +
-      `трат: в худший день останется ${fmt(parts.minBalanceAfter ?? 0)}.`;
+      `трат: в худший день останется ${fmt(parts.minBalanceAfter ?? 0, parts.currency)}.`;
   } else if (parts.earliestAffordable !== null) {
     message =
       `На горизонте ${horizonDays} ${pluralRu(horizonDays, 'дня', 'дней', 'дней')} ` +
@@ -161,10 +164,10 @@ function buildMessage(parts: {
   return message;
 }
 
-function fmt(value: number): string {
+function fmt(value: number, currency: string): string {
   return value.toLocaleString('ru-RU', {
     style: 'currency',
-    currency: 'RUB',
+    currency,
     maximumFractionDigits: value % 1 === 0 ? 0 : 2,
   });
 }

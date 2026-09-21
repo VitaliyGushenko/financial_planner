@@ -3,9 +3,9 @@ import { FormsModule } from '@angular/forms';
 
 import { GoalsService } from '../../core/goals.service';
 import { ProjectionService } from '../../core/projection.service';
+import { CurrencyService } from '../../core/currency.service';
 import { advisePurchase, PurchaseAdvice } from '../../core/advisor';
 import { DayKey, formatDayKeyRelative } from '../../core/day-key';
-import { formatMoney } from '../../core/format';
 
 @Component({
   selector: 'app-planner',
@@ -16,6 +16,8 @@ import { formatMoney } from '../../core/format';
 export class PlannerComponent {
   private readonly goalsService = inject(GoalsService);
   private readonly projectionService = inject(ProjectionService);
+  private readonly currency = inject(CurrencyService);
+  readonly curr = this.currency;
 
   // Быстрый расчёт «хочу купить».
   quick = {
@@ -24,15 +26,17 @@ export class PlannerComponent {
     deadline: '',
   };
   readonly quickError = signal('');
-  readonly quickAdvice = computed<PurchaseAdvice | null>(() => {
+  // Обычный метод, а не computed: quick.amount — не сигнал, иначе подсказка не обновлялась бы при вводе.
+  quickAdvice(): PurchaseAdvice | null {
     const amount = Number(this.quick.amount);
     if (!amount || amount <= 0) {
       return null;
     }
     return advisePurchase(this.projectionService.projection(), amount, {
       deadline: this.quick.deadline || null,
+      currency: this.currency.currency(),
     });
-  });
+  }
 
   readonly goals = this.goalsService.goals;
   readonly projection = this.projectionService.projection;
@@ -42,7 +46,13 @@ export class PlannerComponent {
     const projection = this.projectionService.projection();
     const map = new Map<string, PurchaseAdvice>();
     for (const goal of this.goals()) {
-      map.set(goal.id, advisePurchase(projection, goal.amount, { deadline: goal.deadline }));
+      map.set(
+        goal.id,
+        advisePurchase(projection, goal.amount, {
+          deadline: goal.deadline,
+          currency: this.currency.currency(),
+        }),
+      );
     }
     return map;
   });
@@ -84,7 +94,7 @@ export class PlannerComponent {
   }
 
   money(value: number | null | undefined): string {
-    return value === null || value === undefined ? '—' : formatMoney(value);
+    return value === null || value === undefined ? '—' : this.currency.format(value);
   }
 
   markDone(goalId: string): void {

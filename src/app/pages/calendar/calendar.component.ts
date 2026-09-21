@@ -1,11 +1,11 @@
 import { Component, computed, inject, signal } from '@angular/core';
 
 import { AccountsService } from '../../core/accounts.service';
+import { CurrencyService } from '../../core/currency.service';
 import { TransactionsService } from '../../core/transactions.service';
 import { ProjectionService } from '../../core/projection.service';
 import { DayProjection, ProjectionEvent } from '../../core/projection';
 import { DayKey, formatDayKeyShort, fromDayKey, todayKey, weekdayOf } from '../../core/day-key';
-import { formatMoney } from '../../core/format';
 
 interface CalendarCell {
   key: DayKey;
@@ -28,6 +28,7 @@ export class CalendarComponent {
   private readonly projectionService = inject(ProjectionService);
   private readonly accountsService = inject(AccountsService);
   private readonly transactionsService = inject(TransactionsService);
+  private readonly currency = inject(CurrencyService);
 
   readonly today = todayKey();
   readonly weekdayLabels = ['Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб', 'Вс'];
@@ -129,20 +130,12 @@ export class CalendarComponent {
     }
   }
 
-  balanceOf(key: DayKey): string {
-    const day = this.projection().days.get(key);
-    if (!day) {
-      return '';
-    }
-    return Math.round(day.balance).toLocaleString('ru-RU');
-  }
-
   eventsOf(key: DayKey): ProjectionEvent[] {
     return this.projection().days.get(key)?.events ?? [];
   }
 
   money(value: number | null | undefined): string {
-    return value === null || value === undefined ? '—' : formatMoney(value);
+    return value === null || value === undefined ? '—' : this.currency.format(value);
   }
 
   dayTitle(key: DayKey): string {
@@ -174,7 +167,7 @@ export class CalendarComponent {
   }
 
   accountBalance(accountId: string): string {
-    return formatMoney(this.accountsService.byId().get(accountId)?.balance ?? 0);
+    return this.currency.format(this.accountsService.byId().get(accountId)?.balance ?? 0);
   }
 
   private currentMonthKey(): string {

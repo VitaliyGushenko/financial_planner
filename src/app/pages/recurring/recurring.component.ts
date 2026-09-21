@@ -1,12 +1,12 @@
-import { Component, computed, inject, signal } from '@angular/core';
+import { Component, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 
 import { AccountsService } from '../../core/accounts.service';
 import { CategoriesService } from '../../core/categories.service';
+import { CurrencyService } from '../../core/currency.service';
 import { RecurringService, RecurringDraft, describeFrequency } from '../../core/recurring.service';
-import { Category, CustomUnit, Frequency, OperationKind, RecurringRule } from '../../core/models';
+import { Category, CustomUnit, Frequency, OperationKind, RecurringRule, Subcategory } from '../../core/models';
 import { DayKey, formatDayKeyRelative, todayKey } from '../../core/day-key';
-import { formatMoney } from '../../core/format';
 import { occurrencesOfRule } from '../../core/projection';
 
 @Component({
@@ -19,6 +19,8 @@ export class RecurringComponent {
   private readonly accountsService = inject(AccountsService);
   private readonly categoriesService = inject(CategoriesService);
   private readonly recurringService = inject(RecurringService);
+  private readonly currency = inject(CurrencyService);
+  readonly curr = this.currency;
 
   readonly todayMarker = todayKey();
   readonly kinds: OperationKind[] = ['expense', 'income', 'transfer'];
@@ -57,13 +59,16 @@ export class RecurringComponent {
   editingId = signal<string | null>(null);
   readonly formError = signal('');
 
-  readonly formCategories = computed<Category[]>(() =>
-    this.form.kind === 'income' ? this.categoriesService.incomeCategories() : this.categoriesService.expenseCategories(),
-  );
+  // Обычные методы, а не computed: form.kind — не сигнал, computed бы закэшировал список.
+  formCategories(): Category[] {
+    return this.form.kind === 'income'
+      ? this.categoriesService.incomeCategories()
+      : this.categoriesService.expenseCategories();
+  }
 
-  readonly formSubcategories = computed(() =>
-    this.formCategories().find((c) => c.id === this.form.categoryId)?.subcategories ?? [],
-  );
+  formSubcategories(): Subcategory[] {
+    return this.formCategories().find((c) => c.id === this.form.categoryId)?.subcategories ?? [];
+  }
 
   readonly rules = this.recurringService.rules;
 
@@ -215,6 +220,6 @@ export class RecurringComponent {
   }
 
   money(value: number): string {
-    return formatMoney(value);
+    return this.currency.format(value);
   }
 }

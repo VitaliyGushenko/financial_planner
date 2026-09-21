@@ -4,11 +4,11 @@ import { RouterLink } from '@angular/router';
 
 import { AccountsService } from '../../core/accounts.service';
 import { CategoriesService } from '../../core/categories.service';
+import { CurrencyService } from '../../core/currency.service';
 import { ProjectionService } from '../../core/projection.service';
 import { TransactionsService } from '../../core/transactions.service';
 import { ProjectionEvent } from '../../core/projection';
 import { DayKey, formatDayKeyRelative } from '../../core/day-key';
-import { formatMoney } from '../../core/format';
 
 interface UpcomingDay {
   key: DayKey;
@@ -28,8 +28,9 @@ export class DashboardComponent {
   private readonly categoriesService = inject(CategoriesService);
   private readonly transactionsService = inject(TransactionsService);
   private readonly projectionService = inject(ProjectionService);
+  private readonly currency = inject(CurrencyService);
 
-  readonly total = computed(() => formatMoney(this.accountsService.total()));
+  readonly total = computed(() => this.currency.format(this.accountsService.total()));
   readonly accounts = this.accountsService.accounts;
 
   readonly projection = this.projectionService.projection;
@@ -81,11 +82,11 @@ export class DashboardComponent {
   }
 
   money(value: number): string {
-    return formatMoney(value);
+    return this.currency.format(value);
   }
 
   signed(value: number, kind: string): string {
-    return kind === 'income' ? `+${formatMoney(value)}` : `−${formatMoney(value)}`;
+    return kind === 'income' ? `+${this.currency.format(value)}` : `−${this.currency.format(value)}`;
   }
 
   amountClass(kind: string): string {
