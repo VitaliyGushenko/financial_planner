@@ -6,6 +6,17 @@
     font-weight: 600;
     white-space: nowrap;
 
+    &::before {
+      content: '';
+      display: inline-block;
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      margin-right: 5px;
+      background: currentColor;
+      vertical-align: 0.5px;
+    }
+
     &.income {
       color: var(--income);
     }
@@ -143,10 +154,6 @@
       color: var(--muted);
     }
   }
-}
-
-.day-panel {
-  margin-top: 14px;
 }
 
 .day-panel-head {

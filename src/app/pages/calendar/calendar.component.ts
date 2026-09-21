@@ -4,6 +4,7 @@ import { AccountsService } from '../../core/accounts.service';
 import { CurrencyService } from '../../core/currency.service';
 import { TransactionsService } from '../../core/transactions.service';
 import { ProjectionService } from '../../core/projection.service';
+import { ModalComponent } from '../../ui/modal.component';
 import { DayProjection, ProjectionEvent } from '../../core/projection';
 import { DayKey, formatDayKeyShort, fromDayKey, todayKey, weekdayOf } from '../../core/day-key';
 
@@ -20,7 +21,7 @@ interface CalendarWeek {
 
 @Component({
   selector: 'app-calendar',
-  imports: [],
+  imports: [ModalComponent],
   templateUrl: './calendar.component.html',
   styleUrl: './calendar.component.less',
 })
@@ -35,7 +36,8 @@ export class CalendarComponent {
 
   /** Отображаемый месяц: «YYYY-MM». */
   readonly month = signal(this.currentMonthKey());
-  readonly selected = signal(this.today);
+  /** Выбранный день (открыта модалка с деталями) или null. */
+  readonly selected = signal<DayKey | null>(null);
 
   readonly monthTitle = computed(() => {
     const [y, m] = this.month().split('-').map(Number);
@@ -81,7 +83,16 @@ export class CalendarComponent {
   readonly projection = this.projectionService.projection;
 
   /** Данные выбранного дня, если попадает в горизонт проекции. */
-  readonly selectedDay = computed<DayProjection | null>(() => this.projection().days.get(this.selected()) ?? null);
+  readonly selectedDay = computed<DayProjection | null>(() => {
+    const key = this.selected();
+    return key ? this.projection().days.get(key) ?? null : null;
+  });
+
+  /** Заголовок модалки выбранного дня. */
+  selectedTitle(): string {
+    const key = this.selected();
+    return key ? this.dayTitle(key) : '';
+  }
 
   readonly monthTotals = computed(() => {
     const [year, month] = this.month().split('-').map(Number);
@@ -120,7 +131,7 @@ export class CalendarComponent {
 
   goToday(): void {
     this.month.set(this.currentMonthKey());
-    this.selected.set(this.today);
+    this.selected.set(null);
   }
 
   select(cell: CalendarCell): void {

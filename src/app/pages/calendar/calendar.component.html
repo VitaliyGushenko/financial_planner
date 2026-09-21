@@ -4,10 +4,11 @@
 </div>
 
 <p class="muted intro">
-  Кликните на дату — покажет остаток на этот день и все операции. Точки в ячейке означают
-  запланированные события: <span class="legend income">зелёные — доходы</span>,
-  <span class="legend expense">красные — расходы</span>, <span class="legend transfer">сиреневые — переводы</span>.
-  Красный фон ячейки — в этот день остаток уходит в минус.
+  Клик по дате — остаток и операции дня. Точки:
+  <span class="legend income">доходы</span>,
+  <span class="legend expense">расходы</span>,
+  <span class="legend transfer">переводы</span>;
+  красная ячейка — остаток уходит в минус.
 </p>
 
 <div class="card">
@@ -60,18 +61,15 @@
   }
 </div>
 
-@if (selectedDay(); as day) {
-  <div class="card day-panel">
+<app-modal [open]="selected() !== null" [title]="selectedTitle()" (closed)="selected.set(null)">
+  @if (selectedDay(); as day) {
     <div class="day-panel-head">
-      <div>
-        <h2 class="card-title">{{ dayTitle(day.key) }}</h2>
-        <div class="muted small">
-          @if (day.past) {
-            Остаток на конец дня (по записанным операциям)
-          } @else {
-            Прогноз остатка на конец дня
-          }
-        </div>
+      <div class="muted small">
+        @if (day.past) {
+          Остаток на конец дня (по записанным операциям)
+        } @else {
+          Прогноз остатка на конец дня
+        }
       </div>
       <div class="day-balances">
         <div class="day-balance-main" [class.negative]="day.balance < 0">{{ money(day.balance) }}</div>
@@ -107,5 +105,5 @@
     } @else {
       <div class="empty-state">В этот день операций нет</div>
     }
-  </div>
-}
+  }
+</app-modal>
