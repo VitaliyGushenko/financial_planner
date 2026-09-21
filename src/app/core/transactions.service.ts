@@ -1,5 +1,5 @@
 import { Injectable, computed, inject } from '@angular/core';
-import { Timestamp, doc, increment, serverTimestamp, setDoc, writeBatch } from '@angular/fire/firestore';
+import { Timestamp, doc, getDoc, increment, serverTimestamp, setDoc, writeBatch } from '@angular/fire/firestore';
 
 import { Transaction, TransactionDraft } from './models';
 import { round2 } from './money';
@@ -39,7 +39,7 @@ export class TransactionsService extends UserCollectionService<Transaction> {
     const batch = writeBatch(this.firestore);
     batch.set(ref, { ...draft, applied, createdAt: serverTimestamp() });
     if (applied) {
-      this.applyDeltas(batch, draft, +1);
+      await this.applyDeltas(batch, draft, +1);
     }
     await batch.commit();
   }
@@ -53,10 +53,10 @@ export class TransactionsService extends UserCollectionService<Transaction> {
     const batch = writeBatch(this.firestore);
     batch.set(this.docRef(id), { ...draft, applied, createdAt: old.createdAt ?? serverTimestamp() });
     if (old.applied) {
-      this.applyDeltas(batch, old, -1);
+      await this.applyDeltas(batch, old, -1);
     }
     if (applied) {
-      this.applyDeltas(batch, draft, +1);
+      await this.applyDeltas(batch, draft, +1);
     }
     await batch.commit();
   }
@@ -69,7 +69,7 @@ export class TransactionsService extends UserCollectionService<Transaction> {
     const batch = writeBatch(this.firestore);
     batch.delete(this.docRef(id));
     if (old.applied) {
-      this.applyDeltas(batch, old, -1);
+      await this.applyDeltas(batch, old, -1);
     }
     await batch.commit();
   }
@@ -113,41 +113,46 @@ export class TransactionsService extends UserCollectionService<Transaction> {
     const amount = round2(actualAmount);
     const batch = writeBatch(this.firestore);
     batch.update(this.docRef(txId), { amount, applied: true });
-    this.applyDeltas(batch, { ...old, amount }, +1);
+    await this.applyDeltas(batch, { ...old, amount }, +1);
     await batch.commit();
   }
 
   /**
    * Влияние операции на балансы счетов. sign=1 — применить, sign=-1 — отменить.
    * Перевод двигает деньги между своими счетами (на общий баланс не влияет).
+   * Если счёт был удалён, корректировка баланса пропускается — иначе весь
+   * пакет падает с «No document to update» и операция не сохраняется.
    */
-  private applyDeltas(
+  private async applyDeltas(
     batch: ReturnType<typeof writeBatch>,
     tx: Pick<TransactionDraft, 'kind' | 'amount' | 'accountId' | 'toAccountId'>,
     sign: 1 | -1,
-  ): void {
+  ): Promise<void> {
     if (tx.kind === 'transfer') {
-      this.applyDelta(batch, tx.accountId, -sign * tx.amount);
+      await this.applyDelta(batch, tx.accountId, -sign * tx.amount);
       if (tx.toAccountId) {
-        this.applyDelta(batch, tx.toAccountId, sign * tx.amount);
+        await this.applyDelta(batch, tx.toAccountId, sign * tx.amount);
       }
       return;
     }
     const factor = tx.kind === 'income' ? 1 : -1;
-    this.applyDelta(batch, tx.accountId, sign * factor * tx.amount);
+    await this.applyDelta(batch, tx.accountId, sign * factor * tx.amount);
   }
 
-  private applyDelta(
+  private async applyDelta(
     batch: ReturnType<typeof writeBatch>,
     accountId: string | undefined,
     delta: number,
-  ): void {
+  ): Promise<void> {
     if (!accountId || !delta) {
       return;
     }
-    batch.update(doc(this.firestore, 'users', this.uid, 'accounts', accountId), {
-      balance: increment(round2(delta)),
-    });
+    const ref = doc(this.firestore, 'users', this.uid, 'accounts', accountId);
+    const snap = await getDoc(ref);
+    if (!snap.exists()) {
+      return;
+    }
+    batch.update(ref, { balance: increment(round2(delta)) });
   }
 
   private byCreated(t: Transaction): number {
