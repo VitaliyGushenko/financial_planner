@@ -63,11 +63,11 @@
 <app-modal [open]="selected() !== null" [title]="selectedTitle()" (closed)="selected.set(null)">
   @if (selectedDay(); as day) {
     <div class="day-nav">
-      <button class="btn btn-ghost btn-sm" (click)="shiftSelected(-1)" [disabled]="!canPrev()" aria-label="Предыдущий день" title="Предыдущий день (←)">
+      <button class="btn btn-ghost btn-sm" (click)="shiftSelected(-1)" [disabled]="!canPrev()" aria-label="Предыдущий день" title="Предыдущий день (← / ↑)">
         ← Назад
       </button>
       <span class="weekday">{{ weekdayLabel() }}</span>
-      <button class="btn btn-ghost btn-sm" (click)="shiftSelected(1)" [disabled]="!canNext()" aria-label="Следующий день" title="Следующий день (→)">
+      <button class="btn btn-ghost btn-sm" (click)="shiftSelected(1)" [disabled]="!canNext()" aria-label="Следующий день" title="Следующий день (→ / ↓)">
         Вперёд →
       </button>
     </div>

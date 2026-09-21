@@ -25,6 +25,8 @@ interface CalendarWeek {
   host: {
     '(document:keydown.arrowleft)': 'onArrowKey(-1)',
     '(document:keydown.arrowright)': 'onArrowKey(1)',
+    '(document:keydown.arrowup)': 'onArrowKey(-1)',
+    '(document:keydown.arrowdown)': 'onArrowKey(1)',
   },
   templateUrl: './calendar.component.html',
   styleUrl: './calendar.component.less',
