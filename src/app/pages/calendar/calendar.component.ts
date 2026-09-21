@@ -133,11 +133,6 @@ export class CalendarComponent {
     this.month.set(`${ny}-${String(nm).padStart(2, '0')}`);
   }
 
-  goToday(): void {
-    this.month.set(this.currentMonthKey());
-    this.selected.set(null);
-  }
-
   select(cell: CalendarCell): void {
     this.selected.set(cell.key);
     if (!cell.inMonth) {
