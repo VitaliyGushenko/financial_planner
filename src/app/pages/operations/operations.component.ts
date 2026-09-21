@@ -1,4 +1,4 @@
-import { Component, inject, signal } from '@angular/core';
+import { Component, computed, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { DatePipe } from '@angular/common';
 import { RouterLink } from '@angular/router';
@@ -6,6 +6,8 @@ import { RouterLink } from '@angular/router';
 import { AccountsService } from '../../core/accounts.service';
 import { CategoriesService } from '../../core/categories.service';
 import { CurrencyService } from '../../core/currency.service';
+import { PendingService } from '../../core/pending.service';
+import { PendingItem } from '../../core/pending';
 import { RecurringService, RecurringDraft, describeFrequency } from '../../core/recurring.service';
 import { TransactionsService } from '../../core/transactions.service';
 import { ModalComponent } from '../../ui/modal.component';
@@ -28,6 +30,7 @@ export class OperationsComponent {
   private readonly categoriesService = inject(CategoriesService);
   private readonly transactionsService = inject(TransactionsService);
   private readonly recurringService = inject(RecurringService);
+  private readonly pendingService = inject(PendingService);
   readonly curr = inject(CurrencyService);
 
   readonly todayMarker = todayKey();
@@ -59,6 +62,58 @@ export class OperationsComponent {
 
   /** Активный таб страницы: журнал операций или правила повторения. */
   readonly tab = signal<'journal' | 'recurring'>('journal');
+
+  // ----- Платежи, ожидающие подтверждения -----
+
+  readonly pending = this.pendingService.items;
+  private readonly pendingAmounts = signal<Record<string, number>>({});
+
+  amountOf(item: PendingItem): number {
+    return this.pendingAmounts()[item.id] ?? item.amount;
+  }
+
+  setAmount(item: PendingItem, raw: string): void {
+    const value = Number(raw);
+    this.pendingAmounts.update((map) => ({
+      ...map,
+      [item.id]: Number.isFinite(value) && value > 0 ? value : item.amount,
+    }));
+  }
+
+  async confirmPending(item: PendingItem): Promise<void> {
+    const amount = this.amountOf(item);
+    if (item.txId) {
+      // Плановая разовая операция: фиксируем фактическую сумму.
+      await this.transactionsService.confirm(item.txId, amount);
+      return;
+    }
+    if (item.ruleId) {
+      const rule = this.recurringService.byId().get(item.ruleId);
+      if (!rule) {
+        return;
+      }
+      await this.transactionsService.add({
+        kind: rule.kind,
+        amount,
+        accountId: rule.accountId,
+        toAccountId: rule.toAccountId,
+        categoryId: rule.categoryId,
+        subcategoryId: rule.subcategoryId,
+        date: item.date,
+        note: rule.note || rule.title,
+        ruleId: rule.id,
+      });
+    }
+  }
+
+  /** Пропустить платёж правила / удалить плановую операцию. */
+  async skipPending(item: PendingItem): Promise<void> {
+    if (item.txId) {
+      await this.transactionsService.remove(item.txId);
+    } else if (item.ruleId) {
+      await this.recurringService.skipOccurrence(item.ruleId, item.date);
+    }
+  }
 
   form = {
     kind: 'expense' as OperationKind,
