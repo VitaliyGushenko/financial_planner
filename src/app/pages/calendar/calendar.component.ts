@@ -6,7 +6,7 @@ import { TransactionsService } from '../../core/transactions.service';
 import { ProjectionService } from '../../core/projection.service';
 import { ModalComponent } from '../../ui/modal.component';
 import { DayProjection, ProjectionEvent } from '../../core/projection';
-import { DayKey, formatDayKeyShort, fromDayKey, todayKey, weekdayOf } from '../../core/day-key';
+import { DayKey, addDaysToKey, formatDayKeyShort, fromDayKey, todayKey, weekdayOf } from '../../core/day-key';
 
 interface CalendarCell {
   key: DayKey;
@@ -22,6 +22,10 @@ interface CalendarWeek {
 @Component({
   selector: 'app-calendar',
   imports: [ModalComponent],
+  host: {
+    '(document:keydown.arrowleft)': 'onArrowKey(-1)',
+    '(document:keydown.arrowright)': 'onArrowKey(1)',
+  },
   templateUrl: './calendar.component.html',
   styleUrl: './calendar.component.less',
 })
@@ -139,6 +143,49 @@ export class CalendarComponent {
     if (!cell.inMonth) {
       this.month.set(cell.key.slice(0, 7));
     }
+  }
+
+  /** Сдвиг выбранного дня на ±1 (стрелки в модалке и клавиши ←/→). */
+  shiftSelected(delta: number): void {
+    const key = this.selected();
+    if (!key) {
+      return;
+    }
+    const next = addDaysToKey(key, delta);
+    if (!this.projection().days.has(next)) {
+      return; // край горизонта прогноза
+    }
+    this.selected.set(next);
+    const monthOfNext = next.slice(0, 7);
+    if (monthOfNext !== this.month()) {
+      this.month.set(monthOfNext);
+    }
+  }
+
+  onArrowKey(delta: number): void {
+    if (this.selected()) {
+      this.shiftSelected(delta);
+    }
+  }
+
+  readonly canPrev = computed(() => {
+    const key = this.selected();
+    return !!key && this.projection().days.has(addDaysToKey(key, -1));
+  });
+
+  readonly canNext = computed(() => {
+    const key = this.selected();
+    return !!key && this.projection().days.has(addDaysToKey(key, 1));
+  });
+
+  /** День недели выбранной даты: «вторник». */
+  weekdayLabel(): string {
+    const key = this.selected();
+    if (!key) {
+      return '';
+    }
+    const label = fromDayKey(key).toLocaleDateString('ru-RU', { weekday: 'long' });
+    return label.charAt(0).toUpperCase() + label.slice(1);
   }
 
   eventsOf(key: DayKey): ProjectionEvent[] {
