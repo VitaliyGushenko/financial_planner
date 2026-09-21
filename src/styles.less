@@ -348,6 +348,74 @@ textarea:focus {
   justify-content: center;
 }
 
+/* ----- Модальные окна ----- */
+
+body.modal-open {
+  overflow: hidden;
+}
+
+.modal-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 50;
+  background: rgba(15, 23, 32, 0.45);
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  padding: 40px 16px;
+  overflow-y: auto;
+}
+
+.modal-dialog {
+  background: var(--surface);
+  border-radius: 14px;
+  box-shadow: 0 12px 40px rgba(10, 20, 30, 0.22);
+  width: 100%;
+  max-width: 680px;
+  padding: 18px 20px 20px;
+  animation: modal-in 0.15s ease-out;
+}
+
+.modal-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin-bottom: 14px;
+
+  h2 {
+    font-size: 18px;
+    margin: 0;
+  }
+}
+
+.modal-close {
+  border: none;
+  background: var(--surface-2);
+  width: 30px;
+  height: 30px;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 14px;
+  color: var(--muted);
+
+  &:hover {
+    background: var(--border);
+    color: var(--text);
+  }
+}
+
+@keyframes modal-in {
+  from {
+    opacity: 0;
+    transform: translateY(-8px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
 /* ----- Каркас приложения ----- */
 
 .app-header {

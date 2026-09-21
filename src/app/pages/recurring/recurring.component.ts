@@ -1,17 +1,19 @@
 import { Component, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
+import { RouterLink } from '@angular/router';
 
 import { AccountsService } from '../../core/accounts.service';
 import { CategoriesService } from '../../core/categories.service';
 import { CurrencyService } from '../../core/currency.service';
 import { RecurringService, RecurringDraft, describeFrequency } from '../../core/recurring.service';
+import { ModalComponent } from '../../ui/modal.component';
 import { Category, CustomUnit, Frequency, OperationKind, RecurringRule, Subcategory } from '../../core/models';
 import { DayKey, formatDayKeyRelative, todayKey } from '../../core/day-key';
 import { occurrencesOfRule } from '../../core/projection';
 
 @Component({
   selector: 'app-recurring',
-  imports: [FormsModule],
+  imports: [FormsModule, RouterLink, ModalComponent],
   templateUrl: './recurring.component.html',
   styleUrl: './recurring.component.less',
 })
@@ -57,6 +59,8 @@ export class RecurringComponent {
     note: '',
   };
   editingId = signal<string | null>(null);
+  /** Открыта ли модалка с формой (создание/редактирование). */
+  readonly formOpen = signal(false);
   readonly formError = signal('');
 
   // Обычные методы, а не computed: form.kind — не сигнал, computed бы закэшировал список.
@@ -109,6 +113,16 @@ export class RecurringComponent {
     } else {
       await this.recurringService.create(draft);
     }
+    this.closeForm();
+  }
+
+  openForm(): void {
+    this.resetForm();
+    this.formOpen.set(true);
+  }
+
+  closeForm(): void {
+    this.formOpen.set(false);
     this.resetForm();
   }
 
@@ -130,14 +144,14 @@ export class RecurringComponent {
       note: rule.note ?? '',
     };
     this.formError.set('');
-    window.scrollTo({ top: 0, behavior: 'smooth' });
+    this.formOpen.set(true);
   }
 
   async remove(rule: RecurringRule): Promise<void> {
     if (confirm(`Удалить правило «${rule.title}»?`)) {
       await this.recurringService.remove(rule.id);
       if (this.editingId() === rule.id) {
-        this.resetForm();
+        this.closeForm();
       }
     }
   }

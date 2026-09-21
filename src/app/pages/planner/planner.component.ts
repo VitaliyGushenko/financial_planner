@@ -7,13 +7,14 @@ import { CurrencyService } from '../../core/currency.service';
 import { GoalsService } from '../../core/goals.service';
 import { ProjectionService } from '../../core/projection.service';
 import { TransactionsService } from '../../core/transactions.service';
+import { ModalComponent } from '../../ui/modal.component';
 import { advisePurchase, PurchaseAdvice } from '../../core/advisor';
 import { Category, Goal } from '../../core/models';
 import { DayKey, formatDayKeyRelative, todayKey } from '../../core/day-key';
 
 @Component({
   selector: 'app-planner',
-  imports: [FormsModule],
+  imports: [FormsModule, ModalComponent],
   templateUrl: './planner.component.html',
   styleUrl: './planner.component.less',
 })
@@ -37,6 +38,8 @@ export class PlannerComponent {
     deadline: '',
   };
   readonly quickError = signal('');
+  /** Открыта ли модалка «Хочу купить». */
+  readonly quickOpen = signal(false);
   // Обычный метод, а не computed: quick.amount — не сигнал, иначе подсказка не обновлялась бы при вводе.
   quickAdvice(): PurchaseAdvice | null {
     const amount = Number(this.quick.amount);
@@ -90,6 +93,13 @@ export class PlannerComponent {
     });
     this.quick = { title: '', amount: null, deadline: '' };
     this.quickError.set('');
+    this.quickOpen.set(false);
+  }
+
+  openQuick(): void {
+    this.quick = { title: '', amount: null, deadline: '' };
+    this.quickError.set('');
+    this.quickOpen.set(true);
   }
 
   adviceFor(goalId: string): PurchaseAdvice | null {

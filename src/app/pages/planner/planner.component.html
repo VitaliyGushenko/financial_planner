@@ -1,5 +1,6 @@
 <div class="page-head">
   <h1>Планировщик покупок</h1>
+  <button class="btn" (click)="openQuick()">+ Хочу купить</button>
 </div>
 
 <p class="muted intro">
@@ -7,156 +8,152 @@
   доходы и расходы и подскажет дату, когда покупка не оставит вас в минусе.
 </p>
 
-<div class="grid-2">
-  <div class="card">
-    <h2 class="card-title">Хочу купить</h2>
-    <form (ngSubmit)="addGoal()">
-      <div class="form-row">
-        <div class="field grow">
-          <label for="title">Что хотим купить</label>
-          <input id="title" name="title" [(ngModel)]="quick.title" placeholder="например, Ноутбук" />
-        </div>
-        <div class="field amount-field">
-          <label for="amount">Сумма, {{ curr.symbol() }}</label>
-          <input id="amount" name="amount" type="number" min="0" step="0.01" [(ngModel)]="quick.amount" placeholder="0" />
-        </div>
-        <div class="field">
-          <label for="deadline">Желаемый срок</label>
-          <input id="deadline" name="deadline" type="date" [(ngModel)]="quick.deadline" />
-        </div>
-      </div>
-
-      @if (quickError()) {
-        <p class="form-error">{{ quickError() }}</p>
-      }
-
-      <div class="quick-actions">
-        <button class="btn" type="submit">Добавить в цели</button>
-      </div>
-    </form>
-
-    @if (quickAdvice(); as advice) {
-      <div [class]="'advice ' + advice.tone">
-        <div class="advice-head">
-          @if (advice.canBuyNow) {
-            <span class="advice-icon">✅</span>
-          } @else if (advice.recommendedDate) {
-            <span class="advice-icon">📅</span>
-          } @else {
-            <span class="advice-icon">🚫</span>
-          }
-          <div>
-            @if (advice.recommendedDate) {
-              <div class="advice-date">
-                {{ advice.canBuyNow ? 'Можно покупать сегодня' : 'Оптимальная дата: ' + dateLabel(advice.recommendedDate) }}
-              </div>
-            } @else {
-              <div class="advice-date">Пока не получается накопить</div>
-            }
-          </div>
-        </div>
-        <p class="advice-message">{{ advice.message }}</p>
-      </div>
-    }
+@if (deficitDays().length) {
+  <div class="card deficit-card">
+    <h2 class="card-title">⚠ Прогноз дефицита</h2>
+    <p>
+      Без новых трат остаток уходит в минус на
+      {{ deficitDays().length }} дн. — впервые
+      {{ dateLabel(deficitDays()[0]) }}.
+      Проверьте повторяющиеся расходы или добавьте доход.
+    </p>
   </div>
+}
 
-  <div>
-    @if (deficitDays().length) {
-      <div class="card deficit-card">
-        <h2 class="card-title">⚠ Прогноз дефицита</h2>
-        <p>
-          Без новых трат остаток уходит в минус на
-          {{ deficitDays().length }} дн. — впервые
-          {{ dateLabel(deficitDays()[0]) }}.
-          Проверьте повторяющиеся расходы или добавьте доход.
-        </p>
-      </div>
-    }
+<div class="card">
+  <h2 class="card-title">Цели ({{ goals().length }})</h2>
+  @if (goals().length) {
+    <div class="rows">
+      @for (goal of goals(); track goal.id) {
+        <div class="goal">
+          <div class="goal-head">
+            <div class="row-main">
+              <div class="row-title">{{ goal.title }}</div>
+              <div class="row-sub">
+                {{ money(goal.amount) }}
+                @if (goal.deadline) {
+                  · к {{ dateLabel(goal.deadline) }}
+                }
+              </div>
+            </div>
+            <button class="btn btn-ghost btn-sm" (click)="markDone(goal.id)" title="Отметить покупку: списать со счёта">
+              Куплено
+            </button>
+            <button class="btn btn-danger btn-sm" (click)="remove(goal.id)" title="Удалить">✕</button>
+          </div>
+          @if (adviceFor(goal.id); as advice) {
+            <div class="goal-advice" [class.ok]="advice.canBuyNow">
+              @if (advice.canBuyNow) {
+                Уже можно покупать — остаток не уйдёт в минус.
+              } @else if (advice.recommendedDate) {
+                Оптимально: {{ dateLabel(advice.recommendedDate) }} ({{ money(advice.minBalanceAfter) }} останется в худший день).
+              } @else {
+                Накопить безопасно не выходит — стоит пересмотреть планы.
+              }
+            </div>
+          }
 
-    <div class="card">
-      <h2 class="card-title">Цели ({{ goals().length }})</h2>
-      @if (goals().length) {
-        <div class="rows">
-          @for (goal of goals(); track goal.id) {
-            <div class="goal">
-              <div class="goal-head">
-                <div class="row-main">
-                  <div class="row-title">{{ goal.title }}</div>
-                  <div class="row-sub">
-                    {{ money(goal.amount) }}
-                    @if (goal.deadline) {
-                      · к {{ dateLabel(goal.deadline) }}
-                    }
+          @if (buyingGoalId() === goal.id) {
+            <div class="buy-form">
+              <div class="buy-title">Отметить покупку «{{ goal.title }}» — {{ money(goal.amount) }}</div>
+              @if (accounts().length === 0) {
+                <p class="form-error">Сначала добавьте счёт в настройках — списывать не с чего.</p>
+              } @else {
+                <div class="form-row">
+                  <div class="field">
+                    <label for="buyAcc-{{ goal.id }}">Списать со счёта</label>
+                    <select id="buyAcc-{{ goal.id }}" [name]="'buyAcc-' + goal.id" [(ngModel)]="buyForm.accountId">
+                      <option value="" disabled>— выберите —</option>
+                      @for (acc of accounts(); track acc.id) {
+                        <option [value]="acc.id">{{ acc.name }} ({{ money(acc.balance) }})</option>
+                      }
+                    </select>
+                  </div>
+                  <div class="field">
+                    <label for="buyCat-{{ goal.id }}">Категория</label>
+                    <select id="buyCat-{{ goal.id }}" [name]="'buyCat-' + goal.id" [(ngModel)]="buyForm.categoryId">
+                      <option value="">— не указывать —</option>
+                      @for (cat of expenseCategories(); track cat.id) {
+                        <option [value]="cat.id">{{ cat.name }}</option>
+                      }
+                    </select>
+                  </div>
+                  <div class="field">
+                    <label for="buyDate-{{ goal.id }}">Дата покупки</label>
+                    <input id="buyDate-{{ goal.id }}" [name]="'buyDate-' + goal.id" type="date" [(ngModel)]="buyForm.date" [max]="todayMarker" />
                   </div>
                 </div>
-                <button class="btn btn-ghost btn-sm" (click)="markDone(goal.id)" title="Отметить покупку: списать со счёта">
-                  Куплено
-                </button>
-                <button class="btn btn-danger btn-sm" (click)="remove(goal.id)" title="Удалить">✕</button>
-              </div>
-              @if (adviceFor(goal.id); as advice) {
-                <div class="goal-advice" [class.ok]="advice.canBuyNow">
-                  @if (advice.canBuyNow) {
-                    Уже можно покупать — остаток не уйдёт в минус.
-                  } @else if (advice.recommendedDate) {
-                    Оптимально: {{ dateLabel(advice.recommendedDate) }} ({{ money(advice.minBalanceAfter) }} останется в худший день).
-                  } @else {
-                    Накопить безопасно не выходит — стоит пересмотреть планы.
-                  }
-                </div>
-              }
-
-              @if (buyingGoalId() === goal.id) {
-                <div class="buy-form">
-                  <div class="buy-title">Отметить покупку «{{ goal.title }}» — {{ money(goal.amount) }}</div>
-                  @if (accounts().length === 0) {
-                    <p class="form-error">Сначала добавьте счёт в настройках — списывать не с чего.</p>
-                  } @else {
-                    <div class="form-row">
-                      <div class="field">
-                        <label for="buyAcc-{{ goal.id }}">Списать со счёта</label>
-                        <select id="buyAcc-{{ goal.id }}" [name]="'buyAcc-' + goal.id" [(ngModel)]="buyForm.accountId">
-                          <option value="" disabled>— выберите —</option>
-                          @for (acc of accounts(); track acc.id) {
-                            <option [value]="acc.id">{{ acc.name }} ({{ money(acc.balance) }})</option>
-                          }
-                        </select>
-                      </div>
-                      <div class="field">
-                        <label for="buyCat-{{ goal.id }}">Категория</label>
-                        <select id="buyCat-{{ goal.id }}" [name]="'buyCat-' + goal.id" [(ngModel)]="buyForm.categoryId">
-                          <option value="">— не указывать —</option>
-                          @for (cat of expenseCategories(); track cat.id) {
-                            <option [value]="cat.id">{{ cat.name }}</option>
-                          }
-                        </select>
-                      </div>
-                      <div class="field">
-                        <label for="buyDate-{{ goal.id }}">Дата покупки</label>
-                        <input id="buyDate-{{ goal.id }}" [name]="'buyDate-' + goal.id" type="date" [(ngModel)]="buyForm.date" [max]="todayMarker" />
-                      </div>
-                    </div>
-                    @if (buyingAccount(); as acc) {
-                      <p class="muted small" [class.negative]="acc.balance < goal.amount">
-                        Останется на счёте: {{ money(acc.balance - goal.amount) }}
-                      </p>
-                    }
-                    @if (buyError()) {
-                      <p class="form-error">{{ buyError() }}</p>
-                    }
-                    <div class="buy-actions">
-                      <button class="btn btn-sm" (click)="confirmBuying(goal)">Списать и закрыть цель</button>
-                      <button class="btn btn-ghost btn-sm" (click)="cancelBuying()">Отмена</button>
-                    </div>
-                  }
+                @if (buyingAccount(); as acc) {
+                  <p class="muted small" [class.negative]="acc.balance < goal.amount">
+                    Останется на счёте: {{ money(acc.balance - goal.amount) }}
+                  </p>
+                }
+                @if (buyError()) {
+                  <p class="form-error">{{ buyError() }}</p>
+                }
+                <div class="buy-actions">
+                  <button class="btn btn-sm" (click)="confirmBuying(goal)">Списать и закрыть цель</button>
+                  <button class="btn btn-ghost btn-sm" (click)="cancelBuying()">Отмена</button>
                 </div>
               }
             </div>
           }
         </div>
-      } @else {
-        <div class="empty-state">Целей пока нет. Заполните форму слева — покупка появится здесь, и за ней будет следить советчик.</div>
       }
     </div>
-  </div>
+  } @else {
+    <div class="empty-state">Целей пока нет. Нажмите «+ Хочу купить» — покупка появится здесь, и за ней будет следить советчик.</div>
+  }
 </div>
+
+<app-modal [open]="quickOpen()" title="Хочу купить" (closed)="quickOpen.set(false)">
+  <form (ngSubmit)="addGoal()">
+    <div class="form-row">
+      <div class="field grow">
+        <label for="title">Что хотим купить</label>
+        <input id="title" name="title" [(ngModel)]="quick.title" placeholder="например, Ноутбук" />
+      </div>
+      <div class="field amount-field">
+        <label for="amount">Сумма, {{ curr.symbol() }}</label>
+        <input id="amount" name="amount" type="number" min="0" step="0.01" [(ngModel)]="quick.amount" placeholder="0" />
+      </div>
+      <div class="field">
+        <label for="deadline">Желаемый срок</label>
+        <input id="deadline" name="deadline" type="date" [(ngModel)]="quick.deadline" />
+      </div>
+    </div>
+
+    @if (quickError()) {
+      <p class="form-error">{{ quickError() }}</p>
+    }
+
+    <div class="quick-actions">
+      <button class="btn" type="submit">Добавить в цели</button>
+      <button class="btn btn-ghost" type="button" (click)="quickOpen.set(false)">Отмена</button>
+    </div>
+  </form>
+
+  @if (quickAdvice(); as advice) {
+    <div [class]="'advice ' + advice.tone">
+      <div class="advice-head">
+        @if (advice.canBuyNow) {
+          <span class="advice-icon">✅</span>
+        } @else if (advice.recommendedDate) {
+          <span class="advice-icon">📅</span>
+        } @else {
+          <span class="advice-icon">🚫</span>
+        }
+        <div>
+          @if (advice.recommendedDate) {
+            <div class="advice-date">
+              {{ advice.canBuyNow ? 'Можно покупать сегодня' : 'Оптимальная дата: ' + dateLabel(advice.recommendedDate) }}
+            </div>
+          } @else {
+            <div class="advice-date">Пока не получается накопить</div>
+          }
+        </div>
+      </div>
+      <p class="advice-message">{{ advice.message }}</p>
+    </div>
+  }
+</app-modal>

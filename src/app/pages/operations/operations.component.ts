@@ -1,17 +1,19 @@
 import { Component, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { DatePipe } from '@angular/common';
+import { RouterLink } from '@angular/router';
 
 import { AccountsService } from '../../core/accounts.service';
 import { CategoriesService } from '../../core/categories.service';
 import { CurrencyService } from '../../core/currency.service';
 import { TransactionsService } from '../../core/transactions.service';
+import { ModalComponent } from '../../ui/modal.component';
 import { Category, OperationKind, Subcategory, Transaction } from '../../core/models';
 import { todayKey } from '../../core/day-key';
 
 @Component({
   selector: 'app-operations',
-  imports: [FormsModule, DatePipe],
+  imports: [FormsModule, DatePipe, RouterLink, ModalComponent],
   templateUrl: './operations.component.html',
   styleUrl: './operations.component.less',
 })
@@ -43,6 +45,8 @@ export class OperationsComponent {
     note: '',
   };
   editingId = signal<string | null>(null);
+  /** Открыта ли модалка с формой (создание/редактирование). */
+  readonly formOpen = signal(false);
 
   readonly formError = signal('');
 
@@ -94,6 +98,16 @@ export class OperationsComponent {
     } else {
       await this.transactionsService.add(draft);
     }
+    this.closeForm();
+  }
+
+  openForm(): void {
+    this.resetForm();
+    this.formOpen.set(true);
+  }
+
+  closeForm(): void {
+    this.formOpen.set(false);
     this.resetForm();
   }
 
@@ -110,14 +124,14 @@ export class OperationsComponent {
       note: tx.note ?? '',
     };
     this.formError.set('');
-    window.scrollTo({ top: 0, behavior: 'smooth' });
+    this.formOpen.set(true);
   }
 
   async remove(tx: Transaction): Promise<void> {
     if (confirm('Удалить операцию? Баланс счёта будет скорректирован.')) {
       await this.transactionsService.remove(tx.id);
       if (this.editingId() === tx.id) {
-        this.resetForm();
+        this.closeForm();
       }
     }
   }

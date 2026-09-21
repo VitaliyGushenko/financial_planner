@@ -1,12 +1,11 @@
 <div class="page-head">
   <h1>Операции</h1>
+  <button class="btn" (click)="openForm()">+ Новая операция</button>
 </div>
 
-<div class="card">
-  <h2 class="card-title">{{ editingId() ? 'Редактирование операции' : 'Новая операция' }}</h2>
-
+<app-modal [open]="formOpen()" [title]="editingId() ? 'Редактирование операции' : 'Новая операция'" (closed)="closeForm()">
   @if (accounts().length === 0) {
-    <div class="empty-state">Сначала добавьте счёт в <a routerLink="/settings">настройках</a>.</div>
+    <div class="empty-state">Сначала добавьте счёт в <a routerLink="/settings" (click)="closeForm()">настройках</a>.</div>
   } @else {
     <div class="seg kind-seg">
       @for (kind of kinds; track kind) {
@@ -80,9 +79,7 @@
         </div>
         <div class="field submit-field">
           <button class="btn" type="submit">{{ editingId() ? 'Сохранить' : 'Добавить' }}</button>
-          @if (editingId()) {
-            <button class="btn btn-ghost" type="button" (click)="cancelEdit()">Отмена</button>
-          }
+          <button class="btn btn-ghost" type="button" (click)="closeForm()">Отмена</button>
         </div>
       </div>
 
@@ -94,14 +91,14 @@
       }
     </form>
   }
-</div>
+</app-modal>
 
 <div class="card">
   <h2 class="card-title">Журнал</h2>
   @if (transactions().length) {
     <div class="rows">
       @for (tx of transactions(); track tx.id) {
-        <div class="row" [class.editing]="editingId() === tx.id">
+        <div class="row">
           <span class="kind-dot" [class]="tx.kind"></span>
           <div class="row-main">
             <div class="row-title">
@@ -122,6 +119,6 @@
       }
     </div>
   } @else {
-    <div class="empty-state">Пока пусто. Добавьте первую операцию выше.</div>
+    <div class="empty-state">Пока пусто. Нажмите «+ Новая операция».</div>
   }
 </div>

@@ -1,5 +1,6 @@
 <div class="page-head">
   <h1>Повторяющиеся операции</h1>
+  <button class="btn" (click)="openForm()">+ Новое правило</button>
 </div>
 
 <p class="muted intro">
@@ -7,11 +8,9 @@
   календарь покажет остаток с их учётом, а советчик покупок подскажет лучшую дату.
 </p>
 
-<div class="card">
-  <h2 class="card-title">{{ editingId() ? 'Редактирование правила' : 'Новое правило' }}</h2>
-
+<app-modal [open]="formOpen()" [title]="editingId() ? 'Редактирование правила' : 'Новое правило'" (closed)="closeForm()">
   @if (accounts().length === 0) {
-    <div class="empty-state">Сначала добавьте счёт в <a routerLink="/settings">настройках</a>.</div>
+    <div class="empty-state">Сначала добавьте счёт в <a routerLink="/settings" (click)="closeForm()">настройках</a>.</div>
   } @else {
     <div class="seg kind-seg">
       @for (kind of kinds; track kind) {
@@ -117,20 +116,18 @@
 
       <div class="form-actions">
         <button class="btn" type="submit">{{ editingId() ? 'Сохранить' : 'Добавить правило' }}</button>
-        @if (editingId()) {
-          <button class="btn btn-ghost" type="button" (click)="cancelEdit()">Отмена</button>
-        }
+        <button class="btn btn-ghost" type="button" (click)="closeForm()">Отмена</button>
       </div>
     </form>
   }
-</div>
+</app-modal>
 
 <div class="card">
   <h2 class="card-title">Правила</h2>
   @if (rules().length) {
     <div class="rows">
       @for (rule of rules(); track rule.id) {
-        <div class="row" [class.editing]="editingId() === rule.id">
+        <div class="row">
           <span class="kind-dot" [class]="rule.kind"></span>
           <div class="row-main">
             <div class="row-title">{{ rule.title }}</div>
@@ -157,6 +154,6 @@
       }
     </div>
   } @else {
-    <div class="empty-state">Правил ещё нет. Добавьте, например, зарплату «каждый месяц».</div>
+    <div class="empty-state">Правил ещё нет. Нажмите «+ Новое правило», например, для зарплаты «каждый месяц».</div>
   }
 </div>
