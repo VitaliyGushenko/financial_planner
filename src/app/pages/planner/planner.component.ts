@@ -1,11 +1,15 @@
 import { Component, computed, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 
+import { AccountsService } from '../../core/accounts.service';
+import { CategoriesService } from '../../core/categories.service';
+import { CurrencyService } from '../../core/currency.service';
 import { GoalsService } from '../../core/goals.service';
 import { ProjectionService } from '../../core/projection.service';
-import { CurrencyService } from '../../core/currency.service';
+import { TransactionsService } from '../../core/transactions.service';
 import { advisePurchase, PurchaseAdvice } from '../../core/advisor';
-import { DayKey, formatDayKeyRelative } from '../../core/day-key';
+import { Category, Goal } from '../../core/models';
+import { DayKey, formatDayKeyRelative, todayKey } from '../../core/day-key';
 
 @Component({
   selector: 'app-planner',
@@ -16,8 +20,15 @@ import { DayKey, formatDayKeyRelative } from '../../core/day-key';
 export class PlannerComponent {
   private readonly goalsService = inject(GoalsService);
   private readonly projectionService = inject(ProjectionService);
+  private readonly transactionsService = inject(TransactionsService);
+  private readonly accountsService = inject(AccountsService);
+  private readonly categoriesService = inject(CategoriesService);
   private readonly currency = inject(CurrencyService);
   readonly curr = this.currency;
+
+  readonly todayMarker = todayKey();
+  readonly accounts = this.accountsService.accounts;
+  readonly expenseCategories = this.categoriesService.expenseCategories;
 
   // Быстрый расчёт «хочу купить».
   quick = {
@@ -97,8 +108,55 @@ export class PlannerComponent {
     return value === null || value === undefined ? '—' : this.currency.format(value);
   }
 
+  // ----- Отметка покупки: списание со счёта + операция + закрытие цели -----
+
+  /** Цель, для которой открыта форма отметки покупки. */
+  readonly buyingGoalId = signal<string | null>(null);
+  buyForm = { accountId: '', categoryId: '', date: todayKey() };
+  readonly buyError = signal('');
+
+  readonly buyingAccount = computed(() =>
+    this.accounts().find((a) => a.id === this.buyForm.accountId) ?? null,
+  );
+
+  startBuying(goal: Goal): void {
+    this.buyingGoalId.set(goal.id);
+    this.buyForm = { accountId: '', categoryId: '', date: todayKey() };
+    this.buyError.set('');
+  }
+
+  cancelBuying(): void {
+    this.buyingGoalId.set(null);
+    this.buyError.set('');
+  }
+
+  async confirmBuying(goal: Goal): Promise<void> {
+    if (!this.buyForm.accountId) {
+      this.buyError.set('Выберите счёт, с которого списать покупку.');
+      return;
+    }
+    if (!this.buyForm.date || this.buyForm.date > this.todayMarker) {
+      this.buyError.set('Дата покупки не может быть в будущем.');
+      return;
+    }
+    // Реальная операция расхода: сама спишет с баланса счёта и появится в «Операциях».
+    await this.transactionsService.add({
+      kind: 'expense',
+      amount: goal.amount,
+      accountId: this.buyForm.accountId,
+      categoryId: this.buyForm.categoryId || undefined,
+      date: this.buyForm.date,
+      note: `Покупка: ${goal.title}`,
+    });
+    await this.goalsService.markDone(goal.id);
+    this.cancelBuying();
+  }
+
   markDone(goalId: string): void {
-    void this.goalsService.markDone(goalId);
+    const goal = this.goals().find((g) => g.id === goalId);
+    if (goal) {
+      this.startBuying(goal);
+    }
   }
 
   remove(goalId: string): void {

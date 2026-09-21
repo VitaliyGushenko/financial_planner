@@ -89,7 +89,9 @@
                     }
                   </div>
                 </div>
-                <button class="btn btn-ghost btn-sm" (click)="markDone(goal.id)" title="Куплено">✓</button>
+                <button class="btn btn-ghost btn-sm" (click)="markDone(goal.id)" title="Отметить покупку: списать со счёта">
+                  Куплено
+                </button>
                 <button class="btn btn-danger btn-sm" (click)="remove(goal.id)" title="Удалить">✕</button>
               </div>
               @if (adviceFor(goal.id); as advice) {
@@ -100,6 +102,52 @@
                     Оптимально: {{ dateLabel(advice.recommendedDate) }} ({{ money(advice.minBalanceAfter) }} останется в худший день).
                   } @else {
                     Накопить безопасно не выходит — стоит пересмотреть планы.
+                  }
+                </div>
+              }
+
+              @if (buyingGoalId() === goal.id) {
+                <div class="buy-form">
+                  <div class="buy-title">Отметить покупку «{{ goal.title }}» — {{ money(goal.amount) }}</div>
+                  @if (accounts().length === 0) {
+                    <p class="form-error">Сначала добавьте счёт в настройках — списывать не с чего.</p>
+                  } @else {
+                    <div class="form-row">
+                      <div class="field">
+                        <label for="buyAcc-{{ goal.id }}">Списать со счёта</label>
+                        <select id="buyAcc-{{ goal.id }}" [name]="'buyAcc-' + goal.id" [(ngModel)]="buyForm.accountId">
+                          <option value="" disabled>— выберите —</option>
+                          @for (acc of accounts(); track acc.id) {
+                            <option [value]="acc.id">{{ acc.name }} ({{ money(acc.balance) }})</option>
+                          }
+                        </select>
+                      </div>
+                      <div class="field">
+                        <label for="buyCat-{{ goal.id }}">Категория</label>
+                        <select id="buyCat-{{ goal.id }}" [name]="'buyCat-' + goal.id" [(ngModel)]="buyForm.categoryId">
+                          <option value="">— не указывать —</option>
+                          @for (cat of expenseCategories(); track cat.id) {
+                            <option [value]="cat.id">{{ cat.name }}</option>
+                          }
+                        </select>
+                      </div>
+                      <div class="field">
+                        <label for="buyDate-{{ goal.id }}">Дата покупки</label>
+                        <input id="buyDate-{{ goal.id }}" [name]="'buyDate-' + goal.id" type="date" [(ngModel)]="buyForm.date" [max]="todayMarker" />
+                      </div>
+                    </div>
+                    @if (buyingAccount(); as acc) {
+                      <p class="muted small" [class.negative]="acc.balance < goal.amount">
+                        Останется на счёте: {{ money(acc.balance - goal.amount) }}
+                      </p>
+                    }
+                    @if (buyError()) {
+                      <p class="form-error">{{ buyError() }}</p>
+                    }
+                    <div class="buy-actions">
+                      <button class="btn btn-sm" (click)="confirmBuying(goal)">Списать и закрыть цель</button>
+                      <button class="btn btn-ghost btn-sm" (click)="cancelBuying()">Отмена</button>
+                    </div>
                   }
                 </div>
               }
