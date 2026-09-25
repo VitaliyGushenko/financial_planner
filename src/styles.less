@@ -471,6 +471,7 @@ body.modal-open {
   display: flex;
   align-items: center;
   gap: 16px;
+  flex-wrap: wrap;
 }
 
 .app-logo {
@@ -654,5 +655,34 @@ body.modal-open {
   .app-nav {
     order: 3;
     width: 100%;
+  }
+}
+
+/* На узких экранах строки списков — в два ряда:
+   заголовок + сумма, кнопки прижаты вправо на отдельной строке. */
+@media (max-width: 640px) {
+  .row {
+    flex-wrap: wrap;
+    row-gap: 2px;
+  }
+
+  .row .row-main {
+    flex: 1 1 calc(100% - 96px);
+  }
+
+  .row .row-amount {
+    margin-left: auto;
+  }
+
+  .row > .btn {
+    order: 3;
+  }
+
+  .row > .btn:first-of-type {
+    margin-left: auto;
+  }
+
+  .row > .btn + .btn {
+    margin-left: 8px;
   }
 }
