@@ -1,6 +1,6 @@
 import { Component, DestroyRef, computed, effect, inject, signal, viewChild, ElementRef } from '@angular/core';
 import { FormsModule } from '@angular/forms';
-import { Chart, registerables } from 'chart.js';
+import { Chart, Plugin, registerables } from 'chart.js';
 
 import { AccountsService } from '../../core/accounts.service';
 import { CategoriesService } from '../../core/categories.service';
@@ -70,7 +70,7 @@ export class StatsComponent {
   private readonly monthsCanvas = viewChild<ElementRef<HTMLCanvasElement>>('months');
   private readonly balanceCanvas = viewChild<ElementRef<HTMLCanvasElement>>('balance');
 
-  private donutChart?: Chart;
+  private donutChart?: Chart<'doughnut'>;
   private monthsChart?: Chart;
   private balanceChart?: Chart;
 
@@ -109,8 +109,31 @@ export class StatsComponent {
     }
     const data = this.stats()
       .byCategory.filter((c) => c.categoryId !== '__income__' && c.amount > 0);
+    // Сумма рисуется на канвасе (а не HTML-слоем), чтобы тултип всегда был поверх.
+    const centerTotal = this.currency.format(this.stats().expense);
+    const centerPlugin: Plugin<'doughnut'> = {
+      id: 'donutCenter',
+      afterDatasetsDraw(chart) {
+        const meta = chart.getDatasetMeta(0);
+        if (!meta.data.length) {
+          return;
+        }
+        const point = meta.data[0] as unknown as { x: number; y: number };
+        const ctx = chart.ctx;
+        ctx.save();
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillStyle = '#1d2530';
+        ctx.font = "800 20px -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif";
+        ctx.fillText(centerTotal, point.x, point.y - 10);
+        ctx.fillStyle = '#66717f';
+        ctx.font = "13px -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif";
+        ctx.fillText('расходы', point.x, point.y + 14);
+        ctx.restore();
+      },
+    };
     this.donutChart?.destroy();
-    this.donutChart = new Chart(canvas, {
+    this.donutChart = new Chart<'doughnut'>(canvas, {
       type: 'doughnut',
       data: {
         labels: data.map((c) => c.title),
@@ -139,6 +162,7 @@ export class StatsComponent {
           },
         },
       },
+      plugins: [centerPlugin],
     });
   }
 

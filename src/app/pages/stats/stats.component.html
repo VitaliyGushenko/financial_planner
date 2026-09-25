@@ -49,12 +49,6 @@
     <h2 class="card-title">Расходы по категориям</h2>
     <div class="donut-wrap">
       <canvas #donut></canvas>
-      @if (stats().expense > 0) {
-        <div class="donut-center">
-          <div class="donut-total">{{ money(stats().expense) }}</div>
-          <div class="muted small">расходы</div>
-        </div>
-      }
     </div>
     @if (stats().expense === 0) {
       <div class="empty-state">Нет подтверждённых расходов за период</div>
