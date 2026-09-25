@@ -51,7 +51,7 @@
             <div class="row">
               <div class="row-main">
                 <div class="row-title">{{ txTitle(tx) }}</div>
-                <div class="row-sub">{{ tx.date | date: 'dd.MM.yyyy' }} · {{ accountName(tx.accountId) }}{{ tx.note ? ' · ' + tx.note : '' }}</div>
+                <div class="row-sub">{{ formatDay(tx.date) }} · {{ accountName(tx.accountId) }}{{ tx.note ? ' · ' + tx.note : '' }}</div>
               </div>
               <span class="row-amount" [class]="amountClass(tx.kind)">{{ signed(tx.amount, tx.kind) }}</span>
             </div>

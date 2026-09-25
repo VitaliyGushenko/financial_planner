@@ -1,5 +1,4 @@
 import { Component, computed, inject } from '@angular/core';
-import { DatePipe } from '@angular/common';
 import { RouterLink } from '@angular/router';
 
 import { AccountsService } from '../../core/accounts.service';
@@ -9,7 +8,7 @@ import { PendingService } from '../../core/pending.service';
 import { ProjectionService } from '../../core/projection.service';
 import { TransactionsService } from '../../core/transactions.service';
 import { ProjectionEvent } from '../../core/projection';
-import { DayKey, formatDayKeyRelative } from '../../core/day-key';
+import { DayKey, formatDayKeyRelative, formatDayKeyShort } from '../../core/day-key';
 
 interface UpcomingDay {
   key: DayKey;
@@ -20,7 +19,7 @@ interface UpcomingDay {
 
 @Component({
   selector: 'app-dashboard',
-  imports: [RouterLink, DatePipe],
+  imports: [RouterLink],
   templateUrl: './dashboard.component.html',
   styleUrl: './dashboard.component.less',
 })
@@ -36,6 +35,9 @@ export class DashboardComponent {
   readonly accounts = this.accountsService.accounts;
 
   readonly projection = this.projectionService.projection;
+
+  /** Даты хранятся строками «YYYY-MM-DD» — форматируем без LocaleId (DatePipe ломает NG0203). */
+  readonly formatDay = formatDayKeyShort;
 
   /** Платежи, ожидающие подтверждения (редактируются на странице «Операции»). */
   readonly pending = this.pendingService.items;

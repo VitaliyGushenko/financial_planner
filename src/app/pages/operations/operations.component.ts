@@ -1,6 +1,5 @@
 import { Component, computed, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
-import { DatePipe } from '@angular/common';
 import { RouterLink } from '@angular/router';
 
 import { AccountsService } from '../../core/accounts.service';
@@ -12,7 +11,7 @@ import { RecurringService, RecurringDraft, describeFrequency } from '../../core/
 import { TransactionsService } from '../../core/transactions.service';
 import { ModalComponent } from '../../ui/modal.component';
 import { Category, CustomUnit, Frequency, OperationKind, RecurringRule, Subcategory, Transaction, TransactionDraft } from '../../core/models';
-import { DayKey, formatDayKeyRelative, todayKey } from '../../core/day-key';
+import { DayKey, formatDayKeyRelative, formatDayKeyShort, todayKey } from '../../core/day-key';
 
 /**
  * Объединённая страница операций: разовые операции и правила повторения.
@@ -21,7 +20,7 @@ import { DayKey, formatDayKeyRelative, todayKey } from '../../core/day-key';
  */
 @Component({
   selector: 'app-operations',
-  imports: [FormsModule, DatePipe, RouterLink, ModalComponent],
+  imports: [FormsModule, RouterLink, ModalComponent],
   templateUrl: './operations.component.html',
   styleUrl: './operations.component.less',
 })

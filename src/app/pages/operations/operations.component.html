@@ -17,7 +17,7 @@
           <span class="kind-dot" [class]="item.kindOf"></span>
           <div class="row-main">
             <div class="row-title">{{ item.title }}</div>
-            <div class="row-sub">{{ item.date | date: 'dd.MM.yyyy' }} · план: {{ money(item.amount) }}</div>
+            <div class="row-sub">{{ formatDay(item.date) }} · план: {{ money(item.amount) }}</div>
           </div>
           <input
             class="pending-amount"
@@ -203,7 +203,7 @@
           <div class="row-main">
             <div class="row-title">{{ categoryName(tx) }}</div>
             <div class="row-sub">
-              {{ tx.date | date: 'dd.MM.yyyy' }}
+              {{ formatDay(tx.date) }}
               · {{ accountName(tx.accountId) }}{{ tx.kind === 'transfer' ? ' → ' + accountName(tx.toAccountId) : '' }}{{ tx.note ? ' · ' + tx.note : '' }}
             </div>
           </div>
