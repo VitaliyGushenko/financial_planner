@@ -11,6 +11,11 @@
   grid-template-columns: repeat(4, 1fr);
   gap: 14px;
   margin-bottom: 14px;
+
+  // Внутри грида отступы даёт gap: глобальное .card + .card сдвигало карточки вниз.
+  .card {
+    margin-top: 0;
+  }
 }
 
 .kpi {
