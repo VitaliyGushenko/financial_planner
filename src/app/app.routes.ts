@@ -29,6 +29,11 @@ export const routes: Routes = [
         title: 'Календарь — Планировщик финансов',
       },
       {
+        path: 'stats',
+        loadComponent: () => import('./pages/stats/stats.component').then((m) => m.StatsComponent),
+        title: 'Статистика — Планировщик финансов',
+      },
+      {
         path: 'planner',
         loadComponent: () => import('./pages/planner/planner.component').then((m) => m.PlannerComponent),
         title: 'Планировщик покупок — Планировщик финансов',

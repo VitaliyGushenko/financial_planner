@@ -1,0 +1,100 @@
+<div class="page-head">
+  <h1>Аналитика</h1>
+  <div class="seg period-seg">
+    @for (p of periodOptions; track p.key) {
+      <button type="button" [class.active]="period() === p.key" (click)="setPeriod(p.key)">{{ p.label }}</button>
+    }
+  </div>
+</div>
+
+@if (period() === 'custom') {
+  <div class="card custom-range">
+    <div class="form-row">
+      <div class="field">
+        <label for="rangeFrom">С</label>
+        <input id="rangeFrom" name="rangeFrom" type="date" [(ngModel)]="customFrom" [max]="customTo()" />
+      </div>
+      <div class="field">
+        <label for="rangeTo">По</label>
+        <input id="rangeTo" name="rangeTo" type="date" [(ngModel)]="customTo" [min]="customFrom()" />
+      </div>
+    </div>
+  </div>
+}
+
+<div class="kpi-grid">
+  <div class="card kpi">
+    <div class="kpi-label">Доходы</div>
+    <div class="kpi-value positive">{{ money(stats().income) }}</div>
+  </div>
+  <div class="card kpi">
+    <div class="kpi-label">Расходы</div>
+    <div class="kpi-value negative">{{ money(stats().expense) }}</div>
+  </div>
+  <div class="card kpi">
+    <div class="kpi-label">Сальдо</div>
+    <div class="kpi-value" [class.positive]="stats().net >= 0" [class.negative]="stats().net < 0">
+      {{ stats().net >= 0 ? '+' : '' }}{{ money(stats().net) }}
+    </div>
+  </div>
+  <div class="card kpi">
+    <div class="kpi-label">Средние траты в день</div>
+    <div class="kpi-value">{{ money(stats().avgPerDay) }}</div>
+    <div class="muted small">за {{ stats().daysCount }} дн.</div>
+  </div>
+</div>
+
+<div class="grid-2">
+  <div class="card chart-card">
+    <h2 class="card-title">Расходы по категориям</h2>
+    <div class="donut-wrap">
+      <canvas #donut></canvas>
+      @if (stats().expense > 0) {
+        <div class="donut-center">
+          <div class="donut-total">{{ money(stats().expense) }}</div>
+          <div class="muted small">расходы</div>
+        </div>
+      }
+    </div>
+    @if (stats().expense === 0) {
+      <div class="empty-state">Нет подтверждённых расходов за период</div>
+    }
+  </div>
+
+  <div class="card">
+    <h2 class="card-title">Топ категорий расходов</h2>
+    @if (stats().byCategory.length) {
+      <div class="rows">
+        @for (cat of stats().byCategory.slice(0, 7); track cat.categoryId) {
+          <div class="cat-row">
+            <div class="cat-line">
+              <span class="cat-name">{{ cat.title }}</span>
+              <span class="cat-sum">{{ money(cat.amount) }} · {{ (cat.share * 100).toFixed(0) }}%</span>
+            </div>
+            <div class="bar-track">
+              <div class="bar-fill" [style.width.%]="cat.share * 100"></div>
+            </div>
+          </div>
+        }
+      </div>
+    } @else {
+      <div class="empty-state">Нет данных за период</div>
+    }
+  </div>
+</div>
+
+<div class="card">
+  <h2 class="card-title">Доходы и расходы по месяцам</h2>
+  <div class="chart-box">
+    <canvas #months></canvas>
+  </div>
+</div>
+
+<div class="card">
+  <h2 class="card-title">Баланс: факт и прогноз</h2>
+  <p class="muted small">Сплошная линия — факт за последние ~3 месяца, пунктир — прогноз
+  с учётом всех запланированных операций и правил.</p>
+  <div class="chart-box">
+    <canvas #balance></canvas>
+  </div>
+</div>
