@@ -275,6 +275,23 @@ textarea:focus {
   box-shadow: 0 0 0 4px var(--primary-soft);
 }
 
+/* ----- Фокус ----- */
+/* После клика мышью браузер рисует своё кольцо (в некоторых сборках — оранжевое).
+   Убираем его и оставляем видимый фокус только для клавиатуры. */
+button:focus,
+a:focus,
+input:focus,
+select:focus,
+textarea:focus {
+  outline: none;
+}
+
+button:focus-visible,
+a:focus-visible {
+  outline: 2px solid var(--primary);
+  outline-offset: 2px;
+}
+
 .btn:disabled {
   opacity: 0.55;
   cursor: default;
@@ -788,10 +805,9 @@ body.modal-open {
   padding: 6px;
   display: flex;
   flex-direction: column;
-  background: var(--glass-strong);
-  -webkit-backdrop-filter: var(--glass-blur);
-  backdrop-filter: var(--glass-blur);
-  border: 1px solid var(--border-soft);
+  /* Непрозрачный фон: меню висит над кнопками страницы, стекло тут мешает читать. */
+  background: var(--surface);
+  border: 1px solid var(--border);
   border-radius: var(--radius-md);
   box-shadow: var(--shadow-lg);
   animation: dropdown-in var(--dur) var(--ease-spring) both;
