@@ -1,7 +1,13 @@
 <div class="page-head">
   <h1>Операции</h1>
-  <button class="btn" (click)="openForm()">+ Новая операция</button>
+  <div class="head-actions">
+    <button class="btn btn-ghost" (click)="openVoice()">🎤 Голосом</button>
+    <button class="btn" (click)="openForm()">+ Новая операция</button>
+  </div>
 </div>
+
+<!-- На телефоне то же действие доступно плавающей кнопкой (≤800px). -->
+<button type="button" class="fab" (click)="openForm()" aria-label="Новая операция" title="Новая операция">+</button>
 
 @if (pending().length) {
   <div class="card pending-card">
@@ -59,6 +65,10 @@
   @if (accounts().length === 0) {
     <div class="empty-state">Сначала добавьте счёт в <a routerLink="/settings" (click)="closeForm()">настройках</a>.</div>
   } @else {
+    @if (voiceNotice()) {
+      <p class="form-notice">{{ voiceNotice() }}</p>
+    }
+
     <div class="seg kind-seg">
       @for (kind of kinds; track kind) {
         <button type="button" [class]="form.kind === kind ? 'active ' + kind : ''" (click)="form.kind = kind; onKindChange()">
@@ -69,12 +79,12 @@
 
     <form (ngSubmit)="save()" class="op-form">
       <div class="form-row">
-        <div class="field amount-field">
+        <div class="field amount-field" [class.voice-filled]="voiceHints().amount">
           <label for="amount">Сумма, {{ curr.symbol() }}</label>
           <input id="amount" name="amount" type="number" min="0" step="0.01" [(ngModel)]="form.amount" placeholder="0" />
         </div>
 
-        <div class="field">
+        <div class="field" [class.voice-filled]="voiceHints().account">
           <label for="account">{{ form.kind === 'transfer' ? 'Списать со счёта' : 'Счёт' }}</label>
           <select id="account" name="accountId" [(ngModel)]="form.accountId">
             <option value="" disabled>— выберите —</option>
@@ -85,7 +95,7 @@
         </div>
 
         @if (form.kind === 'transfer') {
-          <div class="field">
+          <div class="field" [class.voice-filled]="voiceHints().toAccount">
             <label for="toAccount">Зачислить на счёт</label>
             <select id="toAccount" name="toAccountId" [(ngModel)]="form.toAccountId">
               <option value="" disabled>— выберите —</option>
@@ -95,7 +105,7 @@
             </select>
           </div>
         } @else {
-          <div class="field">
+          <div class="field" [class.voice-filled]="voiceHints().category">
             <label for="category">Категория</label>
             <select id="category" name="categoryId" [(ngModel)]="form.categoryId" (change)="onCategoryChange()">
               <option value="" disabled>— выберите —</option>
@@ -118,7 +128,7 @@
           }
         }
 
-        <div class="field">
+        <div class="field" [class.voice-filled]="voiceHints().date">
           <label for="date">{{ form.repeat || editingRuleId() ? 'Дата первого платежа' : 'Дата' }}</label>
           <input id="date" name="date" type="date" [(ngModel)]="form.date" />
         </div>
@@ -257,3 +267,10 @@
     }
   </div>
 }
+
+<app-voice-input
+  [open]="voiceOpen()"
+  (closed)="closeVoice()"
+  (submitted)="applyVoice($event)"
+/>
+

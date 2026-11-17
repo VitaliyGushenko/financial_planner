@@ -10,6 +10,8 @@ import { PendingItem } from '../../core/pending';
 import { RecurringService, RecurringDraft, describeFrequency } from '../../core/recurring.service';
 import { TransactionsService } from '../../core/transactions.service';
 import { ModalComponent } from '../../ui/modal.component';
+import { VoiceInputComponent } from '../../ui/voice-input.component';
+import { parseVoice, VoiceField } from '../../core/voice/parse-voice';
 import { Category, CustomUnit, Frequency, OperationKind, RecurringRule, Subcategory, Transaction, TransactionDraft } from '../../core/models';
 import { DayKey, formatDayKeyRelative, formatDayKeyShort, todayKey } from '../../core/day-key';
 
@@ -20,7 +22,7 @@ import { DayKey, formatDayKeyRelative, formatDayKeyShort, todayKey } from '../..
  */
 @Component({
   selector: 'app-operations',
-  imports: [FormsModule, RouterLink, ModalComponent],
+  imports: [FormsModule, RouterLink, ModalComponent, VoiceInputComponent],
   templateUrl: './operations.component.html',
   styleUrl: './operations.component.less',
 })
@@ -138,6 +140,12 @@ export class OperationsComponent {
 
   readonly formError = signal('');
 
+  /** Открыто ли окно голосового ввода. */
+  readonly voiceOpen = signal(false);
+  /** Поля, заполненные из речи: подсвечиваем — их нужно проверить. */
+  readonly voiceHints = signal<Partial<Record<VoiceField, boolean>>>({});
+  readonly voiceNotice = signal('');
+
   // Обычные методы, а не computed: form.kind — не сигнал, computed бы закэшировал список.
   formCategories(): Category[] {
     return this.form.kind === 'income'
@@ -234,6 +242,52 @@ export class OperationsComponent {
     this.formOpen.set(true);
   }
 
+  openVoice(): void {
+    this.resetForm();
+    this.voiceOpen.set(true);
+  }
+
+  closeVoice(): void {
+    this.voiceOpen.set(false);
+  }
+
+  /**
+   * Заполнить форму по фразе. Ничего не сохраняем: пользователь проверяет
+   * подсвеченные поля и подтверждает кнопкой «Добавить».
+   */
+  applyVoice(text: string): void {
+    const draft = parseVoice(text, {
+      categories: this.categoriesService.categories(),
+      accounts: this.accounts(),
+      today: todayKey(),
+    });
+
+    this.resetForm();
+    this.form = {
+      kind: draft.kind,
+      amount: draft.amount,
+      accountId: draft.accountId,
+      toAccountId: draft.toAccountId,
+      categoryId: draft.categoryId,
+      subcategoryId: draft.subcategoryId,
+      date: draft.date,
+      note: draft.note,
+      repeat: false,
+      frequency: 'monthly',
+      every: 1,
+      customUnit: 'months',
+      endDate: '',
+    };
+    this.voiceHints.set(draft.hints);
+    this.voiceNotice.set(
+      draft.unresolved.length
+        ? `Заполнено голосом. Проверьте поля и укажите: ${draft.unresolved.join(', ')}.`
+        : 'Заполнено голосом. Проверьте поля перед сохранением.',
+    );
+    this.voiceOpen.set(false);
+    this.formOpen.set(true);
+  }
+
   closeForm(): void {
     this.formOpen.set(false);
     this.resetForm();
@@ -257,6 +311,8 @@ export class OperationsComponent {
       endDate: '',
     };
     this.formError.set('');
+    this.voiceHints.set({});
+    this.voiceNotice.set('');
     this.formOpen.set(true);
   }
 
@@ -278,6 +334,8 @@ export class OperationsComponent {
       endDate: rule.endDate ?? '',
     };
     this.formError.set('');
+    this.voiceHints.set({});
+    this.voiceNotice.set('');
     this.formOpen.set(true);
   }
 
@@ -362,6 +420,8 @@ export class OperationsComponent {
       endDate: '',
     };
     this.formError.set('');
+    this.voiceHints.set({});
+    this.voiceNotice.set('');
   }
 
   // ----- Отображение списков -----

@@ -76,3 +76,18 @@
 .badge {
   margin-left: 6px;
 }
+
+.head-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+/* Поля, заполненные голосом, подсвечиваем — пользователь должен их проверить. */
+.voice-filled {
+  > input,
+  > select {
+    border-color: var(--primary);
+    background: var(--primary-soft);
+  }
+}
