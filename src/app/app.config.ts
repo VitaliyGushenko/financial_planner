@@ -1,5 +1,6 @@
-import { ApplicationConfig, provideZoneChangeDetection } from '@angular/core';
+import { ApplicationConfig, isDevMode, provideZoneChangeDetection } from '@angular/core';
 import { provideRouter, withViewTransitions } from '@angular/router';
+import { provideServiceWorker } from '@angular/service-worker';
 import { getApp, initializeApp, provideFirebaseApp } from '@angular/fire/app';
 import { getAuth, provideAuth } from '@angular/fire/auth';
 import { initializeFirestore, provideFirestore } from '@angular/fire/firestore';
@@ -17,5 +18,11 @@ export const appConfig: ApplicationConfig = {
     provideAuth(() => getAuth()),
     // Пустые поля форм пишем как undefined — выключаем ругань Firestore на них.
     provideFirestore(() => initializeFirestore(getApp(), { ignoreUndefinedProperties: true })),
+    // PWA: в dev-режиме service worker не нужен — он кэшировал бы сборку.
+    provideServiceWorker('ngsw-worker.js', {
+      enabled: !isDevMode(),
+      registrationStrategy: 'registerWhenStable:30000',
+    }),
   ],
 };
+

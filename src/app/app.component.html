@@ -1,7 +1,11 @@
+<app-update-banner />
+
 @if (!isReady()) {
   <div class="center-screen"><span class="spinner"></span></div>
 } @else if (!isAuthenticated()) {
-  <router-outlet />
+  <main>
+    <router-outlet />
+  </main>
 } @else {
   <header class="app-header">
     <div class="app-header-inner">
@@ -34,4 +38,28 @@
   <main class="app-main">
     <router-outlet />
   </main>
+
+  <!-- Нижняя навигация: на телефоне заменяет верхнее меню (см. styles.less). -->
+  <nav class="app-tabbar" aria-label="Разделы приложения">
+    <a routerLink="/" routerLinkActive="active" [routerLinkActiveOptions]="{ exact: true }">
+      <span class="tab-icon" aria-hidden="true">🏠</span>
+      <span class="tab-label">Дашборд</span>
+    </a>
+    <a routerLink="/operations" routerLinkActive="active">
+      <span class="tab-icon" aria-hidden="true">💸</span>
+      <span class="tab-label">Операции</span>
+    </a>
+    <a routerLink="/calendar" routerLinkActive="active">
+      <span class="tab-icon" aria-hidden="true">📅</span>
+      <span class="tab-label">Календарь</span>
+    </a>
+    <a routerLink="/stats" routerLinkActive="active">
+      <span class="tab-icon" aria-hidden="true">📈</span>
+      <span class="tab-label">Статистика</span>
+    </a>
+    <a routerLink="/planner" routerLinkActive="active">
+      <span class="tab-icon" aria-hidden="true">🎯</span>
+      <span class="tab-label">Покупки</span>
+    </a>
+  </nav>
 }

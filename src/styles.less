@@ -20,6 +20,7 @@
   --warn-soft: #fdf3e0;
   --shadow: 0 1px 3px rgba(20, 30, 40, 0.07), 0 4px 14px rgba(20, 30, 40, 0.05);
   --radius: 12px;
+  --tabbar-h: 58px;
 }
 
 * {
@@ -31,6 +32,8 @@ body {
   margin: 0;
   padding: 0;
   height: 100%;
+  /* iOS не раздувает текст при повороте экрана. */
+  -webkit-text-size-adjust: 100%;
 }
 
 body {
@@ -642,6 +645,108 @@ body.modal-open {
   align-items: start;
 }
 
+/* ----- Нижняя навигация (только мобильные) ----- */
+
+.app-tabbar {
+  display: none;
+}
+
+.tab-icon {
+  font-size: 19px;
+  line-height: 1;
+}
+
+/* ----- Плавающая кнопка «новая операция» ----- */
+
+.fab {
+  position: fixed;
+  right: 16px;
+  bottom: calc(var(--tabbar-h) + 16px + env(safe-area-inset-bottom));
+  z-index: 25;
+  display: none;
+  align-items: center;
+  justify-content: center;
+  width: 56px;
+  height: 56px;
+  border: none;
+  border-radius: 50%;
+  background: var(--primary);
+  color: #fff;
+  font-size: 26px;
+  line-height: 1;
+  cursor: pointer;
+  box-shadow: 0 6px 18px rgba(20, 30, 40, 0.25);
+
+  &:hover {
+    background: var(--primary-dark);
+  }
+}
+
+/* ----- Плашка обновления PWA ----- */
+
+.update-banner {
+  position: fixed;
+  left: 50%;
+  bottom: calc(16px + env(safe-area-inset-bottom));
+  transform: translateX(-50%);
+  z-index: 45;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  max-width: calc(100vw - 24px);
+  padding: 10px 12px 10px 16px;
+  border-radius: 999px;
+  background: var(--text);
+  color: #fff;
+  font-size: 14px;
+  box-shadow: 0 10px 28px rgba(10, 20, 30, 0.28);
+
+  .btn {
+    background: #fff;
+    color: var(--primary-dark);
+  }
+
+  .btn:hover {
+    background: var(--primary-soft);
+  }
+}
+
+.update-banner-later {
+  padding: 4px 6px;
+  border: none;
+  background: transparent;
+  color: #cbd4dc;
+  font: inherit;
+  cursor: pointer;
+
+  &:hover {
+    color: #fff;
+  }
+}
+
+/* ----- Голосовой ввод ----- */
+
+.voice-hint {
+  margin: 0 0 12px;
+}
+
+.voice-mic {
+  margin-bottom: 12px;
+
+  &.listening {
+    background: var(--expense);
+  }
+}
+
+.voice-text textarea {
+  min-height: 84px;
+  resize: vertical;
+}
+
+.voice-note {
+  margin: 10px 0 0;
+}
+
 @media (max-width: 800px) {
   .grid-2 {
     grid-template-columns: 1fr;
@@ -650,17 +755,114 @@ body.modal-open {
   .app-header-inner {
     flex-wrap: wrap;
     gap: 8px;
+    padding: 8px 12px;
   }
 
+  /* Верхнее меню на телефоне заменяет нижний таб-бар. */
   .app-nav {
-    order: 3;
-    width: 100%;
+    display: none;
+  }
+
+  .app-user {
+    margin-left: auto;
+  }
+
+  .app-main {
+    padding: 16px 12px calc(var(--tabbar-h) + 28px + env(safe-area-inset-bottom));
+  }
+
+  .app-tabbar {
+    position: fixed;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    z-index: 30;
+    display: flex;
+    padding-bottom: env(safe-area-inset-bottom);
+    background: var(--surface);
+    border-top: 1px solid var(--border);
+    box-shadow: 0 -4px 16px rgba(20, 30, 40, 0.06);
+
+    a {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 2px;
+      min-height: var(--tabbar-h);
+      padding: 6px 2px;
+      color: var(--muted);
+      font-size: 11px;
+      font-weight: 600;
+      white-space: nowrap;
+    }
+
+    a.active {
+      color: var(--primary-dark);
+    }
+  }
+
+  .fab {
+    display: flex;
+  }
+
+  .update-banner {
+    bottom: calc(var(--tabbar-h) + 12px + env(safe-area-inset-bottom));
   }
 }
 
 /* На узких экранах строки списков — в два ряда:
    заголовок + сумма, кнопки прижаты вправо на отдельной строке. */
 @media (max-width: 640px) {
+  /* iOS Safari зумит страницу при фокусе, если шрифт поля меньше 16px. */
+  input,
+  select,
+  textarea {
+    font-size: 16px;
+  }
+
+  .btn {
+    min-height: 42px;
+  }
+
+  .btn-sm {
+    min-height: 36px;
+    padding: 7px 10px;
+  }
+
+  .page-head h1 {
+    font-size: 20px;
+  }
+
+  /* Модалка на телефоне — на весь экран, как sheet. */
+  .modal-backdrop {
+    padding: 0;
+    align-items: stretch;
+    overscroll-behavior: contain;
+  }
+
+  .modal-dialog {
+    max-width: none;
+    min-height: 100vh;
+    min-height: 100dvh;
+    border-radius: 0;
+    padding: 14px 16px calc(20px + env(safe-area-inset-bottom));
+  }
+
+  .modal-head {
+    position: sticky;
+    top: 0;
+    z-index: 1;
+    padding-bottom: 6px;
+    background: var(--surface);
+  }
+
+  .center-screen {
+    min-height: 100vh;
+    min-height: 100dvh;
+  }
+
   .row {
     flex-wrap: wrap;
     row-gap: 2px;

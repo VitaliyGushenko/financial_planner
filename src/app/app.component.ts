@@ -4,10 +4,11 @@ import { Router, RouterLink, RouterLinkActive, RouterOutlet } from '@angular/rou
 import { AuthService } from './core/auth.service';
 import { AccountsService } from './core/accounts.service';
 import { CurrencyService } from './core/currency.service';
+import { UpdateBannerComponent } from './ui/update-banner.component';
 
 @Component({
   selector: 'app-root',
-  imports: [RouterOutlet, RouterLink, RouterLinkActive],
+  imports: [RouterOutlet, RouterLink, RouterLinkActive, UpdateBannerComponent],
   host: {
     '(document:click)': 'onDocumentClick()',
     '(document:keydown.escape)': 'closeMenu()',
