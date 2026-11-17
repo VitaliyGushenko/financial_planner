@@ -8,7 +8,7 @@ import { CurrencyService } from '../../core/currency.service';
 import { ProjectionService } from '../../core/projection.service';
 import { TransactionsService } from '../../core/transactions.service';
 import { StatsPeriod, balanceSeries, buildStats, fillMonths, lastMonths, periodRange } from '../../core/stats';
-import { DayKey, formatDayKeyShort, todayKey } from '../../core/day-key';
+import { DayKey, todayKey } from '../../core/day-key';
 import { CountUpDirective } from '../../ui/count-up.directive';
 
 Chart.register(...registerables);
@@ -193,8 +193,7 @@ export class StatsComponent {
     this.monthsChart = new Chart(canvas, {
       type: 'bar',
       data: {
-        labels: months.map((m) => this.monthLabel(m.month)),
-        datasets: [
+        labels: months.map((m) => this.monthLabel(m.month)),        datasets: [
           {
             label: 'Доходы',
             data: months.map((m) => m.income),
@@ -214,7 +213,7 @@ export class StatsComponent {
         animation: CHART_ANIMATION,
         plugins: { legend: { position: 'bottom', labels: { boxWidth: 12, padding: 12 } } },
         scales: {
-          x: { grid: { display: false } },
+          x: { grid: { display: false }, ticks: { maxTicksLimit: 6, maxRotation: 0, autoSkip: true } },
           y: { beginAtZero: true, ticks: { maxTicksLimit: 6 } },
         },
       },
@@ -227,7 +226,8 @@ export class StatsComponent {
       return;
     }
     const series = balanceSeries(this.projectionService.projection());
-    const labels = series.labels.map((k) => formatDayKeyShort(k));
+    // На телефоне «20.08.2026» не помещается — оставляем день и месяц.
+    const labels = series.labels.map((k) => `${k.slice(8, 10)}.${k.slice(5, 7)}`);
     this.balanceChart?.destroy();
     this.balanceChart = new Chart(canvas, {
       type: 'line',
@@ -266,7 +266,7 @@ export class StatsComponent {
           },
         },
         scales: {
-          x: { grid: { display: false }, ticks: { maxTicksLimit: 8, maxRotation: 0 } },
+          x: { grid: { display: false }, ticks: { maxTicksLimit: 5, maxRotation: 0, autoSkip: true } },
           y: { ticks: { maxTicksLimit: 6 } },
         },
       },
@@ -276,5 +276,8 @@ export class StatsComponent {
 
 function fromMonthKey(month: string): string {
   const [y, m] = month.split('-').map(Number);
-  return new Date(Date.UTC(y, m - 1, 1)).toLocaleDateString('ru-RU', { month: 'long', year: 'numeric' });
+  // Короткий формат «дек. 25» — длинные подписи наезжают друг на друга на телефоне.
+  return new Date(Date.UTC(y, m - 1, 1))
+    .toLocaleDateString('ru-RU', { month: 'short', year: '2-digit' })
+    .replace(/ г\.$/, '');
 }

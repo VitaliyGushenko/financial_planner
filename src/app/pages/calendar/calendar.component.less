@@ -105,7 +105,7 @@
 
   &.negative {
     background: var(--expense-soft);
-    border-color: #f2c4c4;
+    border-color: var(--expense-border);
   }
 
   &.today {
@@ -219,13 +219,42 @@
 }
 
 @media (max-width: 640px) {
-  .cal-cell {
-    min-height: 40px;
-    padding: 4px 5px;
+  /* Навигация по месяцам — в первой строке, суммы месяца — во второй. */
+  .cal-head {
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr) auto;
+    grid-template-areas:
+      'prev title next'
+      'totals totals totals';
+    align-items: center;
+    row-gap: 6px;
+  }
+
+  .cal-head > .btn:first-of-type {
+    grid-area: prev;
+  }
+
+  .cal-head > .btn:last-of-type {
+    grid-area: next;
   }
 
   .cal-head .cal-title {
+    grid-area: title;
     min-width: 0;
-    flex: 1;
+    font-size: 16px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .cal-head .cal-totals {
+    grid-area: totals;
+    margin-left: 0;
+    justify-content: flex-end;
+  }
+
+  .cal-cell {
+    min-height: 40px;
+    padding: 4px 5px;
   }
 }

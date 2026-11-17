@@ -27,12 +27,7 @@
         <a routerLink="/planner" routerLinkActive="active">Покупки</a>
       </nav>
       <div class="app-user">
-        <span
-          class="app-username total-chip"
-          [title]="'Всего на счетах: ' + total()"
-          [appCountUp]="totalValue()"
-          [appCountUpFormat]="moneyFormat"
-        >{{ total() }}</span>
+        <span class="app-username total-chip" [title]="'Всего на счетах: ' + total()">{{ total() }}</span>
         <div class="user-menu">
           <button type="button" class="user-btn" (click)="toggleMenu(); $event.stopPropagation()" [attr.aria-expanded]="menuOpen()">
             <span class="name">{{ displayName() }}</span>

@@ -94,6 +94,22 @@
 }
 
 @media (max-width: 640px) {
+  /* Периоды — одна прокручиваемая строка вместо переноса в два ряда. */
+  .period-seg {
+    flex-wrap: nowrap;
+    width: 100%;
+    overflow-x: auto;
+    scrollbar-width: none;
+
+    &::-webkit-scrollbar {
+      display: none;
+    }
+
+    button {
+      flex: 0 0 auto;
+    }
+  }
+
   .chart-box {
     height: 240px;
   }

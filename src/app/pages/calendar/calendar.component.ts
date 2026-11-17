@@ -49,7 +49,8 @@ export class CalendarComponent {
   readonly monthTitle = computed(() => {
     const [y, m] = this.month().split('-').map(Number);
     return fromDayKey(`${y}-${String(m).padStart(2, '0')}-01`)
-      .toLocaleDateString('ru-RU', { month: 'long', year: 'numeric' });
+      .toLocaleDateString('ru-RU', { month: 'long', year: 'numeric' })
+      .replace(/ г\.$/, '');
   });
 
   readonly weeks = computed<CalendarWeek[]>(() => {

@@ -23,6 +23,7 @@
   --income-soft: #e2f3ea;
   --expense: #d64545;
   --expense-soft: #fceaea;
+  --expense-border: #f2c4c4;
   --transfer: #7a5cd6;
   --transfer-soft: #efeafc;
   --warn: #b97d10;
@@ -66,6 +67,7 @@
     --income-soft: rgba(70, 201, 138, 0.16);
     --expense: #f07a7a;
     --expense-soft: rgba(240, 122, 122, 0.14);
+    --expense-border: rgba(240, 122, 122, 0.38);
     --transfer: #a48bf0;
     --transfer-soft: rgba(164, 139, 240, 0.16);
     --warn: #e3b34a;
@@ -1104,6 +1106,10 @@ body.modal-open {
     border-bottom: none;
     padding: 8px 16px calc(20px + env(safe-area-inset-bottom));
     animation: sheet-in var(--dur-slow) var(--ease-spring) both;
+    /* Длинные формы (например, с блоком повторения) скроллятся внутри шторки. */
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    -webkit-overflow-scrolling: touch;
   }
 
   .sheet-grip {
@@ -1121,7 +1127,9 @@ body.modal-open {
     position: sticky;
     top: 0;
     z-index: 1;
-    padding-bottom: 6px;
+    /* Отрицательные поля — чтобы шапка перекрывала всю ширину шторки. */
+    margin: 0 -16px 14px;
+    padding: 0 16px 8px;
     background: var(--glass-strong);
     -webkit-backdrop-filter: var(--glass-blur);
     backdrop-filter: var(--glass-blur);
@@ -1132,21 +1140,38 @@ body.modal-open {
     min-height: 100dvh;
   }
 
+  /* Строка списка на телефоне: заголовок и сумма в первой строке,
+     кнопки — отдельной строкой справа. */
   .row {
     flex-wrap: wrap;
-    row-gap: 2px;
+    row-gap: 4px;
+    align-items: center;
+  }
+
+  .row > .kind-dot {
+    align-self: flex-start;
+    margin-top: 7px;
   }
 
   .row .row-main {
-    flex: 1 1 calc(100% - 96px);
+    flex: 1 1 0;
+    min-width: 0;
   }
 
   .row .row-amount {
     margin-left: auto;
   }
 
+  /* Гарантированный перенос перед кнопками: пустой элемент на всю строку. */
+  .row:has(> .btn)::after {
+    content: '';
+    order: 1;
+    flex-basis: 100%;
+    height: 0;
+  }
+
   .row > .btn {
-    order: 3;
+    order: 2;
   }
 
   .row > .btn:first-of-type {
@@ -1158,7 +1183,53 @@ body.modal-open {
   }
 }
 
-/* ----- �������� ����� ���������� (View Transitions API) ----- */
+/* ----- Очень узкие экраны: шапка должна укладываться в одну строку ----- */
+
+@media (max-width: 420px) {
+  .app-header-inner {
+    padding: 8px 10px;
+    gap: 6px;
+  }
+
+  .app-logo {
+    font-size: 15px;
+    gap: 6px;
+  }
+
+  .app-logo-mark {
+    width: 20px;
+    height: 20px;
+  }
+
+  .app-username {
+    font-size: 12px;
+    max-width: 100px;
+  }
+
+  .user-btn {
+    max-width: 132px;
+    padding: 5px 9px;
+    font-size: 13px;
+  }
+
+  .user-btn .name {
+    max-width: 84px;
+  }
+
+  .page-head h1 {
+    font-size: 19px;
+  }
+
+  .app-tabbar a {
+    font-size: 10px;
+  }
+
+  .tab-icon {
+    font-size: 18px;
+  }
+}
+
+/* ----- Переходы между страницами (View Transitions API) ----- */
 
 ::view-transition-old(root) {
   animation: vt-out 140ms var(--ease-out) both;
@@ -1182,7 +1253,7 @@ body.modal-open {
   }
 }
 
-/* ----- �����������: ������� ��������� ��������� ������� ��������� ----- */
+/* ----- Доступность: уважаем системную настройку «меньше движения» ----- */
 
 @media (prefers-reduced-motion: reduce) {
   *,
