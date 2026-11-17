@@ -11,6 +11,30 @@
       {
         "source": "**/*.@(jpg|jpeg|png|gif|webp|svg|ico|woff|woff2)",
         "headers": [{ "key": "Cache-Control", "value": "max-age=604800" }]
+      },
+      {
+        "source": "/ngsw-worker.js",
+        "headers": [{ "key": "Cache-Control", "value": "no-cache" }]
+      },
+      {
+        "source": "/safety-worker.js",
+        "headers": [{ "key": "Cache-Control", "value": "no-cache" }]
+      },
+      {
+        "source": "/worker-basic.min.js",
+        "headers": [{ "key": "Cache-Control", "value": "no-cache" }]
+      },
+      {
+        "source": "/ngsw.json",
+        "headers": [{ "key": "Cache-Control", "value": "no-cache" }]
+      },
+      {
+        "source": "/index.html",
+        "headers": [{ "key": "Cache-Control", "value": "no-cache" }]
+      },
+      {
+        "source": "/manifest.webmanifest",
+        "headers": [{ "key": "Cache-Control", "value": "no-cache" }]
       }
     ]
   },
