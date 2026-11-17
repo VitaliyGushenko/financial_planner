@@ -1,14 +1,17 @@
 import { Component, computed, effect, inject, signal } from '@angular/core';
-import { Router, RouterLink, RouterLinkActive, RouterOutlet } from '@angular/router';
+import { toSignal } from '@angular/core/rxjs-interop';
+import { NavigationEnd, Router, RouterLink, RouterLinkActive, RouterOutlet } from '@angular/router';
+import { filter, map, startWith } from 'rxjs';
 
 import { AuthService } from './core/auth.service';
 import { AccountsService } from './core/accounts.service';
 import { CurrencyService } from './core/currency.service';
+import { CountUpDirective } from './ui/count-up.directive';
 import { UpdateBannerComponent } from './ui/update-banner.component';
 
 @Component({
   selector: 'app-root',
-  imports: [RouterOutlet, RouterLink, RouterLinkActive, UpdateBannerComponent],
+  imports: [RouterOutlet, RouterLink, RouterLinkActive, UpdateBannerComponent, CountUpDirective],
   host: {
     '(document:click)': 'onDocumentClick()',
     '(document:keydown.escape)': 'closeMenu()',
@@ -29,6 +32,23 @@ export class AppComponent {
   );
   readonly total = computed(() => this.currency.format(this.accounts.total()));
 
+  /** Число для счётчика в шапке и его форматтер. */
+  readonly totalValue = this.accounts.total;
+  readonly moneyFormat = (value: number) => this.currency.format(value);
+
+  /** Разделы нижнего таб-бара: порядок задаёт позицию «пилюли». */
+  private readonly tabRoutes = ['/', '/operations', '/calendar', '/stats', '/planner'];
+
+  /** Индекс активного раздела: -1 — раздел вне таб-бара (настройки). */
+  readonly tabIndex = toSignal(
+    this.router.events.pipe(
+      filter((event): event is NavigationEnd => event instanceof NavigationEnd),
+      map((event) => this.tabIndexOf(event.urlAfterRedirects)),
+      startWith(this.tabIndexOf(this.router.url)),
+    ),
+    { initialValue: -1 },
+  );
+
   /** Открыт ли dropdown пользователя (Настройки / Выйти). */
   readonly menuOpen = signal(false);
 
@@ -48,6 +68,12 @@ export class AppComponent {
 
   closeMenu(): void {
     this.menuOpen.set(false);
+  }
+
+  /** URL → индекс раздела таб-бара (-1, если раздел не в навигации). */
+  private tabIndexOf(url: string): number {
+    const path = url.split('?')[0].split('#')[0];
+    return this.tabRoutes.findIndex((route) => (route === '/' ? path === '/' : path.startsWith(route)));
   }
 
   onDocumentClick(): void {

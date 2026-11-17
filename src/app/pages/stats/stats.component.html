@@ -25,11 +25,11 @@
 <div class="kpi-grid">
   <div class="card kpi">
     <div class="kpi-label">Доходы</div>
-    <div class="kpi-value positive">{{ money(stats().income) }}</div>
+    <div class="kpi-value positive" [appCountUp]="stats().income" [appCountUpFormat]="moneyFn">{{ money(stats().income) }}</div>
   </div>
   <div class="card kpi">
     <div class="kpi-label">Расходы</div>
-    <div class="kpi-value negative">{{ money(stats().expense) }}</div>
+    <div class="kpi-value negative" [appCountUp]="stats().expense" [appCountUpFormat]="moneyFn">{{ money(stats().expense) }}</div>
   </div>
   <div class="card kpi">
     <div class="kpi-label">Сальдо</div>
@@ -39,7 +39,7 @@
   </div>
   <div class="card kpi">
     <div class="kpi-label">Средние траты в день</div>
-    <div class="kpi-value">{{ money(stats().avgPerDay) }}</div>
+    <div class="kpi-value" [appCountUp]="stats().avgPerDay" [appCountUpFormat]="moneyFn">{{ money(stats().avgPerDay) }}</div>
     <div class="muted small">за {{ stats().daysCount }} дн.</div>
   </div>
 </div>

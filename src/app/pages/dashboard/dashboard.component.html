@@ -20,7 +20,7 @@
   <div>
     <div class="card total-card">
       <div class="muted small">Всего на счетах</div>
-      <div class="total-value">{{ total() }}</div>
+      <div class="total-value" [appCountUp]="totalValue()" [appCountUpFormat]="moneyFn">{{ total() }}</div>
     </div>
 
     <div class="card">

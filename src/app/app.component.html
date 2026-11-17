@@ -1,7 +1,13 @@
 <app-update-banner />
 
 @if (!isReady()) {
-  <div class="center-screen"><span class="spinner"></span></div>
+  <div class="app-boot" aria-busy="true" aria-label="Загрузка">
+    <div class="skeleton boot-line"></div>
+    <div class="skeleton boot-hero"></div>
+    <div class="skeleton boot-row"></div>
+    <div class="skeleton boot-row"></div>
+    <div class="skeleton boot-row"></div>
+  </div>
 } @else if (!isAuthenticated()) {
   <main>
     <router-outlet />
@@ -9,7 +15,10 @@
 } @else {
   <header class="app-header">
     <div class="app-header-inner">
-      <span class="app-logo">📊 Планировщик</span>
+      <span class="app-logo">
+        <img class="app-logo-mark" src="favicon.svg" alt="" width="22" height="22" />
+        Планировщик
+      </span>
       <nav class="app-nav">
         <a routerLink="/" routerLinkActive="active" [routerLinkActiveOptions]="{ exact: true }">Дашборд</a>
         <a routerLink="/operations" routerLinkActive="active">Операции</a>
@@ -18,7 +27,12 @@
         <a routerLink="/planner" routerLinkActive="active">Покупки</a>
       </nav>
       <div class="app-user">
-        <span class="app-username total-chip" title="Всего на счетах">{{ total() }}</span>
+        <span
+          class="app-username total-chip"
+          [title]="'Всего на счетах: ' + total()"
+          [appCountUp]="totalValue()"
+          [appCountUpFormat]="moneyFormat"
+        >{{ total() }}</span>
         <div class="user-menu">
           <button type="button" class="user-btn" (click)="toggleMenu(); $event.stopPropagation()" [attr.aria-expanded]="menuOpen()">
             <span class="name">{{ displayName() }}</span>
@@ -41,6 +55,13 @@
 
   <!-- Нижняя навигация: на телефоне заменяет верхнее меню (см. styles.less). -->
   <nav class="app-tabbar" aria-label="Разделы приложения">
+    <!-- Пилюля активного раздела: позиция = индекс × ширина таба. -->
+    <span
+      class="tab-pill"
+      aria-hidden="true"
+      [style.transform]="'translateX(' + tabIndex() * 100 + '%)'"
+      [style.opacity]="tabIndex() < 0 ? 0 : 1"
+    ></span>
     <a routerLink="/" routerLinkActive="active" [routerLinkActiveOptions]="{ exact: true }">
       <span class="tab-icon" aria-hidden="true">🏠</span>
       <span class="tab-label">Дашборд</span>

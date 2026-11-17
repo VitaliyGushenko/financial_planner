@@ -1,15 +1,24 @@
 /* ===== Планировщик финансов — общие стили и дизайн-токены ===== */
 
 :root {
-  --bg: #f2f5f7;
+  color-scheme: light;
+
+  --bg: #eef2f5;
+  --bg-glow-1: rgba(26, 127, 75, 0.12);
+  --bg-glow-2: rgba(122, 92, 214, 0.09);
   --surface: #ffffff;
-  --surface-2: #f7f9fa;
+  --surface-2: #f3f6f8;
+  /* Полупрозрачные поверхности для «стекла»: карточки, шапка, таб-бар. */
+  --glass: rgba(255, 255, 255, 0.74);
+  --glass-strong: rgba(255, 255, 255, 0.84);
   --border: #e3e8ec;
+  --border-soft: rgba(29, 37, 48, 0.08);
   --text: #1d2530;
   --muted: #66717f;
   --primary: #1a7f4b;
   --primary-dark: #146a3e;
   --primary-soft: #e2f3ea;
+  --on-primary: #ffffff;
   --income: #188554;
   --income-soft: #e2f3ea;
   --expense: #d64545;
@@ -18,9 +27,53 @@
   --transfer-soft: #efeafc;
   --warn: #b97d10;
   --warn-soft: #fdf3e0;
-  --shadow: 0 1px 3px rgba(20, 30, 40, 0.07), 0 4px 14px rgba(20, 30, 40, 0.05);
-  --radius: 12px;
+  --shadow-sm: 0 1px 2px rgba(20, 30, 40, 0.06);
+  --shadow: 0 10px 30px rgba(20, 30, 40, 0.08), 0 2px 6px rgba(20, 30, 40, 0.04);
+  --shadow-lg: 0 24px 60px rgba(15, 23, 32, 0.22);
+  --radius: 20px;
+  --radius-md: 14px;
+  --radius-sm: 10px;
   --tabbar-h: 58px;
+  --dur-fast: 140ms;
+  --dur: 220ms;
+  --dur-slow: 360ms;
+  --ease-out: cubic-bezier(0.2, 0.8, 0.2, 1);
+  /* Чуть перелетающая кривая — «пружина» для шторок и пилюль. */
+  --ease-spring: cubic-bezier(0.34, 1.4, 0.64, 1);
+  --glass-blur: saturate(1.6) blur(20px);
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    color-scheme: dark;
+
+    --bg: #0c1117;
+    --bg-glow-1: rgba(63, 191, 127, 0.14);
+    --bg-glow-2: rgba(122, 92, 214, 0.16);
+    --surface: #151c24;
+    --surface-2: #1b242d;
+    --glass: rgba(21, 28, 36, 0.72);
+    --glass-strong: rgba(18, 24, 31, 0.86);
+    --border: #27313d;
+    --border-soft: rgba(255, 255, 255, 0.09);
+    --text: #e8eef4;
+    --muted: #96a4b3;
+    --primary: #2f9f66;
+    --primary-dark: #3fbf7f;
+    --primary-soft: rgba(63, 191, 127, 0.16);
+    --on-primary: #08130d;
+    --income: #46c98a;
+    --income-soft: rgba(70, 201, 138, 0.16);
+    --expense: #f07a7a;
+    --expense-soft: rgba(240, 122, 122, 0.14);
+    --transfer: #a48bf0;
+    --transfer-soft: rgba(164, 139, 240, 0.16);
+    --warn: #e3b34a;
+    --warn-soft: rgba(227, 179, 74, 0.16);
+    --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.4);
+    --shadow: 0 12px 34px rgba(0, 0, 0, 0.45), 0 2px 6px rgba(0, 0, 0, 0.3);
+    --shadow-lg: 0 28px 70px rgba(0, 0, 0, 0.6);
+  }
 }
 
 * {
@@ -37,16 +90,23 @@ body {
 }
 
 body {
-  background: var(--bg);
+  background:
+    radial-gradient(900px 600px at 6% -8%, var(--bg-glow-1), transparent 62%),
+    radial-gradient(760px 520px at 104% 4%, var(--bg-glow-2), transparent 58%),
+    var(--bg);
+  background-attachment: fixed;
   color: var(--text);
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
   font-size: 15px;
   line-height: 1.45;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
 }
 
 h1, h2, h3 {
   margin: 0 0 8px;
-  font-weight: 700;
+  font-weight: 800;
+  letter-spacing: -0.015em;
 }
 
 a {
@@ -57,11 +117,20 @@ a {
 /* ----- Контейнеры и карточки ----- */
 
 .card {
-  background: var(--surface);
-  border: 1px solid var(--border);
+  background: var(--glass);
+  -webkit-backdrop-filter: var(--glass-blur);
+  backdrop-filter: var(--glass-blur);
+  border: 1px solid var(--border-soft);
   border-radius: var(--radius);
   box-shadow: var(--shadow);
   padding: 18px;
+}
+
+/* Без поддержки blur — непрозрачная поверхность, чтобы текст не «плыл». */
+@supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
+  .card {
+    background: var(--surface);
+  }
 }
 
 .card + .card {
@@ -109,21 +178,28 @@ input,
 select,
 textarea {
   width: 100%;
-  padding: 9px 11px;
+  padding: 10px 12px;
   border: 1px solid var(--border);
-  border-radius: 9px;
+  border-radius: var(--radius-sm);
   background: var(--surface);
   color: var(--text);
   font: inherit;
   outline: none;
-  transition: border-color 0.15s, box-shadow 0.15s;
+  transition: border-color var(--dur-fast) var(--ease-out), box-shadow var(--dur-fast) var(--ease-out),
+    background var(--dur-fast) var(--ease-out);
+}
+
+input:hover,
+select:hover,
+textarea:hover {
+  border-color: var(--muted);
 }
 
 input:focus,
 select:focus,
 textarea:focus {
   border-color: var(--primary);
-  box-shadow: 0 0 0 3px var(--primary-soft);
+  box-shadow: 0 0 0 4px var(--primary-soft);
 }
 
 .form-grid {
@@ -147,8 +223,8 @@ textarea:focus {
 .form-error {
   color: var(--expense);
   background: var(--expense-soft);
-  border-radius: 8px;
-  padding: 8px 12px;
+  border-radius: var(--radius-sm);
+  padding: 9px 12px;
   margin: 10px 0 0;
   font-size: 14px;
 }
@@ -156,8 +232,8 @@ textarea:focus {
 .form-notice {
   color: var(--primary-dark);
   background: var(--primary-soft);
-  border-radius: 8px;
-  padding: 8px 12px;
+  border-radius: var(--radius-sm);
+  padding: 9px 12px;
   margin: 10px 0 0;
   font-size: 14px;
 }
@@ -169,31 +245,45 @@ textarea:focus {
   align-items: center;
   justify-content: center;
   gap: 6px;
-  padding: 9px 16px;
+  padding: 10px 16px;
   border: 1px solid transparent;
-  border-radius: 9px;
+  border-radius: var(--radius-md);
   background: var(--primary);
-  color: #fff;
+  color: var(--on-primary);
   font: inherit;
-  font-weight: 600;
+  font-weight: 650;
   cursor: pointer;
   white-space: nowrap;
-  transition: background 0.15s, border-color 0.15s, opacity 0.15s;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.16);
+  transition: background var(--dur-fast) var(--ease-out), border-color var(--dur-fast) var(--ease-out),
+    opacity var(--dur-fast) var(--ease-out), transform var(--dur-fast) var(--ease-spring),
+    box-shadow var(--dur-fast) var(--ease-out);
 }
 
 .btn:hover {
   background: var(--primary-dark);
 }
 
+.btn:active {
+  transform: scale(0.97);
+}
+
+.btn:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 4px var(--primary-soft);
+}
+
 .btn:disabled {
   opacity: 0.55;
   cursor: default;
+  transform: none;
 }
 
 .btn-ghost {
   background: var(--surface);
   border-color: var(--border);
   color: var(--text);
+  box-shadow: none;
 }
 
 .btn-ghost:hover {
@@ -204,6 +294,7 @@ textarea:focus {
   background: transparent;
   border-color: transparent;
   color: var(--expense);
+  box-shadow: none;
 }
 
 .btn-danger:hover {
@@ -211,42 +302,42 @@ textarea:focus {
 }
 
 .btn-sm {
-  padding: 5px 10px;
+  padding: 6px 11px;
   font-size: 13px;
-  border-radius: 7px;
+  border-radius: var(--radius-sm);
 }
 
 .btn-block {
   width: 100%;
 }
 
-/* Сегментный переключатель (Расход / Доход / Перевод) */
+/* Сегментный переключатель (Расход / Доход / Перевод) — «пилюля». */
 .seg {
   display: inline-flex;
-  border: 1px solid var(--border);
-  border-radius: 9px;
-  overflow: hidden;
-  background: var(--surface);
+  gap: 2px;
+  padding: 3px;
+  border: 1px solid var(--border-soft);
+  border-radius: 999px;
+  background: var(--surface-2);
 }
 
 .seg button {
   border: none;
+  border-radius: 999px;
   background: transparent;
   padding: 8px 14px;
   font: inherit;
   font-weight: 600;
   color: var(--muted);
   cursor: pointer;
-  border-right: 1px solid var(--border);
-}
-
-.seg button:last-child {
-  border-right: none;
+  transition: background var(--dur-fast) var(--ease-out), color var(--dur-fast) var(--ease-out),
+    box-shadow var(--dur-fast) var(--ease-out);
 }
 
 .seg button.active {
-  background: var(--primary-soft);
-  color: var(--primary-dark);
+  background: var(--surface);
+  color: var(--text);
+  box-shadow: var(--shadow-sm);
 }
 
 .seg button.active.expense {
@@ -266,12 +357,55 @@ textarea:focus {
   flex-direction: column;
 }
 
+/* Каскадное появление строк: задержка задаётся номером элемента. */
+.rows > * {
+  animation: rise-in var(--dur-slow) var(--ease-out) both;
+}
+
+.rows > *:nth-child(1) { animation-delay: 0ms; }
+.rows > *:nth-child(2) { animation-delay: 32ms; }
+.rows > *:nth-child(3) { animation-delay: 64ms; }
+.rows > *:nth-child(4) { animation-delay: 96ms; }
+.rows > *:nth-child(5) { animation-delay: 128ms; }
+.rows > *:nth-child(6) { animation-delay: 160ms; }
+.rows > *:nth-child(7) { animation-delay: 192ms; }
+.rows > *:nth-child(8) { animation-delay: 224ms; }
+.rows > *:nth-child(9) { animation-delay: 256ms; }
+.rows > *:nth-child(10) { animation-delay: 288ms; }
+.rows > *:nth-child(n + 11) { animation-delay: 300ms; }
+
+@keyframes rise-in {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@keyframes fade-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes shimmer {
+  to {
+    background-position: 200% 0;
+  }
+}
+
 .row {
   display: flex;
   align-items: center;
   gap: 12px;
   padding: 10px 4px;
-  border-bottom: 1px solid var(--border);
+  border-bottom: 1px solid var(--border-soft);
   min-width: 0;
 }
 
@@ -351,24 +485,62 @@ textarea:focus {
   justify-content: center;
 }
 
+/* ----- Скелетоны загрузки ----- */
+
+.skeleton {
+  border-radius: var(--radius-sm);
+  background: linear-gradient(100deg, var(--surface-2) 20%, var(--border) 40%, var(--surface-2) 60%);
+  background-size: 200% 100%;
+  animation: shimmer 1.4s linear infinite;
+}
+
+.app-boot {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  max-width: 1100px;
+  margin: 0 auto;
+  padding: 24px 16px;
+  /* Короткая загрузка не мигает скелетоном. */
+  animation: fade-in var(--dur) 120ms var(--ease-out) both;
+}
+
+.boot-line {
+  height: 18px;
+  width: 40%;
+}
+
+.boot-hero {
+  height: 110px;
+  border-radius: var(--radius);
+}
+
+.boot-row {
+  height: 56px;
+}
+
 /* ----- Табы ----- */
 
 .tabs {
-  display: flex;
-  gap: 4px;
+  display: inline-flex;
+  gap: 2px;
+  padding: 4px;
   margin-bottom: 14px;
-  border-bottom: 2px solid var(--border);
+  border: 1px solid var(--border-soft);
+  border-radius: 999px;
+  background: var(--surface-2);
 
   button {
     border: none;
+    border-radius: 999px;
     background: transparent;
-    padding: 9px 16px;
+    padding: 8px 16px;
     font: inherit;
     font-weight: 600;
     color: var(--muted);
     cursor: pointer;
-    border-bottom: 2px solid transparent;
-    margin-bottom: -2px;
+    transition: background var(--dur-fast) var(--ease-out), color var(--dur-fast) var(--ease-out),
+      box-shadow var(--dur-fast) var(--ease-out);
   }
 
   button:hover {
@@ -376,8 +548,9 @@ textarea:focus {
   }
 
   button.active {
-    color: var(--primary-dark);
-    border-bottom-color: var(--primary);
+    background: var(--surface);
+    color: var(--text);
+    box-shadow: var(--shadow-sm);
   }
 }
 
@@ -399,22 +572,39 @@ body.modal-open {
   position: fixed;
   inset: 0;
   z-index: 50;
-  background: rgba(15, 23, 32, 0.45);
+  background: rgba(10, 16, 22, 0.42);
+  -webkit-backdrop-filter: blur(4px);
+  backdrop-filter: blur(4px);
   display: flex;
   align-items: flex-start;
   justify-content: center;
   padding: 40px 16px;
   overflow-y: auto;
+  animation: fade-in var(--dur) var(--ease-out) both;
 }
 
 .modal-dialog {
-  background: var(--surface);
-  border-radius: 14px;
-  box-shadow: 0 12px 40px rgba(10, 20, 30, 0.22);
+  background: var(--glass-strong);
+  -webkit-backdrop-filter: var(--glass-blur);
+  backdrop-filter: var(--glass-blur);
+  border: 1px solid var(--border-soft);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow-lg);
   width: 100%;
   max-width: 680px;
   padding: 18px 20px 20px;
-  animation: modal-in 0.15s ease-out;
+  animation: modal-in var(--dur-slow) var(--ease-spring) both;
+  transition: transform var(--dur-slow) var(--ease-spring);
+}
+
+/* Пока тянем шторку пальцем — анимация не должна «догонять» палец. */
+.modal-dialog.dragging {
+  transition: none;
+}
+
+/* Ручка для свайпа вниз — только на телефоне. */
+.sheet-grip {
+  display: none;
 }
 
 .modal-head {
@@ -463,8 +653,10 @@ body.modal-open {
   position: sticky;
   top: 0;
   z-index: 20;
-  background: var(--surface);
-  border-bottom: 1px solid var(--border);
+  background: var(--glass-strong);
+  -webkit-backdrop-filter: var(--glass-blur);
+  backdrop-filter: var(--glass-blur);
+  border-bottom: 1px solid var(--border-soft);
 }
 
 .app-header-inner {
@@ -478,10 +670,18 @@ body.modal-open {
 }
 
 .app-logo {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
   font-weight: 800;
   font-size: 17px;
   color: var(--primary);
   white-space: nowrap;
+}
+
+.app-logo-mark {
+  border-radius: 7px;
+  box-shadow: var(--shadow-sm);
 }
 
 .app-nav {
@@ -497,11 +697,12 @@ body.modal-open {
 }
 
 .app-nav a {
-  padding: 7px 12px;
-  border-radius: 8px;
+  padding: 7px 14px;
+  border-radius: 999px;
   color: var(--muted);
   font-weight: 600;
   white-space: nowrap;
+  transition: background var(--dur-fast) var(--ease-out), color var(--dur-fast) var(--ease-out);
 }
 
 .app-nav a:hover {
@@ -545,18 +746,23 @@ body.modal-open {
   align-items: center;
   gap: 7px;
   max-width: 200px;
-  padding: 6px 10px;
+  padding: 6px 12px;
   border: 1px solid var(--border);
-  border-radius: 8px;
+  border-radius: 999px;
   background: var(--surface);
   font: inherit;
   font-size: 14px;
   font-weight: 600;
   color: var(--text);
   cursor: pointer;
+  transition: background var(--dur-fast) var(--ease-out), transform var(--dur-fast) var(--ease-spring);
 
   &:hover {
     background: var(--surface-2);
+  }
+
+  &:active {
+    transform: scale(0.97);
   }
 
   .name {
@@ -580,10 +786,13 @@ body.modal-open {
   padding: 6px;
   display: flex;
   flex-direction: column;
-  background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: 10px;
-  box-shadow: 0 8px 24px rgba(10, 20, 30, 0.16);
+  background: var(--glass-strong);
+  -webkit-backdrop-filter: var(--glass-blur);
+  backdrop-filter: var(--glass-blur);
+  border: 1px solid var(--border-soft);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-lg);
+  animation: dropdown-in var(--dur) var(--ease-spring) both;
 
   a,
   button {
@@ -592,7 +801,7 @@ body.modal-open {
     gap: 8px;
     padding: 8px 10px;
     border: none;
-    border-radius: 7px;
+    border-radius: var(--radius-sm);
     background: transparent;
     color: var(--text);
     font: inherit;
@@ -609,12 +818,32 @@ body.modal-open {
 
   .sep {
     height: 1px;
-    background: var(--border);
+    background: var(--border-soft);
     margin: 4px 2px;
   }
 
   .logout {
     color: var(--expense);
+  }
+}
+
+@keyframes dropdown-in {
+  from {
+    opacity: 0;
+    transform: translateY(-6px) scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@keyframes sheet-in {
+  from {
+    transform: translateY(100%);
+  }
+  to {
+    transform: none;
   }
 }
 
@@ -654,6 +883,20 @@ body.modal-open {
 .tab-icon {
   font-size: 19px;
   line-height: 1;
+  transition: transform var(--dur-slow) var(--ease-spring);
+}
+
+/* Пилюля активного раздела: едет между табами, а не переключается скачком. */
+.tab-pill {
+  position: absolute;
+  top: 6px;
+  left: 0;
+  width: 20%;
+  height: calc(var(--tabbar-h) - 12px);
+  border-radius: 16px;
+  background: var(--primary-soft);
+  transition: transform var(--dur-slow) var(--ease-spring), opacity var(--dur) var(--ease-out);
+  pointer-events: none;
 }
 
 /* ----- Плавающая кнопка «новая операция» ----- */
@@ -696,18 +939,19 @@ body.modal-open {
   max-width: calc(100vw - 24px);
   padding: 10px 12px 10px 16px;
   border-radius: 999px;
-  background: var(--text);
-  color: #fff;
+  /* Плашка всегда тёмная: читается и в светлой, и в тёмной теме. */
+  background: #11171e;
+  color: #f2f5f7;
   font-size: 14px;
-  box-shadow: 0 10px 28px rgba(10, 20, 30, 0.28);
+  box-shadow: 0 14px 36px rgba(10, 20, 30, 0.34);
 
   .btn {
-    background: #fff;
-    color: var(--primary-dark);
+    background: #ffffff;
+    color: #146a3e;
   }
 
   .btn:hover {
-    background: var(--primary-soft);
+    background: #e2f3ea;
   }
 }
 
@@ -779,11 +1023,15 @@ body.modal-open {
     z-index: 30;
     display: flex;
     padding-bottom: env(safe-area-inset-bottom);
-    background: var(--surface);
-    border-top: 1px solid var(--border);
-    box-shadow: 0 -4px 16px rgba(20, 30, 40, 0.06);
+    background: var(--glass-strong);
+    -webkit-backdrop-filter: var(--glass-blur);
+    backdrop-filter: var(--glass-blur);
+    border-top: 1px solid var(--border-soft);
+    box-shadow: 0 -8px 30px rgba(20, 30, 40, 0.08);
 
     a {
+      position: relative;
+      z-index: 1;
       flex: 1;
       display: flex;
       flex-direction: column;
@@ -796,10 +1044,15 @@ body.modal-open {
       font-size: 11px;
       font-weight: 600;
       white-space: nowrap;
+      transition: color var(--dur-fast) var(--ease-out);
     }
 
     a.active {
       color: var(--primary-dark);
+    }
+
+    a.active .tab-icon {
+      transform: translateY(-2px) scale(1.1);
     }
   }
 
@@ -835,19 +1088,33 @@ body.modal-open {
     font-size: 20px;
   }
 
-  /* Модалка на телефоне — на весь экран, как sheet. */
+  /* Модалка на телефоне — шторка снизу: ручка, скруглённые углы, свайп вниз. */
   .modal-backdrop {
     padding: 0;
-    align-items: stretch;
+    align-items: flex-end;
     overscroll-behavior: contain;
   }
 
   .modal-dialog {
     max-width: none;
-    min-height: 100vh;
-    min-height: 100dvh;
-    border-radius: 0;
-    padding: 14px 16px calc(20px + env(safe-area-inset-bottom));
+    max-height: 92vh;
+    max-height: 92dvh;
+    min-height: 0;
+    border-radius: 24px 24px 0 0;
+    border-bottom: none;
+    padding: 8px 16px calc(20px + env(safe-area-inset-bottom));
+    animation: sheet-in var(--dur-slow) var(--ease-spring) both;
+  }
+
+  .sheet-grip {
+    display: block;
+    width: 44px;
+    height: 5px;
+    margin: 0 auto 10px;
+    border-radius: 999px;
+    background: var(--border);
+    touch-action: none;
+    cursor: grab;
   }
 
   .modal-head {
@@ -855,7 +1122,9 @@ body.modal-open {
     top: 0;
     z-index: 1;
     padding-bottom: 6px;
-    background: var(--surface);
+    background: var(--glass-strong);
+    -webkit-backdrop-filter: var(--glass-blur);
+    backdrop-filter: var(--glass-blur);
   }
 
   .center-screen {
@@ -886,5 +1155,51 @@ body.modal-open {
 
   .row > .btn + .btn {
     margin-left: 8px;
+  }
+}
+
+/* ----- �������� ����� ���������� (View Transitions API) ----- */
+
+::view-transition-old(root) {
+  animation: vt-out 140ms var(--ease-out) both;
+}
+
+::view-transition-new(root) {
+  animation: vt-in var(--dur-slow) var(--ease-out) both;
+}
+
+@keyframes vt-out {
+  to {
+    opacity: 0;
+    transform: translateY(-6px) scale(0.995);
+  }
+}
+
+@keyframes vt-in {
+  from {
+    opacity: 0;
+    transform: translateY(8px) scale(0.995);
+  }
+}
+
+/* ----- �����������: ������� ��������� ��������� ������� ��������� ----- */
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+
+  .rows > * {
+    animation: none !important;
+  }
+
+  .skeleton {
+    animation: none !important;
+    background: var(--surface-2);
   }
 }

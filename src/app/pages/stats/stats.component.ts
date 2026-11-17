@@ -9,6 +9,7 @@ import { ProjectionService } from '../../core/projection.service';
 import { TransactionsService } from '../../core/transactions.service';
 import { StatsPeriod, balanceSeries, buildStats, fillMonths, lastMonths, periodRange } from '../../core/stats';
 import { DayKey, formatDayKeyShort, todayKey } from '../../core/day-key';
+import { CountUpDirective } from '../../ui/count-up.directive';
 
 Chart.register(...registerables);
 
@@ -17,9 +18,18 @@ const DONUT_PALETTE = [
   '#48a999', '#b0bf4a', '#8d6e63', '#5c6bc0', '#ef6c00', '#455a64',
 ];
 
+/** Значение CSS-переменной — чтобы графики подхватывали тему. */
+function cssVar(name: string, fallback: string): string {
+  const value = getComputedStyle(document.documentElement).getPropertyValue(name).trim();
+  return value || fallback;
+}
+
+const REDUCED_MOTION = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+const CHART_ANIMATION = REDUCED_MOTION ? false : { duration: 700, easing: 'easeOutQuart' as const };
+
 @Component({
   selector: 'app-stats',
-  imports: [FormsModule],
+  imports: [FormsModule, CountUpDirective],
   templateUrl: './stats.component.html',
   styleUrl: './stats.component.less',
 })
@@ -75,7 +85,7 @@ export class StatsComponent {
   private balanceChart?: Chart;
 
   constructor() {
-    Chart.defaults.color = '#66717f';
+    Chart.defaults.color = cssVar('--muted', '#66717f');
     Chart.defaults.font.family =
       "-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif";
 
@@ -97,6 +107,10 @@ export class StatsComponent {
   money(value: number | null | undefined): string {
     return value === null || value === undefined ? '—' : this.currency.format(value);
   }
+
+  /** Форматтер для анимированных KPI. */
+  readonly moneyFn = (value: number | null | undefined): string =>
+    value === null || value === undefined ? '—' : this.currency.format(value);
 
   monthLabel(month: string): string {
     return fromMonthKey(month);
@@ -123,10 +137,10 @@ export class StatsComponent {
         ctx.save();
         ctx.textAlign = 'center';
         ctx.textBaseline = 'middle';
-        ctx.fillStyle = '#1d2530';
+        ctx.fillStyle = cssVar('--text', '#1d2530');
         ctx.font = "800 20px -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif";
         ctx.fillText(centerTotal, point.x, point.y - 10);
-        ctx.fillStyle = '#66717f';
+        ctx.fillStyle = cssVar('--muted', '#66717f');
         ctx.font = "13px -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif";
         ctx.fillText('расходы', point.x, point.y + 14);
         ctx.restore();
@@ -142,13 +156,16 @@ export class StatsComponent {
             data: data.map((c) => c.amount),
             backgroundColor: data.map((_, i) => DONUT_PALETTE[i % DONUT_PALETTE.length]),
             borderWidth: 2,
-            borderColor: '#ffffff',
+            borderColor: cssVar('--surface', '#ffffff'),
           },
         ],
       },
       options: {
         maintainAspectRatio: false,
         cutout: '64%',
+        animation: REDUCED_MOTION
+          ? false
+          : { animateRotate: true, animateScale: true, duration: 800, easing: 'easeOutQuart' as const },
         plugins: {
           legend: { position: 'bottom', labels: { boxWidth: 12, padding: 12 } },
           tooltip: {
@@ -181,19 +198,20 @@ export class StatsComponent {
           {
             label: 'Доходы',
             data: months.map((m) => m.income),
-            backgroundColor: '#1a7f4b',
+            backgroundColor: cssVar('--income', '#1a7f4b'),
             borderRadius: 6,
           },
           {
             label: 'Расходы',
             data: months.map((m) => m.expense),
-            backgroundColor: '#d64545',
+            backgroundColor: cssVar('--expense', '#d64545'),
             borderRadius: 6,
           },
         ],
       },
       options: {
         maintainAspectRatio: false,
+        animation: CHART_ANIMATION,
         plugins: { legend: { position: 'bottom', labels: { boxWidth: 12, padding: 12 } } },
         scales: {
           x: { grid: { display: false } },
@@ -219,7 +237,7 @@ export class StatsComponent {
           {
             label: 'Факт',
             data: series.fact,
-            borderColor: '#1a7f4b',
+            borderColor: cssVar('--primary', '#1a7f4b'),
             borderWidth: 2,
             pointRadius: 0,
             tension: 0.2,
@@ -227,7 +245,7 @@ export class StatsComponent {
           {
             label: 'Прогноз',
             data: series.forecast,
-            borderColor: '#7a5cd6',
+            borderColor: cssVar('--transfer', '#7a5cd6'),
             borderWidth: 2,
             borderDash: [6, 4],
             pointRadius: 0,
@@ -237,6 +255,7 @@ export class StatsComponent {
       },
       options: {
         maintainAspectRatio: false,
+        animation: CHART_ANIMATION,
         interaction: { mode: 'index', intersect: false },
         plugins: {
           legend: { position: 'bottom', labels: { boxWidth: 12, padding: 12 } },

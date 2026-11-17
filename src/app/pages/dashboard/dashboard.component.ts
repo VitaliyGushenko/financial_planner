@@ -9,6 +9,7 @@ import { ProjectionService } from '../../core/projection.service';
 import { TransactionsService } from '../../core/transactions.service';
 import { ProjectionEvent } from '../../core/projection';
 import { DayKey, formatDayKeyRelative, formatDayKeyShort } from '../../core/day-key';
+import { CountUpDirective } from '../../ui/count-up.directive';
 
 interface UpcomingDay {
   key: DayKey;
@@ -19,7 +20,7 @@ interface UpcomingDay {
 
 @Component({
   selector: 'app-dashboard',
-  imports: [RouterLink],
+  imports: [RouterLink, CountUpDirective],
   templateUrl: './dashboard.component.html',
   styleUrl: './dashboard.component.less',
 })
@@ -32,6 +33,9 @@ export class DashboardComponent {
   private readonly currency = inject(CurrencyService);
 
   readonly total = computed(() => this.currency.format(this.accountsService.total()));
+  /** Число и форматтер для анимированного счётчика в карточке баланса. */
+  readonly totalValue = this.accountsService.total;
+  readonly moneyFn = (value: number) => this.currency.format(value);
   readonly accounts = this.accountsService.accounts;
 
   readonly projection = this.projectionService.projection;

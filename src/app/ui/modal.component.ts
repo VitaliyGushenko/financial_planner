@@ -1,13 +1,32 @@
-import { Component, effect, input, output } from '@angular/core';
+import { Component, effect, input, output, signal } from '@angular/core';
 
-/** Простая модалка: подложка (клик — закрыть), Escape, кнопка ✕. Контент — через ng-content. */
+/**
+ * Модалка: подложка (клик — закрыть), Escape, кнопка ✕. Контент — через ng-content.
+ * На телефоне превращается в bottom-sheet: ручка сверху, свайп вниз закрывает.
+ */
 @Component({
   selector: 'app-modal',
   host: { '(document:keydown.escape)': 'onEscape()' },
   template: `
     @if (open()) {
       <div class="modal-backdrop" (click)="close()">
-        <div class="modal-dialog" role="dialog" aria-modal="true" [attr.aria-label]="title()" (click)="$event.stopPropagation()">
+        <div
+          class="modal-dialog"
+          [class.dragging]="dragging()"
+          [style.transform]="dragY() > 0 ? 'translateY(' + dragY() + 'px)' : null"
+          role="dialog"
+          aria-modal="true"
+          [attr.aria-label]="title()"
+          (click)="$event.stopPropagation()"
+        >
+          <div
+            class="sheet-grip"
+            aria-hidden="true"
+            (pointerdown)="startDrag($event)"
+            (pointermove)="moveDrag($event)"
+            (pointerup)="endDrag()"
+            (pointercancel)="endDrag()"
+          ></div>
           <div class="modal-head">
             <h2>{{ title() }}</h2>
             <button type="button" class="modal-close" (click)="close()" aria-label="Закрыть">✕</button>
@@ -25,6 +44,11 @@ export class ModalComponent {
   readonly title = input<string>('');
   readonly closed = output<void>();
 
+  /** Насколько шторку уже сдвинули вниз (px). */
+  readonly dragY = signal(0);
+  readonly dragging = signal(false);
+  private dragStartY: number | null = null;
+
   constructor() {
     // Блокируем прокрутку страницы, пока модалка открыта.
     effect(() => {
@@ -33,12 +57,47 @@ export class ModalComponent {
   }
 
   close(): void {
+    this.dragStartY = null;
+    this.dragging.set(false);
+    this.dragY.set(0);
     this.closed.emit();
   }
 
   onEscape(): void {
     if (this.open()) {
       this.closed.emit();
+    }
+  }
+
+  /** Свайп вниз работает только там, где модалка — шторка (≤640px). */
+  startDrag(event: PointerEvent): void {
+    if (!window.matchMedia('(max-width: 640px)').matches) {
+      return;
+    }
+    this.dragStartY = event.clientY;
+    this.dragY.set(0);
+    this.dragging.set(true);
+    (event.currentTarget as HTMLElement).setPointerCapture(event.pointerId);
+  }
+
+  moveDrag(event: PointerEvent): void {
+    if (this.dragStartY === null) {
+      return;
+    }
+    this.dragY.set(Math.max(0, event.clientY - this.dragStartY));
+  }
+
+  endDrag(): void {
+    if (this.dragStartY === null) {
+      return;
+    }
+    const distance = this.dragY();
+    this.dragStartY = null;
+    this.dragging.set(false);
+    this.dragY.set(0);
+    // Тянули достаточно далеко — закрываем, иначе пружина возвращает на место.
+    if (distance > 110) {
+      this.close();
     }
   }
 }

@@ -1,5 +1,6 @@
 .auth-wrap {
   min-height: 100vh;
+  min-height: 100dvh;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -9,11 +10,14 @@
 .auth-card {
   width: 100%;
   max-width: 400px;
+  padding: 28px 24px;
+  border-radius: 28px;
   text-align: center;
+  animation: auth-in var(--dur-slow) var(--ease-spring) both;
 
   h1 {
-    font-size: 20px;
-    margin: 10px 0 2px;
+    font-size: 21px;
+    margin: 12px 0 2px;
   }
 
   p {
@@ -29,8 +33,24 @@
   }
 }
 
+@keyframes auth-in {
+  from {
+    opacity: 0;
+    transform: translateY(16px) scale(0.985);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
 .auth-logo {
-  font-size: 40px;
+  display: block;
+  width: 64px;
+  height: 64px;
+  margin: 0 auto;
+  border-radius: 20px;
+  box-shadow: var(--shadow);
 }
 
 .auth-seg {
@@ -43,11 +63,16 @@
 
 .auth-submit {
   margin-top: 4px;
+  border-radius: var(--radius-md);
 }
 
 .auth-links {
   margin-top: 14px;
   font-size: 14px;
+
+  a {
+    font-weight: 600;
+  }
 }
 
 .spinner-sm {
