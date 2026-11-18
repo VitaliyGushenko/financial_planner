@@ -6,12 +6,11 @@ import { filter, map, startWith } from 'rxjs';
 import { AuthService } from './core/auth.service';
 import { AccountsService } from './core/accounts.service';
 import { CurrencyService } from './core/currency.service';
-import { CountUpDirective } from './ui/count-up.directive';
 import { UpdateBannerComponent } from './ui/update-banner.component';
 
 @Component({
   selector: 'app-root',
-  imports: [RouterOutlet, RouterLink, RouterLinkActive, UpdateBannerComponent, CountUpDirective],
+  imports: [RouterOutlet, RouterLink, RouterLinkActive, UpdateBannerComponent],
   host: {
     '(document:click)': 'onDocumentClick()',
     '(document:keydown.escape)': 'closeMenu()',
@@ -31,10 +30,6 @@ export class AppComponent {
     () => this.auth.profile()?.displayName || this.auth.user()?.email || '',
   );
   readonly total = computed(() => this.currency.format(this.accounts.total()));
-
-  /** Число для счётчика в шапке и его форматтер. */
-  readonly totalValue = this.accounts.total;
-  readonly moneyFormat = (value: number) => this.currency.format(value);
 
   /** Разделы нижнего таб-бара: порядок задаёт позицию «пилюли». */
   private readonly tabRoutes = ['/', '/operations', '/calendar', '/stats', '/planner'];
