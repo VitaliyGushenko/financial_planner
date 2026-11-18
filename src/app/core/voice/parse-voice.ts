@@ -1,4 +1,4 @@
-import { DayKey, addDaysToKey } from '../day-key';
+import { DayKey, addDaysToKey, weekdayOf } from '../day-key';
 import { round2 } from '../money';
 import { Account, Category, OperationKind } from '../models';
 import { findNumber, parseNumberAt, tokenize } from './number-words';
@@ -152,6 +152,37 @@ const COMPOUND_ORDINALS = new Map<string, number>([
 
 const PLAIN_DAY = /^\d{1,2}$/u;
 
+/** Дни недели: 0 — понедельник (как в weekdayOf). */
+const WEEKDAYS = new Map<string, number>([
+  ['понедельник', 0],
+  ['вторник', 1],
+  ['среда', 2],
+  ['среду', 2],
+  ['четверг', 3],
+  ['пятница', 4],
+  ['пятницу', 4],
+  ['суббота', 5],
+  ['субботу', 5],
+  ['воскресенье', 6],
+]);
+
+/** Единицы для «через …» и «… назад», в днях. */
+const RELATIVE_UNITS = new Map<string, number>([
+  ['день', 1],
+  ['дня', 1],
+  ['дней', 1],
+  ['неделя', 7],
+  ['недели', 7],
+  ['неделю', 7],
+  ['недель', 7],
+  ['месяц', 30],
+  ['месяца', 30],
+  ['месяцев', 30],
+]);
+
+/** «18.11» или «18.11.2026». */
+const NUMERIC_DATE = /^(\d{1,2})\.(\d{1,2})(?:\.(\d{2,4}))?$/u;
+
 const RUBLE_WORDS = new Set(['рубль', 'рубля', 'рублей', 'руб', 'р', 'рубчик', 'рубчика', 'рубчиков']);
 const KOPECK_WORDS = new Set(['копейка', 'копейки', 'копеек', 'коп', 'копейку']);
 
@@ -279,15 +310,21 @@ function dayBefore(tokens: readonly string[], monthIndex: number): { day: number
   if (ordinal !== undefined) {
     return { day: ordinal, from: monthIndex - 1 };
   }
-  const compound = COMPOUND_ORDINALS.get(`${tokens[monthIndex - 2] ?? ''} ${prev}`);
+  // «18-го ноября»: после токенизации это «18», «го», «ноября».
+  const beforeSuffix = tokens[monthIndex - 2] ?? '';
+  if (PLAIN_DAY.test(beforeSuffix) && (prev === 'го' || prev === 'ого')) {
+    return { day: Number(beforeSuffix), from: monthIndex - 2 };
+  }
+  const compound = COMPOUND_ORDINALS.get(`${beforeSuffix} ${prev}`);
   if (compound !== undefined) {
     return { day: compound, from: monthIndex - 2 };
   }
   return null;
 }
 
-/** Дата из фразы: «вчера», «5 ноября», «пятого числа». */
+/** Дата из фразы: «вчера», «в пятницу», «5 ноября», «через неделю», «18.11». */
 function extractDate(tokens: readonly string[], today: DayKey): DateMatch {
+  // 1. «сегодня», «вчера», «позавчера», «завтра», «послезавтра».
   for (let i = 0; i < tokens.length; i++) {
     const delta = RELATIVE_DAYS.get(tokens[i]);
     if (delta !== undefined) {
@@ -297,7 +334,71 @@ function extractDate(tokens: readonly string[], today: DayKey): DateMatch {
 
   const [todayYear, todayMonth] = today.split('-').map(Number);
 
-  // «5 ноября», «двадцать пятого сентября»
+  // 2. «18.11», «18.11.2026».
+  for (let i = 0; i < tokens.length; i++) {
+    const numeric = NUMERIC_DATE.exec(tokens[i]);
+    if (!numeric) {
+      continue;
+    }
+    const rawYear = numeric[3] ? Number(numeric[3]) : todayYear;
+    const year = rawYear < 100 ? 2000 + rawYear : rawYear;
+    const key = makeDayKey(year, Number(numeric[2]), Number(numeric[1]));
+    if (key) {
+      return { date: key, ranges: [[i, i + 1]] };
+    }
+  }
+
+  // 3. День недели: «в пятницу» — ближайшая пятница.
+  for (let i = 0; i < tokens.length; i++) {
+    const weekday = WEEKDAYS.get(tokens[i]);
+    if (weekday === undefined) {
+      continue;
+    }
+    const back = (weekdayOf(today) - weekday + 7) % 7;
+    const delta = back === 0 ? 0 : back > 3 ? 7 - back : -back;
+    const from = tokens[i - 1] === 'в' || tokens[i - 1] === 'во' ? i - 1 : i;
+    return { date: addDaysToKey(today, delta), ranges: [[from, i + 1]] };
+  }
+
+  // 4. «три дня назад», «неделю назад», «месяц назад».
+  for (let i = 0; i < tokens.length; i++) {
+    if (tokens[i] !== 'назад') {
+      continue;
+    }
+    const unitIndex = i - 1;
+    const unit = RELATIVE_UNITS.get(tokens[unitIndex] ?? '');
+    if (unit === undefined) {
+      continue;
+    }
+    let count = 1;
+    let from = unitIndex;
+    for (let j = Math.max(0, unitIndex - 3); j < unitIndex; j++) {
+      const number = parseNumberAt(tokens, j);
+      if (number && number.end === unitIndex) {
+        count = number.value;
+        from = j;
+        break;
+      }
+    }
+    return { date: addDaysToKey(today, -count * unit), ranges: [[from, i + 1]] };
+  }
+
+  // 5. «через неделю», «через три дня».
+  for (let i = 0; i < tokens.length; i++) {
+    if (tokens[i] !== 'через') {
+      continue;
+    }
+    const number = parseNumberAt(tokens, i + 1);
+    const unitIndex = number ? number.end : i + 1;
+    const unit = RELATIVE_UNITS.get(tokens[unitIndex] ?? '');
+    if (unit === undefined) {
+      continue;
+    }
+    const count = number?.value ?? 1;
+    return { date: addDaysToKey(today, count * unit), ranges: [[i, unitIndex + 1]] };
+  }
+
+  // 6. «5 ноября», «двадцать пятого сентября», «18-го ноября».
   for (let i = 0; i < tokens.length; i++) {
     const month = MONTHS.get(tokens[i]);
     if (month === undefined) {
@@ -312,7 +413,7 @@ function extractDate(tokens: readonly string[], today: DayKey): DateMatch {
     }
   }
 
-  // «5 числа», «пятого», «двадцать первого»
+  // 7. «5 числа», «пятого», «двадцать первого».
   for (let i = 0; i < tokens.length; i++) {
     const token = tokens[i];
     const next = tokens[i + 1] ?? '';
