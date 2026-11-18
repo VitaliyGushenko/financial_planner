@@ -1,5 +1,5 @@
 import { Injectable, Injector, computed, inject, runInInjectionContext, signal } from '@angular/core';
-import { Auth, User, createUserWithEmailAndPassword, onAuthStateChanged, sendPasswordResetEmail, signInWithEmailAndPassword, signOut, updateProfile } from '@angular/fire/auth';
+import { Auth, User, EmailAuthProvider, createUserWithEmailAndPassword, onAuthStateChanged, reauthenticateWithCredential, sendPasswordResetEmail, signInWithEmailAndPassword, signOut, updatePassword, updateProfile } from '@angular/fire/auth';
 import { Firestore, doc, docData, getDoc, serverTimestamp, setDoc, updateDoc } from '@angular/fire/firestore';
 import { Subscription } from 'rxjs';
 
@@ -59,6 +59,20 @@ export class AuthService {
 
   async resetPassword(email: string): Promise<void> {
     await sendPasswordResetEmail(this.auth, email.trim());
+  }
+
+  /**
+   * Смена пароля из настроек: сначала повторная аутентификация текущим
+   * паролем (Firebase требует «свежий» вход), затем установка нового.
+   */
+  async changePassword(currentPassword: string, newPassword: string): Promise<void> {
+    const user = this.user();
+    if (!user?.email) {
+      throw new Error('Пользователь не авторизован');
+    }
+    const credential = EmailAuthProvider.credential(user.email, currentPassword);
+    await reauthenticateWithCredential(user, credential);
+    await updatePassword(user, newPassword);
   }
 
   async logout(): Promise<void> {

@@ -9,6 +9,8 @@ const messages: Record<string, string> = {
   'auth/too-many-requests': 'Слишком много попыток. Попробуйте позже.',
   'auth/network-request-failed': 'Ошибка сети. Проверьте подключение к интернету.',
   'auth/user-disabled': 'Аккаунт заблокирован.',
+  'auth/requires-recent-login': 'Сессия устарела — войдите заново и повторите.',
+  'auth/user-mismatch': 'Похоже, вы вошли под другим аккаунтом. Войдите заново.',
 };
 
 export function firebaseErrorMessage(error: unknown): string {

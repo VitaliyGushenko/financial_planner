@@ -17,6 +17,8 @@ import { ImportPlan, ParsedRow, parseBackupFile, parseTransactionsCsv, planImpor
 import { BackupService } from '../../core/backup.service';
 import { ToastService } from '../../ui/toast.service';
 import { todayKey } from '../../core/day-key';
+import { validatePasswordChange } from '../../core/password';
+import { firebaseErrorMessage } from '../../core/firebase-error-map';
 import { IconComponent, IconName } from '../../ui/icon.component';
 import { CATEGORY_ICONS, categoryIconName } from '../../ui/category-icons';
 
@@ -359,6 +361,40 @@ export class SettingsComponent {
     await this.auth.updateCurrency(this.currencyCode);
     this.profileSaved.set(true);
     setTimeout(() => this.profileSaved.set(false), 2500);
+  }
+
+  // ----- Безопасность: смена пароля -----
+
+  passwordForm = { current: '', next: '', repeat: '' };
+  readonly passwordBusy = signal(false);
+  readonly passwordError = signal('');
+  readonly passwordNotice = signal('');
+
+  async changePassword(): Promise<void> {
+    if (this.passwordBusy()) {
+      return;
+    }
+    this.passwordError.set('');
+    this.passwordNotice.set('');
+
+    const validation = validatePasswordChange(this.passwordForm);
+    if (!validation.ok) {
+      this.passwordError.set(validation.message);
+      return;
+    }
+
+    this.passwordBusy.set(true);
+    try {
+      await this.auth.changePassword(this.passwordForm.current, this.passwordForm.next);
+      this.passwordForm = { current: '', next: '', repeat: '' };
+      this.passwordNotice.set('Пароль изменён.');
+      this.toast.show('Пароль изменён');
+    } catch (error) {
+      // Firebase отдаёт код ошибки — переводим на понятный текст.
+      this.passwordError.set(firebaseErrorMessage(error));
+    } finally {
+      this.passwordBusy.set(false);
+    }
   }
 
   money(value: number): string {

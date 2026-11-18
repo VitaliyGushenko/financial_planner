@@ -329,3 +329,57 @@
     <button class="btn btn-ghost" (click)="logout()">Выйти из аккаунта</button>
   </div>
 </div>
+
+<div class="card">
+  <h2 class="card-title">Безопасность</h2>
+  <p class="muted small">
+    Смена пароля для входа. Email: <strong>{{ email() }}</strong>. Если пароль забыт —
+    выйдите и воспользуйтесь ссылкой «Забыли пароль?» на экране входа.
+  </p>
+  <form (ngSubmit)="changePassword()">
+    <div class="form-row">
+      <div class="field">
+        <label for="pwCurrent">Текущий пароль</label>
+        <input
+          id="pwCurrent"
+          name="pwCurrent"
+          type="password"
+          autocomplete="current-password"
+          [(ngModel)]="passwordForm.current"
+        />
+      </div>
+    </div>
+    <div class="form-row">
+      <div class="field">
+        <label for="pwNext">Новый пароль</label>
+        <input
+          id="pwNext"
+          name="pwNext"
+          type="password"
+          autocomplete="new-password"
+          [(ngModel)]="passwordForm.next"
+          placeholder="Минимум 6 символов"
+        />
+      </div>
+      <div class="field">
+        <label for="pwRepeat">Повторите новый</label>
+        <input
+          id="pwRepeat"
+          name="pwRepeat"
+          type="password"
+          autocomplete="new-password"
+          [(ngModel)]="passwordForm.repeat"
+        />
+      </div>
+    </div>
+    @if (passwordError()) {
+      <p class="form-error">{{ passwordError() }}</p>
+    }
+    @if (passwordNotice()) {
+      <p class="form-notice">{{ passwordNotice() }}</p>
+    }
+    <div class="form-actions">
+      <button class="btn" type="submit" [disabled]="passwordBusy()">Изменить пароль</button>
+    </div>
+  </form>
+</div>
