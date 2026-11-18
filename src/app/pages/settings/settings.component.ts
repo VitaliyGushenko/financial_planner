@@ -65,6 +65,15 @@ export class SettingsComponent {
     this.editingAccountId.set(null);
   }
 
+  /** Месячный лимит по категории; пустое значение — убрать бюджет. */
+  saveBudget(category: Category, raw: string): void {
+    const value = Number(raw);
+    void this.categoriesService.setBudget(
+      category.id,
+      Number.isFinite(value) && value > 0 ? value : null,
+    );
+  }
+
   async removeAccount(account: Account): Promise<void> {
     const note =
       account.balance !== 0

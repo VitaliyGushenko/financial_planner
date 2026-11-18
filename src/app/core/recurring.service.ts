@@ -1,5 +1,5 @@
 import { Injectable, computed } from '@angular/core';
-import { Timestamp, addDoc, arrayUnion, deleteDoc, serverTimestamp, updateDoc } from '@angular/fire/firestore';
+import { Timestamp, addDoc, arrayUnion, deleteDoc, serverTimestamp, setDoc, updateDoc } from '@angular/fire/firestore';
 
 import { RecurringRule } from './models';
 import { DayKey, pluralRu } from './day-key';
@@ -53,6 +53,30 @@ export class RecurringService extends UserCollectionService<RecurringRule> {
       return;
     }
     await deleteDoc(this.docRef(id));
+  }
+
+  /** Возвращает удалённое правило (кнопка «Отменить»). */
+  async restore(rule: RecurringRule): Promise<void> {
+    if (!this.isReady) {
+      return;
+    }
+    await setDoc(this.docRef(rule.id), {
+      title: rule.title,
+      kind: rule.kind,
+      amount: rule.amount,
+      accountId: rule.accountId,
+      toAccountId: rule.toAccountId,
+      categoryId: rule.categoryId,
+      subcategoryId: rule.subcategoryId,
+      frequency: rule.frequency,
+      every: rule.every,
+      customUnit: rule.customUnit,
+      startDate: rule.startDate,
+      endDate: rule.endDate,
+      skippedDates: rule.skippedDates ?? [],
+      note: rule.note,
+      createdAt: rule.createdAt ?? serverTimestamp(),
+    });
   }
 
   /** Отметить вхождение правила пропущенным: деньги не пришли, операция не нужна. */

@@ -22,9 +22,47 @@
 
 <div class="grid-2">
   <div>
-    <div class="card total-card">
-      <div class="muted small">Всего на счетах</div>
-      <div class="total-value" [appCountUp]="totalValue()" [appCountUpFormat]="moneyFn">{{ total() }}</div>
+    <div class="card pulse-card">
+      <div class="pulse-head">
+        <span class="pulse-label">Можно потратить сегодня</span>
+        <span class="pulse-total">на счетах {{ total() }}</span>
+      </div>
+
+      <div class="pulse-value" [appCountUp]="safe().amount" [appCountUpFormat]="moneyFn">
+        {{ money(safe().amount) }}
+      </div>
+
+      <div class="pulse-meta">
+        @if (safe().nextIncomeDate) {
+          <span class="pulse-chip">до дохода {{ daysLabel() }}</span>
+        }
+        <span class="pulse-chip" [class.danger]="safe().minBalance < 0">
+          минимум {{ money(safe().minBalance) }} · {{ formatDay(safe().minBalanceDate) }}
+        </span>
+      </div>
+
+      <svg class="pulse-spark" viewBox="0 0 240 64" preserveAspectRatio="none" aria-hidden="true">
+        <path class="pulse-area" [attr.d]="sparkArea()"></path>
+        <path class="pulse-line" [attr.d]="sparkLine()"></path>
+      </svg>
+
+      @if (budget().totalBudget > 0) {
+        <a class="pulse-budget" routerLink="/stats">
+          <span>
+            Бюджет месяца: {{ money(budget().totalSpent) }} из {{ money(budget().totalBudget) }}
+            @if (budget().overCount) {
+              · превышений: {{ budget().overCount }}
+            }
+          </span>
+          <span class="pulse-budget-track">
+            <span
+              class="pulse-budget-fill"
+              [class.over]="budget().progress > 1"
+              [style.width.%]="budgetWidth()"
+            ></span>
+          </span>
+        </a>
+      }
     </div>
 
     <div class="card">

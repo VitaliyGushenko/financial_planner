@@ -8,7 +8,9 @@ import { PendingService } from '../../core/pending.service';
 import { ProjectionService } from '../../core/projection.service';
 import { TransactionsService } from '../../core/transactions.service';
 import { ProjectionEvent } from '../../core/projection';
-import { DayKey, formatDayKeyRelative, formatDayKeyShort } from '../../core/day-key';
+import { DayKey, formatDayKeyRelative, formatDayKeyShort, pluralRu, todayKey } from '../../core/day-key';
+import { buildBudgets } from '../../core/budgets';
+import { safeToSpend } from '../../core/safe-to-spend';
 import { CountUpDirective } from '../../ui/count-up.directive';
 import { IconComponent } from '../../ui/icon.component';
 
@@ -34,12 +36,39 @@ export class DashboardComponent {
   private readonly currency = inject(CurrencyService);
 
   readonly total = computed(() => this.currency.format(this.accountsService.total()));
-  /** Число и форматтер для анимированного счётчика в карточке баланса. */
-  readonly totalValue = this.accountsService.total;
   readonly moneyFn = (value: number) => this.currency.format(value);
   readonly accounts = this.accountsService.accounts;
 
   readonly projection = this.projectionService.projection;
+
+  /** «Безопасно потратить сегодня» и контекст: минимум по прогнозу, дни до дохода. */
+  readonly safe = computed(() => safeToSpend(this.projection(), 30));
+
+  /** Бюджеты текущего месяца — компактная сводка в карточке пульса. */
+  readonly budget = computed(() =>
+    buildBudgets({
+      categories: this.categoriesService.categories(),
+      transactions: this.transactionsService.transactions(),
+      month: todayKey(),
+    }),
+  );
+  readonly budgetWidth = computed(() => Math.min(100, Math.max(0, this.budget().progress * 100)));
+
+  readonly daysLabel = computed(() => {
+    const days = this.safe().daysToIncome;
+    return days === null ? '' : `${days} ${pluralRu(days, 'день', 'дня', 'дней')}`;
+  });
+
+  /** Спарклайн: 14 дней назад и 14 вперёд — видно, куда движется баланс. */
+  private readonly spark = computed(() => {
+    const projection = this.projection();
+    const index = projection.keys.indexOf(projection.today);
+    const keys = projection.keys.slice(Math.max(0, index - 14), index + 15);
+    const values = keys.map((key) => projection.days.get(key)?.balance ?? 0);
+    return sparkPath(values, 240, 64);
+  });
+  readonly sparkLine = computed(() => this.spark().line);
+  readonly sparkArea = computed(() => this.spark().area);
 
   /** Даты хранятся строками «YYYY-MM-DD» — форматируем без LocaleId (DatePipe ломает NG0203). */
   readonly formatDay = formatDayKeyShort;
@@ -124,4 +153,22 @@ export class DashboardComponent {
       dateKey,
     );
   }
+}
+
+/** Точки спарклайна → путь линии и замкнутая область под ней. */
+function sparkPath(values: number[], width: number, height: number): { line: string; area: string } {
+  if (!values.length) {
+    return { line: '', area: '' };
+  }
+  const min = Math.min(...values);
+  const max = Math.max(...values);
+  const span = max - min || 1;
+  const step = values.length > 1 ? width / (values.length - 1) : width;
+  const points = values.map((value, index) => {
+    const x = index * step;
+    const y = height - 2 - ((value - min) / span) * (height - 6);
+    return `${x.toFixed(1)} ${y.toFixed(1)}`;
+  });
+  const line = points.map((point, index) => `${index === 0 ? 'M' : 'L'}${point}`).join(' ');
+  return { line, area: `${line} L${width} ${height} L0 ${height} Z` };
 }

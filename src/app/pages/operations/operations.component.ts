@@ -11,6 +11,7 @@ import { RecurringService, RecurringDraft, describeFrequency } from '../../core/
 import { TransactionsService } from '../../core/transactions.service';
 import { ModalComponent } from '../../ui/modal.component';
 import { IconComponent } from '../../ui/icon.component';
+import { ToastService } from '../../ui/toast.service';
 import { VoiceInputComponent } from '../../ui/voice-input.component';
 import { parseVoice, VoiceField } from '../../core/voice/parse-voice';
 import { Category, CustomUnit, Frequency, OperationKind, RecurringRule, Subcategory, Transaction, TransactionDraft } from '../../core/models';
@@ -33,6 +34,7 @@ export class OperationsComponent {
   private readonly transactionsService = inject(TransactionsService);
   private readonly recurringService = inject(RecurringService);
   private readonly pendingService = inject(PendingService);
+  private readonly toast = inject(ToastService);
   readonly curr = inject(CurrencyService);
 
   readonly todayMarker = todayKey();
@@ -64,6 +66,95 @@ export class OperationsComponent {
 
   /** Активный таб страницы: журнал операций или правила повторения. */
   readonly tab = signal<'journal' | 'recurring'>('journal');
+
+  // ----- Поиск и фильтры журнала -----
+
+  readonly query = signal('');
+  readonly kindFilter = signal<'all' | OperationKind>('all');
+  readonly accountFilter = signal('all');
+  readonly monthFilter = signal('all');
+  readonly filtersOpen = signal(false);
+
+  readonly months = computed(() => {
+    const set = new Set<string>();
+    for (const tx of this.transactions()) {
+      set.add(tx.date.slice(0, 7));
+    }
+    return [...set].sort((a, b) => b.localeCompare(a));
+  });
+
+  readonly activeFilters = computed(() => {
+    let count = 0;
+    if (this.kindFilter() !== 'all') count += 1;
+    if (this.accountFilter() !== 'all') count += 1;
+    if (this.monthFilter() !== 'all') count += 1;
+    return count;
+  });
+
+  readonly hasFilters = computed(() => this.query().trim() !== '' || this.activeFilters() > 0);
+
+  readonly filtered = computed(() => {
+    const query = this.query().trim().toLowerCase();
+    const kind = this.kindFilter();
+    const accountId = this.accountFilter();
+    const month = this.monthFilter();
+
+    return this.transactions().filter((tx) => {
+      if (kind !== 'all' && tx.kind !== kind) {
+        return false;
+      }
+      if (accountId !== 'all' && tx.accountId !== accountId && tx.toAccountId !== accountId) {
+        return false;
+      }
+      if (month !== 'all' && !tx.date.startsWith(month)) {
+        return false;
+      }
+      if (!query) {
+        return true;
+      }
+      const haystack = [
+        this.categoryName(tx),
+        this.accountName(tx.accountId),
+        this.accountName(tx.toAccountId),
+        tx.note ?? '',
+        String(tx.amount),
+      ]
+        .join(' ')
+        .toLowerCase();
+      return haystack.includes(query);
+    });
+  });
+
+  /** Журнал, сгруппированный по дням с итогами дня. */
+  readonly groups = computed(() => {
+    const map = new Map<DayKey, Transaction[]>();
+    for (const tx of this.filtered()) {
+      const list = map.get(tx.date) ?? [];
+      list.push(tx);
+      map.set(tx.date, list);
+    }
+    return [...map.entries()].map(([key, items]) => ({
+      key,
+      label: this.formatDay(key),
+      income: items.filter((tx) => tx.kind === 'income').reduce((sum, tx) => sum + tx.amount, 0),
+      expense: items.filter((tx) => tx.kind === 'expense').reduce((sum, tx) => sum + tx.amount, 0),
+      items,
+    }));
+  });
+
+  resetFilters(): void {
+    this.query.set('');
+    this.kindFilter.set('all');
+    this.accountFilter.set('all');
+    this.monthFilter.set('all');
+  }
+
+  monthLabel(month: string): string {
+    const [year, monthNumber] = month.split('-').map(Number);
+    return new Date(Date.UTC(year, monthNumber - 1, 1))
+      .toLocaleDateString('ru-RU', { month: 'long', year: 'numeric' })
+      .replace(/ г\.$/, '');
+  }
 
   // ----- Платежи, ожидающие подтверждения -----
 
@@ -341,21 +432,25 @@ export class OperationsComponent {
   }
 
   async remove(tx: Transaction): Promise<void> {
-    if (confirm('Удалить операцию? Баланс счёта будет скорректирован.')) {
-      await this.transactionsService.remove(tx.id);
-      if (this.editingId() === tx.id) {
-        this.closeForm();
-      }
+    const snapshot: Transaction = { ...tx };
+    await this.transactionsService.remove(tx.id);
+    if (this.editingId() === tx.id) {
+      this.closeForm();
     }
+    this.toast.show('Операция удалена', {
+      action: { label: 'Отменить', run: () => this.transactionsService.restore(snapshot) },
+    });
   }
 
   async removeRule(rule: RecurringRule): Promise<void> {
-    if (confirm(`Удалить правило «${rule.title}»?`)) {
-      await this.recurringService.remove(rule.id);
-      if (this.editingRuleId() === rule.id) {
-        this.closeForm();
-      }
+    const snapshot: RecurringRule = { ...rule };
+    await this.recurringService.remove(rule.id);
+    if (this.editingRuleId() === rule.id) {
+      this.closeForm();
     }
+    this.toast.show(`Правило «${rule.title}» удалено`, {
+      action: { label: 'Отменить', run: () => this.recurringService.restore(snapshot) },
+    });
   }
 
   private validate(): string {

@@ -44,6 +44,31 @@
   </div>
 </div>
 
+@if (budgets().lines.length) {
+  <div class="card budgets-card">
+    <h2 class="card-title">Бюджеты на месяц</h2>
+    <div class="budget-list">
+      @for (line of budgets().lines; track line.categoryId) {
+        <div class="budget-row" [class.over]="line.over">
+          <div class="budget-line">
+            <span class="budget-name">{{ line.title }}</span>
+            <span class="budget-sum">{{ money(line.spent) }} из {{ money(line.budget) }}</span>
+          </div>
+          <div class="budget-track">
+            <div class="budget-fill" [style.width.%]="budgetWidth(line.progress)"></div>
+          </div>
+        </div>
+      }
+    </div>
+    <p class="muted small">
+      Осталось {{ money(budgets().totalRemaining) }} из {{ money(budgets().totalBudget) }}
+      @if (budgets().overCount) {
+        · превышений: {{ budgets().overCount }}
+      }
+    </p>
+  </div>
+}
+
 <div class="grid-2">
   <div class="card chart-card">
     <h2 class="card-title">Расходы по категориям</h2>

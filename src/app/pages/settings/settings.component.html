@@ -89,6 +89,21 @@
                     }
                   </div>
                 }
+                @if (section.kind === 'expense') {
+                  <div class="budget-edit">
+                    <label [for]="'budget-' + cat.id">Лимит в месяц, {{ curr.symbol() }}</label>
+                    <input
+                      [id]="'budget-' + cat.id"
+                      [name]="'budget-' + cat.id"
+                      type="number"
+                      min="0"
+                      step="100"
+                      [value]="cat.budget ?? ''"
+                      placeholder="без лимита"
+                      (change)="saveBudget(cat, $any($event.target).value)"
+                    />
+                  </div>
+                }
               </div>
               <button class="btn btn-danger btn-sm" (click)="removeCategory(cat)" title="Удалить категорию">Удалить</button>
             </div>

@@ -38,6 +38,8 @@ export interface Category {
   kind: CategoryKind;
   subcategories: Subcategory[];
   sortOrder: number;
+  /** Месячный лимит расходов по категории; не задан — бюджет не ведётся. */
+  budget?: number;
 }
 
 /**

@@ -1,7 +1,8 @@
 import { Injectable, computed } from '@angular/core';
-import { addDoc, arrayRemove, arrayUnion, deleteDoc, updateDoc } from '@angular/fire/firestore';
+import { addDoc, arrayRemove, arrayUnion, deleteDoc, deleteField, updateDoc } from '@angular/fire/firestore';
 
 import { Category, CategoryKind, Subcategory } from './models';
+import { round2 } from './money';
 import { UserCollectionService } from './user-collection.service';
 
 @Injectable({ providedIn: 'root' })
@@ -51,8 +52,17 @@ export class CategoriesService extends UserCollectionService<Category> {
     await deleteDoc(this.docRef(id));
   }
 
-  async addSubcategory(categoryId: string, name: string): Promise<void> {
-    if (!this.isReady || !name.trim()) {
+  /** Месячный лимит по категории; null — убрать бюджет. */
+  async setBudget(categoryId: string, budget: number | null): Promise<void> {
+    if (!this.isReady) {
+      return;
+    }
+    await updateDoc(this.docRef(categoryId), {
+      budget: budget && budget > 0 ? round2(budget) : deleteField(),
+    });
+  }
+
+  async addSubcategory(categoryId: string, name: string): Promise<void> {    if (!this.isReady || !name.trim()) {
       return;
     }
     const sub: Subcategory = { id: genId(), name: name.trim() };

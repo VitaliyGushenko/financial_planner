@@ -994,6 +994,81 @@ app-icon {
   --icon-size: 18px;
 }
 
+/* ----- Плашки-уведомления ----- */
+
+.toast-stack {
+  position: fixed;
+  left: 50%;
+  bottom: calc(16px + env(safe-area-inset-bottom));
+  transform: translateX(-50%);
+  z-index: 60;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  width: min(420px, calc(100vw - 24px));
+  pointer-events: none;
+}
+
+.toast {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 10px 10px 16px;
+  border-radius: 14px;
+  background: #11171e;
+  color: #f2f5f7;
+  box-shadow: 0 14px 36px rgba(10, 20, 30, 0.34);
+  pointer-events: auto;
+  animation: toast-in var(--dur-slow) var(--ease-spring) both;
+}
+
+.toast-text {
+  flex: 1;
+  font-size: 14px;
+}
+
+.toast-action {
+  border: none;
+  padding: 6px 8px;
+  border-radius: 8px;
+  background: transparent;
+  color: #8ce0b0;
+  font: inherit;
+  font-weight: 700;
+  cursor: pointer;
+
+  &:hover {
+    background: rgba(255, 255, 255, 0.08);
+  }
+}
+
+.toast-close {
+  display: inline-flex;
+  padding: 6px;
+  border: none;
+  border-radius: 8px;
+  background: transparent;
+  color: #9fb0c0;
+  cursor: pointer;
+  --icon-size: 16px;
+
+  &:hover {
+    background: rgba(255, 255, 255, 0.08);
+    color: #fff;
+  }
+}
+
+@keyframes toast-in {
+  from {
+    opacity: 0;
+    transform: translateY(12px) scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
 /* ----- Голосовой ввод ----- */
 
 .voice-hint {
@@ -1087,6 +1162,10 @@ app-icon {
   }
 
   .update-banner {
+    bottom: calc(var(--tabbar-h) + 12px + env(safe-area-inset-bottom));
+  }
+
+  .toast-stack {
     bottom: calc(var(--tabbar-h) + 12px + env(safe-area-inset-bottom));
   }
 }

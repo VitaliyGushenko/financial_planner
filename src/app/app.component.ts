@@ -7,11 +7,12 @@ import { AuthService } from './core/auth.service';
 import { AccountsService } from './core/accounts.service';
 import { CurrencyService } from './core/currency.service';
 import { IconComponent } from './ui/icon.component';
+import { ToastComponent } from './ui/toast.component';
 import { UpdateBannerComponent } from './ui/update-banner.component';
 
 @Component({
   selector: 'app-root',
-  imports: [RouterOutlet, RouterLink, RouterLinkActive, UpdateBannerComponent, IconComponent],
+  imports: [RouterOutlet, RouterLink, RouterLinkActive, UpdateBannerComponent, IconComponent, ToastComponent],
   host: {
     '(document:click)': 'onDocumentClick()',
     '(document:keydown.escape)': 'closeMenu()',

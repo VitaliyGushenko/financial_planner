@@ -207,26 +207,103 @@
 
 @if (tab() === 'journal') {
   <div class="card">
-    <h2 class="card-title">Журнал</h2>
-    @if (transactions().length) {
+    <div class="journal-head">
+      <h2 class="card-title">Журнал</h2>
+      <button
+        type="button"
+        class="btn btn-ghost btn-sm"
+        [class.active]="filtersOpen()"
+        (click)="filtersOpen.set(!filtersOpen())"
+      >
+        Фильтры
+        @if (activeFilters()) {
+          <span class="filter-count">{{ activeFilters() }}</span>
+        }
+      </button>
+    </div>
+
+    <label class="search-field">
+      <app-icon name="search" />
+      <input
+        type="search"
+        [value]="query()"
+        (input)="query.set($any($event.target).value)"
+        placeholder="Поиск: заметка, категория, счёт, сумма"
+        aria-label="Поиск по журналу"
+      />
+      @if (query()) {
+        <button type="button" class="search-clear" (click)="query.set('')" aria-label="Очистить поиск">
+          <app-icon name="close" />
+        </button>
+      }
+    </label>
+
+    @if (filtersOpen()) {
+      <div class="journal-filters">
+        <div class="seg">
+          <button type="button" [class.active]="kindFilter() === 'all'" (click)="kindFilter.set('all')">Все</button>
+          <button type="button" [class.active]="kindFilter() === 'expense'" (click)="kindFilter.set('expense')">Расходы</button>
+          <button type="button" [class.active]="kindFilter() === 'income'" (click)="kindFilter.set('income')">Доходы</button>
+          <button type="button" [class.active]="kindFilter() === 'transfer'" (click)="kindFilter.set('transfer')">Переводы</button>
+        </div>
+        <div class="filter-selects">
+          <select [value]="accountFilter()" (change)="accountFilter.set($any($event.target).value)" aria-label="Счёт">
+            <option value="all">Все счета</option>
+            @for (acc of accounts(); track acc.id) {
+              <option [value]="acc.id">{{ acc.name }}</option>
+            }
+          </select>
+          <select [value]="monthFilter()" (change)="monthFilter.set($any($event.target).value)" aria-label="Месяц">
+            <option value="all">Все месяцы</option>
+            @for (month of months(); track month) {
+              <option [value]="month">{{ monthLabel(month) }}</option>
+            }
+          </select>
+          @if (hasFilters()) {
+            <button type="button" class="btn btn-ghost btn-sm" (click)="resetFilters()">Сбросить</button>
+          }
+        </div>
+      </div>
+    }
+
+    @if (groups().length) {
       <div class="rows">
-        @for (tx of transactions(); track tx.id) {
-          <div class="row">
-            <span class="kind-dot" [class]="tx.kind"></span>
-          <div class="row-main">
-            <div class="row-title">{{ categoryName(tx) }}</div>
-            <div class="row-sub">
-              {{ formatDay(tx.date) }}
-              · {{ accountName(tx.accountId) }}{{ tx.kind === 'transfer' ? ' → ' + accountName(tx.toAccountId) : '' }}{{ tx.note ? ' · ' + tx.note : '' }}
+        @for (group of groups(); track group.key) {
+          <div class="day-group">
+            <div class="day-head-row">
+              <span class="day-label">{{ group.label }}</span>
+              <span class="day-totals">
+                @if (group.income) {
+                  <span class="positive">+{{ money(group.income) }}</span>
+                }
+                @if (group.expense) {
+                  <span class="negative">−{{ money(group.expense) }}</span>
+                }
+              </span>
             </div>
-          </div>
-            <span class="row-amount" [class]="amountClass(tx.kind)">{{ signed(tx) }}</span>
-            <button class="btn btn-ghost btn-sm" (click)="edit(tx)">Изменить</button>
-            <button class="btn btn-danger btn-sm" (click)="remove(tx)" aria-label="Удалить операцию" title="Удалить операцию">
-              <app-icon name="close" />
-            </button>
+            @for (tx of group.items; track tx.id) {
+              <div class="row">
+                <span class="kind-dot" [class]="tx.kind"></span>
+                <div class="row-main">
+                  <div class="row-title">{{ categoryName(tx) }}</div>
+                  <div class="row-sub">
+                    {{ accountName(tx.accountId) }}{{ tx.kind === 'transfer' ? ' → ' + accountName(tx.toAccountId) : '' }}{{ tx.note ? ' · ' + tx.note : '' }}
+                  </div>
+                </div>
+                <span class="row-amount" [class]="amountClass(tx.kind)">{{ signed(tx) }}</span>
+                <button class="btn btn-ghost btn-sm" (click)="edit(tx)">Изменить</button>
+                <button class="btn btn-danger btn-sm" (click)="remove(tx)" aria-label="Удалить операцию" title="Удалить операцию">
+                  <app-icon name="close" />
+                </button>
+              </div>
+            }
           </div>
         }
+      </div>
+    } @else if (hasFilters()) {
+      <div class="empty-state">
+        Ничего не найдено.
+        <button type="button" class="btn btn-ghost btn-sm" (click)="resetFilters()">Сбросить фильтры</button>
       </div>
     } @else {
       <div class="empty-state">Пока пусто. Нажмите «+ Новая операция».</div>

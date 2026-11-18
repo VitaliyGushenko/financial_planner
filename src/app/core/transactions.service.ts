@@ -74,6 +74,32 @@ export class TransactionsService extends UserCollectionService<Transaction> {
     await batch.commit();
   }
 
+  /** Возвращает удалённую операцию (кнопка «Отменить»): тот же документ и те же балансы. */
+  async restore(tx: Transaction): Promise<void> {
+    if (!this.isReady) {
+      return;
+    }
+    const applied = tx.applied ?? tx.date <= todayKey();
+    const batch = writeBatch(this.firestore);
+    batch.set(this.docRef(tx.id), {
+      kind: tx.kind,
+      amount: tx.amount,
+      accountId: tx.accountId,
+      toAccountId: tx.toAccountId,
+      categoryId: tx.categoryId,
+      subcategoryId: tx.subcategoryId,
+      date: tx.date,
+      note: tx.note,
+      applied,
+      ruleId: tx.ruleId,
+      createdAt: tx.createdAt ?? serverTimestamp(),
+    });
+    if (applied) {
+      await this.applyDeltas(batch, tx, +1);
+    }
+    await batch.commit();
+  }
+
   /** Создаёт операцию из вхождения повторяющегося правила (кнопка «Записать»/подтверждение). */
   async recordFromRule(
     rule: {

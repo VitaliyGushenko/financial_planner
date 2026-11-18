@@ -9,6 +9,7 @@ import { ProjectionService } from '../../core/projection.service';
 import { TransactionsService } from '../../core/transactions.service';
 import { StatsPeriod, balanceSeries, buildStats, fillMonths, lastMonths, periodRange } from '../../core/stats';
 import { DayKey, todayKey } from '../../core/day-key';
+import { buildBudgets } from '../../core/budgets';
 import { CountUpDirective } from '../../ui/count-up.directive';
 
 Chart.register(...registerables);
@@ -75,6 +76,19 @@ export class StatsComponent {
   readonly monthly = computed(() =>
     fillMonths(lastMonths(this.today, 12), this.transactionsService.transactions()),
   );
+
+  /** Бюджеты по категориям на текущий месяц. */
+  readonly budgets = computed(() =>
+    buildBudgets({
+      categories: this.categoriesService.categories(),
+      transactions: this.transactionsService.transactions(),
+      month: this.today,
+    }),
+  );
+
+  budgetWidth(progress: number): number {
+    return Math.min(100, Math.max(0, progress * 100));
+  }
 
   private readonly donutCanvas = viewChild<ElementRef<HTMLCanvasElement>>('donut');
   private readonly monthsCanvas = viewChild<ElementRef<HTMLCanvasElement>>('months');

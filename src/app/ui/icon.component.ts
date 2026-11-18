@@ -23,6 +23,7 @@ export type IconName =
   | 'check'
   | 'close'
   | 'ban'
+  | 'search'
   | 'chevron-left'
   | 'chevron-right';
 
@@ -104,6 +105,10 @@ export type IconName =
         @case ('ban') {
           <circle cx="12" cy="12" r="8.5"></circle>
           <path d="M6.5 6.5 17.5 17.5"></path>
+        }
+        @case ('search') {
+          <circle cx="11" cy="11" r="6.5"></circle>
+          <path d="m16 16 4.5 4.5"></path>
         }
         @case ('chevron-left') {
           <path d="M14.5 6 8.5 12l6 6"></path>
