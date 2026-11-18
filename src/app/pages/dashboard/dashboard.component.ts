@@ -10,6 +10,7 @@ import { TransactionsService } from '../../core/transactions.service';
 import { ProjectionEvent } from '../../core/projection';
 import { DayKey, formatDayKeyRelative, formatDayKeyShort } from '../../core/day-key';
 import { CountUpDirective } from '../../ui/count-up.directive';
+import { IconComponent } from '../../ui/icon.component';
 
 interface UpcomingDay {
   key: DayKey;
@@ -20,7 +21,7 @@ interface UpcomingDay {
 
 @Component({
   selector: 'app-dashboard',
-  imports: [RouterLink, CountUpDirective],
+  imports: [RouterLink, CountUpDirective, IconComponent],
   templateUrl: './dashboard.component.html',
   styleUrl: './dashboard.component.less',
 })

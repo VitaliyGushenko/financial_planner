@@ -4,22 +4,35 @@
 }
 
 .deficit-banner {
+  display: flex;
+  align-items: center;
+  gap: 9px;
   background: var(--expense-soft);
   color: var(--expense);
   border-radius: var(--radius);
   padding: 10px 14px;
   margin-bottom: 14px;
   font-weight: 600;
+
+  app-icon {
+    --icon-size: 18px;
+  }
 }
 
 .pending-banner {
-  display: block;
+  display: flex;
+  align-items: center;
+  gap: 9px;
   background: var(--warn-soft);
   color: var(--warn);
   border-radius: var(--radius);
   padding: 10px 14px;
   margin-bottom: 14px;
   font-weight: 600;
+
+  app-icon {
+    --icon-size: 18px;
+  }
 }
 
 .total-card {
@@ -38,7 +51,8 @@
 }
 
 .acc-icon {
-  font-size: 20px;
+  --icon-size: 20px;
+  color: var(--muted);
 }
 
 .card-footer {

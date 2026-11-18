@@ -1,7 +1,7 @@
 <div class="page-head">
   <h1>Операции</h1>
   <div class="head-actions">
-    <button class="btn btn-ghost" (click)="openVoice()">🎤 Голосом</button>
+    <button class="btn btn-ghost" (click)="openVoice()"><app-icon name="mic" /> Голосом</button>
     <button class="btn head-new" (click)="openForm()">+ Новая операция</button>
   </div>
 </div>
@@ -34,13 +34,16 @@
             (input)="setAmount(item, $any($event.target).value)"
             aria-label="Фактическая сумма"
           />
-          <button class="btn btn-sm" (click)="confirmPending(item)" title="Подтвердить и записать в журнал">✓</button>
+          <button class="btn btn-sm" (click)="confirmPending(item)" title="Подтвердить и записать в журнал" aria-label="Подтвердить">
+            <app-icon name="check" />
+          </button>
           <button
             class="btn btn-danger btn-sm"
             (click)="skipPending(item)"
             [title]="item.kind === 'recurring' ? 'Деньги не пришли — пропустить' : 'Удалить план'"
+            aria-label="Пропустить"
           >
-            ✕
+            <app-icon name="close" />
           </button>
         </div>
       }
@@ -219,7 +222,9 @@
           </div>
             <span class="row-amount" [class]="amountClass(tx.kind)">{{ signed(tx) }}</span>
             <button class="btn btn-ghost btn-sm" (click)="edit(tx)">Изменить</button>
-            <button class="btn btn-danger btn-sm" (click)="remove(tx)">✕</button>
+            <button class="btn btn-danger btn-sm" (click)="remove(tx)" aria-label="Удалить операцию" title="Удалить операцию">
+              <app-icon name="close" />
+            </button>
           </div>
         }
       </div>
@@ -258,7 +263,9 @@
               {{ rule.kind === 'income' ? '+' : rule.kind === 'expense' ? '−' : '' }}{{ money(rule.amount) }}
             </span>
             <button class="btn btn-ghost btn-sm" (click)="editRule(rule)">Изменить</button>
-            <button class="btn btn-danger btn-sm" (click)="removeRule(rule)">✕</button>
+            <button class="btn btn-danger btn-sm" (click)="removeRule(rule)" aria-label="Удалить правило" title="Удалить правило">
+              <app-icon name="close" />
+            </button>
           </div>
         }
       </div>

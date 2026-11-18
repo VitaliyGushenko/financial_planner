@@ -13,7 +13,7 @@
     <div class="rows">
       @for (acc of accounts(); track acc.id) {
         <div class="row">
-          <span class="acc-icon">{{ acc.type === 'cash' ? '💵' : '💳' }}</span>
+          <app-icon class="acc-icon" [name]="acc.type === 'cash' ? 'wallet' : 'card'" />
           @if (editingAccountId() === acc.id) {
             <div class="row-main account-edit">
               <input name="editName-{{ acc.id }}" [(ngModel)]="accountEdit.name" placeholder="Название" />
@@ -27,7 +27,9 @@
             </div>
             <span class="row-amount" [class.negative]="acc.balance < 0">{{ money(acc.balance) }}</span>
             <button class="btn btn-ghost btn-sm" (click)="startEditAccount(acc)">Изменить</button>
-            <button class="btn btn-danger btn-sm" (click)="removeAccount(acc)">✕</button>
+            <button class="btn btn-danger btn-sm" (click)="removeAccount(acc)" aria-label="Удалить счёт" title="Удалить счёт">
+              <app-icon name="close" />
+            </button>
           }
         </div>
       }

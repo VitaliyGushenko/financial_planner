@@ -7,12 +7,16 @@
 </div>
 
 @if (deficitWarning()) {
-  <div class="deficit-banner">⚠ {{ deficitWarning() }}</div>
+  <div class="deficit-banner">
+    <app-icon name="warning" />
+    <span>{{ deficitWarning() }}</span>
+  </div>
 }
 
 @if (pending().length) {
   <a class="pending-banner" routerLink="/operations">
-    ⏳ Ожидают подтверждения: {{ pending().length }} — подтвердить в разделе «Операции»
+    <app-icon name="clock" />
+    <span>Ожидают подтверждения: {{ pending().length }} — подтвердить в разделе «Операции»</span>
   </a>
 }
 
@@ -29,7 +33,7 @@
         <div class="rows">
           @for (acc of accounts(); track acc.id) {
             <div class="row">
-              <span class="acc-icon">{{ acc.type === 'cash' ? '💵' : '💳' }}</span>
+              <app-icon class="acc-icon" [name]="acc.type === 'cash' ? 'wallet' : 'card'" />
               <div class="row-main">
                 <div class="row-title">{{ acc.name }}</div>
                 <div class="row-sub">{{ acc.type === 'cash' ? 'Наличные' : 'Карта' }}</div>

@@ -6,11 +6,12 @@ import { filter, map, startWith } from 'rxjs';
 import { AuthService } from './core/auth.service';
 import { AccountsService } from './core/accounts.service';
 import { CurrencyService } from './core/currency.service';
+import { IconComponent } from './ui/icon.component';
 import { UpdateBannerComponent } from './ui/update-banner.component';
 
 @Component({
   selector: 'app-root',
-  imports: [RouterOutlet, RouterLink, RouterLinkActive, UpdateBannerComponent],
+  imports: [RouterOutlet, RouterLink, RouterLinkActive, UpdateBannerComponent, IconComponent],
   host: {
     '(document:click)': 'onDocumentClick()',
     '(document:keydown.escape)': 'closeMenu()',

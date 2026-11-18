@@ -7,10 +7,11 @@ import { CategoriesService } from '../../core/categories.service';
 import { CurrencyService } from '../../core/currency.service';
 import { Account, AccountType, Category, CategoryKind } from '../../core/models';
 import { round2 } from '../../core/money';
+import { IconComponent } from '../../ui/icon.component';
 
 @Component({
   selector: 'app-settings',
-  imports: [FormsModule],
+  imports: [FormsModule, IconComponent],
   templateUrl: './settings.component.html',
   styleUrl: './settings.component.less',
 })

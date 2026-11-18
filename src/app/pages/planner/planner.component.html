@@ -10,7 +10,10 @@
 
 @if (deficitDays().length) {
   <div class="card deficit-card">
-    <h2 class="card-title">⚠ Прогноз дефицита</h2>
+    <h2 class="card-title">
+      <app-icon class="card-title-icon" name="warning" />
+      Прогноз дефицита
+    </h2>
     <p>
       Без новых трат остаток уходит в минус на
       {{ deficitDays().length }} дн. — впервые
@@ -39,7 +42,9 @@
             <button class="btn btn-ghost btn-sm" (click)="markDone(goal.id)" title="Отметить покупку: списать со счёта">
               Куплено
             </button>
-            <button class="btn btn-danger btn-sm" (click)="remove(goal.id)" title="Удалить">✕</button>
+            <button class="btn btn-danger btn-sm" (click)="remove(goal.id)" title="Удалить" aria-label="Удалить цель">
+              <app-icon name="close" />
+            </button>
           </div>
           @if (adviceFor(goal.id); as advice) {
             <div class="goal-advice" [class.ok]="advice.canBuyNow">
@@ -132,11 +137,11 @@
     <div [class]="'advice ' + advice.tone">
       <div class="advice-head">
         @if (advice.canBuyNow) {
-          <span class="advice-icon">✅</span>
+          <app-icon class="advice-icon" name="check" />
         } @else if (advice.recommendedDate) {
-          <span class="advice-icon">📅</span>
+          <app-icon class="advice-icon" name="calendar" />
         } @else {
-          <span class="advice-icon">🚫</span>
+          <app-icon class="advice-icon" name="ban" />
         }
         <div>
           @if (advice.recommendedDate) {

@@ -2,6 +2,7 @@ import { Component, effect, inject, input, output } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 
 import { SpeechService } from '../core/voice/speech.service';
+import { IconComponent } from './icon.component';
 import { ModalComponent } from './modal.component';
 
 /**
@@ -11,7 +12,7 @@ import { ModalComponent } from './modal.component';
  */
 @Component({
   selector: 'app-voice-input',
-  imports: [FormsModule, ModalComponent],
+  imports: [FormsModule, ModalComponent, IconComponent],
   template: `
     <app-modal [open]="open()" title="Голосовой ввод" (closed)="close()">
       <p class="muted small voice-hint">
@@ -21,7 +22,11 @@ import { ModalComponent } from './modal.component';
 
       @if (supported()) {
         <button type="button" class="btn btn-block voice-mic" [class.listening]="listening()" (click)="toggle()">
-          {{ listening() ? '■ Остановить' : '🎤 Говорить' }}
+          @if (listening()) {
+            <app-icon name="stop" /> Остановить
+          } @else {
+            <app-icon name="mic" /> Говорить
+          }
         </button>
       } @else {
         <p class="form-notice">

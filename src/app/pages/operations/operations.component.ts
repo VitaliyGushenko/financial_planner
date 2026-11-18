@@ -10,6 +10,7 @@ import { PendingItem } from '../../core/pending';
 import { RecurringService, RecurringDraft, describeFrequency } from '../../core/recurring.service';
 import { TransactionsService } from '../../core/transactions.service';
 import { ModalComponent } from '../../ui/modal.component';
+import { IconComponent } from '../../ui/icon.component';
 import { VoiceInputComponent } from '../../ui/voice-input.component';
 import { parseVoice, VoiceField } from '../../core/voice/parse-voice';
 import { Category, CustomUnit, Frequency, OperationKind, RecurringRule, Subcategory, Transaction, TransactionDraft } from '../../core/models';
@@ -22,7 +23,7 @@ import { DayKey, formatDayKeyRelative, formatDayKeyShort, todayKey } from '../..
  */
 @Component({
   selector: 'app-operations',
-  imports: [FormsModule, RouterLink, ModalComponent, VoiceInputComponent],
+  imports: [FormsModule, RouterLink, ModalComponent, VoiceInputComponent, IconComponent],
   templateUrl: './operations.component.html',
   styleUrl: './operations.component.less',
 })

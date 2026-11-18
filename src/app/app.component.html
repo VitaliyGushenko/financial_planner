@@ -58,23 +58,23 @@
       [style.opacity]="tabIndex() < 0 ? 0 : 1"
     ></span>
     <a routerLink="/" routerLinkActive="active" [routerLinkActiveOptions]="{ exact: true }">
-      <span class="tab-icon" aria-hidden="true">🏠</span>
+      <app-icon class="tab-icon" name="home" />
       <span class="tab-label">Дашборд</span>
     </a>
     <a routerLink="/operations" routerLinkActive="active">
-      <span class="tab-icon" aria-hidden="true">💸</span>
+      <app-icon class="tab-icon" name="receipt" />
       <span class="tab-label">Операции</span>
     </a>
     <a routerLink="/calendar" routerLinkActive="active">
-      <span class="tab-icon" aria-hidden="true">📅</span>
+      <app-icon class="tab-icon" name="calendar" />
       <span class="tab-label">Календарь</span>
     </a>
     <a routerLink="/stats" routerLinkActive="active">
-      <span class="tab-icon" aria-hidden="true">📈</span>
+      <app-icon class="tab-icon" name="chart" />
       <span class="tab-label">Статистика</span>
     </a>
     <a routerLink="/planner" routerLinkActive="active">
-      <span class="tab-icon" aria-hidden="true">🎯</span>
+      <app-icon class="tab-icon" name="bag" />
       <span class="tab-label">Покупки</span>
     </a>
   </nav>

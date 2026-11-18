@@ -5,6 +5,7 @@ import { CurrencyService } from '../../core/currency.service';
 import { TransactionsService } from '../../core/transactions.service';
 import { ProjectionService } from '../../core/projection.service';
 import { ModalComponent } from '../../ui/modal.component';
+import { IconComponent } from '../../ui/icon.component';
 import { DayProjection, ProjectionEvent } from '../../core/projection';
 import { DayKey, addDaysToKey, formatDayKeyShort, fromDayKey, todayKey, weekdayOf } from '../../core/day-key';
 
@@ -21,7 +22,7 @@ interface CalendarWeek {
 
 @Component({
   selector: 'app-calendar',
-  imports: [ModalComponent],
+  imports: [ModalComponent, IconComponent],
   host: {
     '(document:keydown.arrowleft)': 'onArrowKey(-1)',
     '(document:keydown.arrowright)': 'onArrowKey(1)',

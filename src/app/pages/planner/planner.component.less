@@ -18,14 +18,26 @@
 
   &.good {
     background: var(--income-soft);
+
+    .advice-icon {
+      color: var(--income);
+    }
   }
 
   &.warn {
     background: var(--warn-soft);
+
+    .advice-icon {
+      color: var(--warn);
+    }
   }
 
   &.bad {
     background: var(--expense-soft);
+
+    .advice-icon {
+      color: var(--expense);
+    }
   }
 }
 
@@ -35,7 +47,7 @@
   gap: 10px;
 
   .advice-icon {
-    font-size: 22px;
+    --icon-size: 24px;
   }
 
   .advice-date {
@@ -56,6 +68,12 @@
   p {
     margin: 0;
   }
+}
+
+.card-title-icon {
+  --icon-size: 18px;
+  color: var(--warn);
+  vertical-align: -3px;
 }
 
 .goal {

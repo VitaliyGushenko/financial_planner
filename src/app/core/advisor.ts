@@ -143,14 +143,14 @@ function buildMessage(parts: {
 
   if (deadlineLate) {
     message +=
-      ` ⚠ К желаемому сроку (${formatDayKeyShort(parts.deadline!)}) накопить ` +
+      ` К желаемому сроку (${formatDayKeyShort(parts.deadline!)}) накопить ` +
       `безопасно не выйдет — рекомендация позже срока.`;
   } else if (
     parts.deadline !== null &&
     parts.withinDeadline === false &&
     parts.recommendedDate === null
   ) {
-    message += ` ⚠ К желаемому сроку (${formatDayKeyShort(parts.deadline)}) накопить не получится.`;
+    message += ` К желаемому сроку (${formatDayKeyShort(parts.deadline)}) накопить не получится.`;
   }
 
   if (parts.deficitDays.length) {

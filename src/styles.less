@@ -603,9 +603,8 @@ body.modal-open {
 }
 
 .modal-dialog {
-  background: var(--glass-strong);
-  -webkit-backdrop-filter: var(--glass-blur);
-  backdrop-filter: var(--glass-blur);
+  /* Форма — на непрозрачном фоне: сквозь «стекло» читалась страница. */
+  background: var(--surface);
   border: 1px solid var(--border-soft);
   border-radius: var(--radius);
   box-shadow: var(--shadow-lg);
@@ -899,8 +898,7 @@ body.modal-open {
 }
 
 .tab-icon {
-  font-size: 19px;
-  line-height: 1;
+  --icon-size: 22px;
   transition: transform var(--dur-slow) var(--ease-spring);
 }
 
@@ -984,6 +982,16 @@ body.modal-open {
   &:hover {
     color: #fff;
   }
+}
+
+/* ----- Иконки (единый линейный набор) ----- */
+
+app-icon {
+  vertical-align: -0.15em;
+}
+
+.btn app-icon {
+  --icon-size: 18px;
 }
 
 /* ----- Голосовой ввод ----- */
@@ -1146,9 +1154,8 @@ body.modal-open {
     /* Отрицательные поля — чтобы шапка перекрывала всю ширину шторки. */
     margin: 0 -16px 14px;
     padding: 0 16px 8px;
-    background: var(--glass-strong);
-    -webkit-backdrop-filter: var(--glass-blur);
-    backdrop-filter: var(--glass-blur);
+    background: var(--surface);
+    border-bottom: 1px solid var(--border-soft);
   }
 
   .center-screen {
@@ -1241,7 +1248,7 @@ body.modal-open {
   }
 
   .tab-icon {
-    font-size: 18px;
+    --icon-size: 20px;
   }
 }
 

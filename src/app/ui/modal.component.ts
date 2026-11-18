@@ -1,11 +1,14 @@
 import { Component, effect, input, output, signal } from '@angular/core';
 
+import { IconComponent } from './icon.component';
+
 /**
  * Модалка: подложка (клик — закрыть), Escape, кнопка ✕. Контент — через ng-content.
  * На телефоне превращается в bottom-sheet: ручка сверху, свайп вниз закрывает.
  */
 @Component({
   selector: 'app-modal',
+  imports: [IconComponent],
   host: { '(document:keydown.escape)': 'onEscape()' },
   template: `
     @if (open()) {
@@ -29,7 +32,9 @@ import { Component, effect, input, output, signal } from '@angular/core';
           ></div>
           <div class="modal-head">
             <h2>{{ title() }}</h2>
-            <button type="button" class="modal-close" (click)="close()" aria-label="Закрыть">✕</button>
+            <button type="button" class="modal-close" (click)="close()" aria-label="Закрыть">
+              <app-icon name="close" />
+            </button>
           </div>
           <div class="modal-body">
             <ng-content />

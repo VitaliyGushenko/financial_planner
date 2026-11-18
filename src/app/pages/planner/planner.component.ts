@@ -8,13 +8,14 @@ import { GoalsService } from '../../core/goals.service';
 import { ProjectionService } from '../../core/projection.service';
 import { TransactionsService } from '../../core/transactions.service';
 import { ModalComponent } from '../../ui/modal.component';
+import { IconComponent } from '../../ui/icon.component';
 import { advisePurchase, PurchaseAdvice } from '../../core/advisor';
 import { Category, Goal } from '../../core/models';
 import { DayKey, formatDayKeyRelative, todayKey } from '../../core/day-key';
 
 @Component({
   selector: 'app-planner',
-  imports: [FormsModule, ModalComponent],
+  imports: [FormsModule, ModalComponent, IconComponent],
   templateUrl: './planner.component.html',
   styleUrl: './planner.component.less',
 })
