@@ -1159,9 +1159,9 @@ app-icon {
     z-index: 30;
     display: flex;
     padding-bottom: env(safe-area-inset-bottom);
-    background: var(--glass-strong);
-    -webkit-backdrop-filter: var(--glass-blur);
-    backdrop-filter: var(--glass-blur);
+    /* Непрозрачный фон: blur на фиксированном баре дёргался при перерисовке
+       графиков на iOS/Android. */
+    background: var(--surface);
     border-top: 1px solid var(--border-soft);
     box-shadow: 0 -8px 30px rgba(20, 30, 40, 0.08);
 
@@ -1372,6 +1372,8 @@ app-icon {
 
 /* ----- Переходы между страницами (View Transitions API) ----- */
 
+/* Только плавное появление: сдвиг снимка экрана утаскивал за собой
+   фиксированные шапку и таб-бар. */
 ::view-transition-old(root) {
   animation: vt-out 140ms var(--ease-out) both;
 }
@@ -1383,15 +1385,27 @@ app-icon {
 @keyframes vt-out {
   to {
     opacity: 0;
-    transform: translateY(-6px) scale(0.995);
   }
 }
 
 @keyframes vt-in {
   from {
     opacity: 0;
-    transform: translateY(8px) scale(0.995);
   }
+}
+
+/* Шапка и таб-бар живут отдельными слоями и не двигаются при смене страницы. */
+.app-header {
+  view-transition-name: app-header;
+}
+
+.app-tabbar {
+  view-transition-name: app-tabbar;
+}
+
+::view-transition-group(app-header),
+::view-transition-group(app-tabbar) {
+  animation: none;
 }
 
 /* ----- Доступность: уважаем системную настройку «меньше движения» ----- */
