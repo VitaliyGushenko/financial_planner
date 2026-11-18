@@ -131,6 +131,42 @@
   color: var(--income);
 }
 
+/* ----- Конфетти после покупки ----- */
+
+.confetti {
+  position: fixed;
+  inset: 0;
+  z-index: 70;
+  overflow: hidden;
+  pointer-events: none;
+
+  span {
+    position: absolute;
+    top: -14px;
+    width: 8px;
+    height: 14px;
+    border-radius: 2px;
+    opacity: 0;
+    animation-name: confetti-fall;
+    animation-timing-function: cubic-bezier(0.2, 0.6, 0.3, 1);
+    animation-fill-mode: forwards;
+  }
+}
+
+@keyframes confetti-fall {
+  0% {
+    opacity: 0;
+    transform: translateY(-10px) rotate(0);
+  }
+  10% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+    transform: translateY(70vh) rotate(220deg);
+  }
+}
+
 .goal {
   padding: 12px 4px;
   border-bottom: 1px solid var(--border);

@@ -12,6 +12,8 @@ import { DayKey, todayKey } from '../../core/day-key';
 import { buildBudgets } from '../../core/budgets';
 import { compareMonths } from '../../core/compare';
 import { CountUpDirective } from '../../ui/count-up.directive';
+import { IconComponent, IconName } from '../../ui/icon.component';
+import { categoryIconName } from '../../ui/category-icons';
 
 Chart.register(...registerables);
 
@@ -31,7 +33,7 @@ const CHART_ANIMATION = REDUCED_MOTION ? false : { duration: 700, easing: 'easeO
 
 @Component({
   selector: 'app-stats',
-  imports: [FormsModule, CountUpDirective],
+  imports: [FormsModule, CountUpDirective, IconComponent],
   templateUrl: './stats.component.html',
   styleUrl: './stats.component.less',
 })
@@ -109,6 +111,10 @@ export class StatsComponent {
       return '0%';
     }
     return `${value > 0 ? '+' : '−'}${rounded}%`;
+  }
+
+  budgetIcon(categoryId: string): IconName {
+    return categoryIconName(this.categoriesService.byId().get(categoryId)?.icon, 'expense');
   }
 
   private readonly donutCanvas = viewChild<ElementRef<HTMLCanvasElement>>('donut');

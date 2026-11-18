@@ -90,18 +90,49 @@
                   </div>
                 }
                 @if (section.kind === 'expense') {
-                  <div class="budget-edit">
-                    <label [for]="'budget-' + cat.id">Лимит в месяц, {{ curr.symbol() }}</label>
-                    <input
-                      [id]="'budget-' + cat.id"
-                      [name]="'budget-' + cat.id"
-                      type="number"
-                      min="0"
-                      step="100"
-                      [value]="cat.budget ?? ''"
-                      placeholder="без лимита"
-                      (change)="saveBudget(cat, $any($event.target).value)"
-                    />
+                  <div class="cat-settings">
+                    <div class="icon-edit">
+                      <app-icon [name]="iconOf(cat)" />
+                      <select
+                        [value]="cat.icon ?? ''"
+                        (change)="saveIcon(cat, $any($event.target).value)"
+                        aria-label="Иконка категории"
+                      >
+                        <option value="">Без иконки</option>
+                        @for (option of categoryIcons; track option.name) {
+                          <option [value]="option.name">{{ option.label }}</option>
+                        }
+                      </select>
+                    </div>
+                    <div class="budget-edit">
+                      <label [for]="'budget-' + cat.id">Лимит в месяц, {{ curr.symbol() }}</label>
+                      <input
+                        [id]="'budget-' + cat.id"
+                        [name]="'budget-' + cat.id"
+                        type="number"
+                        min="0"
+                        step="100"
+                        [value]="cat.budget ?? ''"
+                        placeholder="без лимита"
+                        (change)="saveBudget(cat, $any($event.target).value)"
+                      />
+                    </div>
+                  </div>
+                } @else {
+                  <div class="cat-settings">
+                    <div class="icon-edit">
+                      <app-icon [name]="iconOf(cat)" />
+                      <select
+                        [value]="cat.icon ?? ''"
+                        (change)="saveIcon(cat, $any($event.target).value)"
+                        aria-label="Иконка категории"
+                      >
+                        <option value="">Без иконки</option>
+                        @for (option of categoryIcons; track option.name) {
+                          <option [value]="option.name">{{ option.label }}</option>
+                        }
+                      </select>
+                    </div>
                   </div>
                 }
               </div>
@@ -151,7 +182,88 @@
   <div class="form-actions">
     <button class="btn btn-ghost" type="button" (click)="exportCsv()">Скачать CSV</button>
     <button class="btn btn-ghost" type="button" (click)="exportJson()">Скачать JSON</button>
+    <button class="btn btn-ghost" type="button" [disabled]="importBusy()" (click)="fileInput.click()">
+      Импортировать…
+    </button>
+    <input
+      #fileInput
+      type="file"
+      accept=".csv,.json,text/csv,application/json"
+      hidden
+      (change)="onImportFile($event)"
+    />
   </div>
+
+  <p class="muted small">
+    Шаблон для заполнения:
+    <button class="btn btn-ghost btn-sm" type="button" (click)="downloadCsvTemplate()">скачать CSV</button>
+  </p>
+
+  @if (importError()) {
+    <p class="form-error">{{ importError() }}</p>
+  }
+
+  @if (csvPreview(); as preview) {
+    <div class="import-preview">
+      <div class="import-head"><strong>{{ preview.fileName }}</strong></div>
+      <div class="muted small">
+        К импорту: {{ preview.plan.drafts.length }} из {{ preview.rowsData.length }} строк
+        @if (preview.plan.duplicates) {
+          · дубликатов: {{ preview.plan.duplicates }}
+        }
+        @if (preview.plan.missingCategories.length) {
+          · новых категорий: {{ preview.plan.missingCategories.length }}
+        }
+      </div>
+
+      @if (preview.plan.missingCategories.length) {
+        <p class="form-notice">Будут созданы категории: {{ missingNames(preview.plan) }}</p>
+      }
+
+      @if (preview.plan.errors.length) {
+        <ul class="import-errors">
+          @for (error of preview.plan.errors.slice(0, 5); track error) {
+            <li>{{ error }}</li>
+          }
+        </ul>
+        @if (preview.plan.errors.length > 5) {
+          <p class="muted small">…и ещё {{ preview.plan.errors.length - 5 }} ошибок</p>
+        }
+      }
+
+      <div class="form-actions">
+        <button
+          class="btn"
+          type="button"
+          [disabled]="importBusy() || !preview.plan.drafts.length"
+          (click)="confirmImport()"
+        >
+          Импортировать {{ preview.plan.drafts.length }}
+        </button>
+        <button class="btn btn-ghost" type="button" (click)="cancelImport()">Отмена</button>
+      </div>
+    </div>
+  }
+
+  @if (backupPreview(); as preview) {
+    <div class="import-preview">
+      <div class="import-head"><strong>{{ preview.fileName }}</strong></div>
+      <div class="muted small">
+        {{ preview.counts.accounts }} счетов · {{ preview.counts.categories }} категорий ·
+        {{ preview.counts.transactions }} операций · {{ preview.counts.recurring }} правил ·
+        {{ preview.counts.goals }} целей
+      </div>
+      <p class="form-error">
+        Все текущие данные будут заменены. Отменить можно сразу после импорта.
+      </p>
+      <div class="form-actions">
+        <button class="btn btn-danger-solid" type="button" [disabled]="importBusy()" (click)="confirmImport()">
+          Заменить всё
+        </button>
+        <button class="btn btn-ghost" type="button" (click)="cancelImport()">Отмена</button>
+      </div>
+    </div>
+  }
 </div>
 
 <div class="card">

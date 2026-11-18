@@ -47,6 +47,9 @@
     </div>
   </header>
   <main class="app-main">
+    @if (!online()) {
+      <div class="offline-banner">Нет сети — изменения отправятся, когда связь вернётся</div>
+    }
     <router-outlet />
   </main>
 

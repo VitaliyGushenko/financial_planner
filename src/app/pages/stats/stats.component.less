@@ -110,10 +110,19 @@
 }
 
 .budget-name {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
   font-weight: 600;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+
+  app-icon {
+    --icon-size: 16px;
+    color: var(--muted);
+  }
 }
 
 .budget-sum {

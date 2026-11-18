@@ -91,7 +91,10 @@
       @for (line of budgets().lines; track line.categoryId) {
         <div class="budget-row" [class.over]="line.over">
           <div class="budget-line">
-            <span class="budget-name">{{ line.title }}</span>
+            <span class="budget-name">
+              <app-icon [name]="budgetIcon(line.categoryId)" />
+              {{ line.title }}
+            </span>
             <span class="budget-sum">{{ money(line.spent) }} из {{ money(line.budget) }}</span>
           </div>
           <div class="budget-track">

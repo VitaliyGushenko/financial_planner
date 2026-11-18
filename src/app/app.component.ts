@@ -9,6 +9,8 @@ import { CurrencyService } from './core/currency.service';
 import { PendingService } from './core/pending.service';
 import { RemindersService } from './core/reminders.service';
 import { ThemeService } from './core/theme.service';
+import { NetworkService } from './core/network.service';
+import { ToastService } from './ui/toast.service';
 import { IconComponent } from './ui/icon.component';
 import { ToastComponent } from './ui/toast.component';
 import { UpdateBannerComponent } from './ui/update-banner.component';
@@ -19,6 +21,7 @@ import { UpdateBannerComponent } from './ui/update-banner.component';
   host: {
     '(document:click)': 'onDocumentClick()',
     '(document:keydown.escape)': 'closeMenu()',
+    '(document:keydown)': 'onKeydown($event)',
   },
   templateUrl: './app.component.html',
   styleUrl: './app.component.less',
@@ -32,6 +35,9 @@ export class AppComponent {
   private readonly reminders = inject(RemindersService);
   // Инжектим на старте: сервис применяет сохранённую тему сразу после загрузки.
   private readonly theme = inject(ThemeService);
+  private readonly network = inject(NetworkService);
+  private readonly toast = inject(ToastService);
+  readonly online = this.network.online;
 
   readonly isReady = this.auth.isReady;
   readonly isAuthenticated = this.auth.isAuthenticated;
@@ -84,6 +90,38 @@ export class AppComponent {
 
   closeMenu(): void {
     this.menuOpen.set(false);
+  }
+
+  /** Горячие клавиши: N — новая операция, / — поиск, ? — подсказка. */
+  onKeydown(event: KeyboardEvent): void {
+    if (event.defaultPrevented || event.metaKey || event.ctrlKey || event.altKey) {
+      return;
+    }
+    const target = event.target as HTMLElement | null;
+    const tag = target?.tagName?.toLowerCase();
+    if (tag === 'input' || tag === 'textarea' || tag === 'select' || target?.isContentEditable) {
+      return;
+    }
+    if (!this.isAuthenticated()) {
+      return;
+    }
+
+    switch (event.key.toLowerCase()) {
+      case 'n':
+      case 'т':
+        event.preventDefault();
+        void this.router.navigate(['/operations'], { queryParams: { new: '1' } });
+        break;
+      case '/':
+        event.preventDefault();
+        void this.router.navigate(['/operations'], { queryParams: { focus: 'search' } });
+        break;
+      case '?':
+        this.toast.show('N — новая операция · / — поиск по журналу');
+        break;
+      default:
+        break;
+    }
   }
 
   /** URL → индекс раздела таб-бара (-1, если раздел не в навигации). */

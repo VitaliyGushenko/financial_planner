@@ -1,6 +1,7 @@
-import { Component, computed, inject, signal } from '@angular/core';
+import { Component, computed, effect, inject, signal, untracked } from '@angular/core';
 import { FormsModule } from '@angular/forms';
-import { RouterLink } from '@angular/router';
+import { ActivatedRoute, Router, RouterLink } from '@angular/router';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 
 import { AccountsService } from '../../core/accounts.service';
 import { CategoriesService } from '../../core/categories.service';
@@ -11,11 +12,13 @@ import { RecurringService, RecurringDraft, describeFrequency } from '../../core/
 import { TransactionsService } from '../../core/transactions.service';
 import { ModalComponent } from '../../ui/modal.component';
 import { IconComponent } from '../../ui/icon.component';
+import { categoryIconName } from '../../ui/category-icons';
 import { ToastService } from '../../ui/toast.service';
 import { VoiceInputComponent } from '../../ui/voice-input.component';
 import { parseVoice, VoiceField } from '../../core/voice/parse-voice';
 import { Category, CustomUnit, Frequency, OperationKind, RecurringRule, Subcategory, Transaction, TransactionDraft } from '../../core/models';
 import { DayKey, formatDayKeyRelative, formatDayKeyShort, todayKey } from '../../core/day-key';
+import { IconName } from '../../ui/icon.component';
 
 /**
  * Объединённая страница операций: разовые операции и правила повторения.
@@ -35,7 +38,28 @@ export class OperationsComponent {
   private readonly recurringService = inject(RecurringService);
   private readonly pendingService = inject(PendingService);
   private readonly toast = inject(ToastService);
+  private readonly route = inject(ActivatedRoute);
+  private readonly router = inject(Router);
   readonly curr = inject(CurrencyService);
+
+  constructor() {
+    // Горячие клавиши приходят параметрами маршрута: «N» — новая операция, «/» — поиск.
+    this.route.queryParamMap.pipe(takeUntilDestroyed()).subscribe((params) => {
+      const openNew = params.get('new') === '1';
+      const focusSearch = params.get('focus') === 'search';
+      if (!openNew && !focusSearch) {
+        return;
+      }
+      if (openNew) {
+        this.openForm();
+      }
+      if (focusSearch) {
+        setTimeout(() => document.querySelector<HTMLInputElement>('.search-field input')?.focus(), 80);
+      }
+      // Чистим параметры, чтобы тот же шорткат сработал повторно.
+      void this.router.navigate([], { relativeTo: this.route, queryParams: {}, replaceUrl: true });
+    });
+  }
 
   readonly todayMarker = todayKey();
   readonly kinds: OperationKind[] = ['expense', 'income', 'transfer'];
@@ -149,11 +173,36 @@ export class OperationsComponent {
     this.monthFilter.set('all');
   }
 
+  /** Показываем журнал порциями по дням, чтобы длинная история не тормозила. */
+  readonly visibleDays = signal(14);
+  readonly visibleGroups = computed(() => this.groups().slice(0, this.visibleDays()));
+  readonly hasMoreDays = computed(() => this.groups().length > this.visibleDays());
+
+  showMoreDays(): void {
+    this.visibleDays.update((count) => count + 14);
+  }
+
+  private readonly resetWindowOnFilter = effect(() => {
+    // Любое изменение фильтров — начинаем показ с первого экрана.
+    this.query();
+    this.kindFilter();
+    this.accountFilter();
+    this.monthFilter();
+    this.tab();
+    untracked(() => this.visibleDays.set(14));
+  });
+
   monthLabel(month: string): string {
     const [year, monthNumber] = month.split('-').map(Number);
     return new Date(Date.UTC(year, monthNumber - 1, 1))
       .toLocaleDateString('ru-RU', { month: 'long', year: 'numeric' })
       .replace(/ г\.$/, '');
+  }
+
+  /** Иконка категории операции (или запасная по типу). */
+  iconOf(tx: Transaction): IconName {
+    const category = tx.categoryId ? this.categoriesService.byId().get(tx.categoryId) : undefined;
+    return categoryIconName(category?.icon, tx.kind);
   }
 
   // ----- Платежи, ожидающие подтверждения -----

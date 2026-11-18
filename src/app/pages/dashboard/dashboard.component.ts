@@ -4,12 +4,14 @@ import { RouterLink } from '@angular/router';
 import { AccountsService } from '../../core/accounts.service';
 import { CategoriesService } from '../../core/categories.service';
 import { CurrencyService } from '../../core/currency.service';
+import { GoalsService } from '../../core/goals.service';
 import { PendingService } from '../../core/pending.service';
 import { ProjectionService } from '../../core/projection.service';
 import { TransactionsService } from '../../core/transactions.service';
 import { ProjectionEvent } from '../../core/projection';
 import { DayKey, formatDayKeyRelative, formatDayKeyShort, pluralRu, todayKey } from '../../core/day-key';
 import { buildBudgets } from '../../core/budgets';
+import { buildDigest } from '../../core/digest';
 import { safeToSpend } from '../../core/safe-to-spend';
 import { CountUpDirective } from '../../ui/count-up.directive';
 import { IconComponent } from '../../ui/icon.component';
@@ -34,10 +36,21 @@ export class DashboardComponent {
   private readonly projectionService = inject(ProjectionService);
   private readonly pendingService = inject(PendingService);
   private readonly currency = inject(CurrencyService);
+  private readonly goalsService = inject(GoalsService);
 
   readonly total = computed(() => this.currency.format(this.accountsService.total()));
   readonly moneyFn = (value: number) => this.currency.format(value);
   readonly accounts = this.accountsService.accounts;
+
+  // ----- Онбординг: три шага, пока не пройдены все -----
+  readonly transactionsCount = computed(() => this.transactionsService.real().length);
+  readonly goalsCount = computed(() => this.goalsService.goals().length);
+  readonly showOnboarding = computed(
+    () =>
+      this.accounts().length === 0 ||
+      this.transactionsCount() === 0 ||
+      this.goalsCount() === 0,
+  );
 
   readonly projection = this.projectionService.projection;
 
@@ -69,6 +82,33 @@ export class DashboardComponent {
   });
   readonly sparkLine = computed(() => this.spark().line);
   readonly sparkArea = computed(() => this.spark().area);
+
+  /** «Неделя в цифрах»: доходы/расходы, сравнение и топ-категория. */
+  readonly digest = computed(() =>
+    buildDigest({
+      transactions: this.transactionsService.transactions(),
+      categories: this.categoriesService.categories(),
+      today: todayKey(),
+    }),
+  );
+  readonly digestNet = computed(() => {
+    const net = this.digest().net;
+    const sign = net > 0 ? '+' : net < 0 ? '−' : '';
+    return `${sign}${this.currency.format(Math.abs(net))}`;
+  });
+  readonly digestChange = computed(() => {
+    const change = this.digest().expenseChange;
+    return change === null ? null : Math.round(change * 100);
+  });
+  readonly digestChangeLabel = computed(() => {
+    const change = this.digestChange();
+    if (change === null || change === 0) {
+      return null;
+    }
+    return `${change > 0 ? '+' : '−'}${Math.abs(change)}%`;
+  });
+  readonly digestChangeBad = computed(() => (this.digestChange() ?? 0) > 0);
+  readonly digestChangeGood = computed(() => (this.digestChange() ?? 0) < 0);
 
   /** Даты хранятся строками «YYYY-MM-DD» — форматируем без LocaleId (DatePipe ломает NG0203). */
   readonly formatDay = formatDayKeyShort;

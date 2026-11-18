@@ -35,8 +35,56 @@
   }
 }
 
-.pulse-card {
-  position: relative;
+/* ----- Онбординг ----- */
+
+.onboarding-card {
+  margin-bottom: 14px;
+}
+
+.onboarding-step {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 4px;
+  border-bottom: 1px solid var(--border-soft);
+  color: var(--text);
+  font-weight: 600;
+
+  &:last-child {
+    border-bottom: none;
+  }
+
+  &:hover {
+    background: var(--surface-2);
+    border-radius: 8px;
+  }
+
+  .step-num {
+    display: inline-flex;
+    flex: none;
+    align-items: center;
+    justify-content: center;
+    width: 24px;
+    height: 24px;
+    border-radius: 50%;
+    background: var(--surface-2);
+    color: var(--muted);
+    font-size: 12px;
+    font-weight: 800;
+  }
+
+  &.done {
+    color: var(--muted);
+    text-decoration: line-through;
+
+    .step-num {
+      background: var(--income-soft);
+      color: var(--income);
+    }
+  }
+}
+
+.pulse-card {  position: relative;
   overflow: hidden;
   margin-bottom: 14px;
   background:
@@ -145,6 +193,62 @@
 .acc-icon {
   --icon-size: 20px;
   color: var(--muted);
+}
+
+/* ----- Неделя в цифрах ----- */
+
+.digest-card {
+  margin-bottom: 14px;
+}
+
+.digest-main {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+}
+
+.digest-net {
+  font-size: 26px;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  font-variant-numeric: tabular-nums;
+}
+
+.digest-rows {
+  display: grid;
+  gap: 4px;
+  margin-top: 10px;
+  font-size: 14px;
+
+  > div {
+    display: flex;
+    justify-content: space-between;
+    gap: 10px;
+    font-variant-numeric: tabular-nums;
+  }
+}
+
+.digest-note {
+  margin: 10px 0 0;
+}
+
+.delta {
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: var(--surface-2);
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 700;
+
+  &.good {
+    background: var(--income-soft);
+    color: var(--income);
+  }
+
+  &.bad {
+    background: var(--expense-soft);
+    color: var(--expense);
+  }
 }
 
 .card-footer {

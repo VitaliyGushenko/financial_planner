@@ -24,18 +24,19 @@ export class CategoriesService extends UserCollectionService<Category> {
     return kind === 'income' ? this.incomeCategories() : this.expenseCategories();
   }
 
-  async create(name: string, kind: CategoryKind): Promise<void> {
+  async create(name: string, kind: CategoryKind): Promise<string | null> {
     if (!this.isReady || !name.trim()) {
-      return;
+      return null;
     }
     const siblings = this.categoriesOf(kind);
     const maxOrder = siblings.reduce((max, c) => Math.max(max, c.sortOrder), -1);
-    await addDoc(this.colRef(), {
+    const ref = await addDoc(this.colRef(), {
       name: name.trim(),
       kind,
       subcategories: [],
       sortOrder: maxOrder + 1,
     });
+    return ref.id;
   }
 
   async rename(id: string, name: string): Promise<void> {
@@ -60,6 +61,14 @@ export class CategoriesService extends UserCollectionService<Category> {
     await updateDoc(this.docRef(categoryId), {
       budget: budget && budget > 0 ? round2(budget) : deleteField(),
     });
+  }
+
+  /** Иконка категории; null — без иконки. */
+  async setIcon(categoryId: string, icon: string | null): Promise<void> {
+    if (!this.isReady) {
+      return;
+    }
+    await updateDoc(this.docRef(categoryId), { icon: icon ?? deleteField() });
   }
 
   async addSubcategory(categoryId: string, name: string): Promise<void> {    if (!this.isReady || !name.trim()) {

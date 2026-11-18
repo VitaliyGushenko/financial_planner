@@ -215,3 +215,16 @@
     <button class="btn btn-ghost" type="button" (click)="quickOpen.set(false)">Отмена</button>
   </div>
 </app-modal>
+
+@if (celebrate()) {
+  <div class="confetti" aria-hidden="true">
+    @for (piece of confetti; track $index) {
+      <span
+        [style.left.%]="piece.left"
+        [style.background]="piece.color"
+        [style.animation-delay.ms]="piece.delay"
+        [style.animation-duration.ms]="piece.duration"
+      ></span>
+    }
+  </div>
+}

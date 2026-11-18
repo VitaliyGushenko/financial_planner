@@ -40,6 +40,8 @@ export interface Category {
   sortOrder: number;
   /** Месячный лимит расходов по категории; не задан — бюджет не ведётся. */
   budget?: number;
+  /** Имя иконки из набора приложения (cart, car, home…). */
+  icon?: string;
 }
 
 /**

@@ -73,6 +73,42 @@
   }
 }
 
+/* Иконка категории в журнале: тот же линейный стиль, цвет — по типу операции. */
+.cat-badge {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 26px;
+  border-radius: 9px;
+  background: var(--surface-2);
+  color: var(--muted);
+  --icon-size: 15px;
+
+  &.income {
+    background: var(--income-soft);
+    color: var(--income);
+  }
+
+  &.expense {
+    background: var(--expense-soft);
+    color: var(--expense);
+  }
+
+  &.transfer {
+    background: var(--transfer-soft);
+    color: var(--transfer);
+  }
+}
+
+@media (max-width: 640px) {
+  .row > .cat-badge {
+    align-self: flex-start;
+    margin-top: 4px;
+  }
+}
+
 .badge {
   margin-left: 6px;
 }
@@ -207,6 +243,10 @@
   font-size: 12px;
   font-weight: 600;
   font-variant-numeric: tabular-nums;
+}
+
+.show-more {
+  margin-top: 12px;
 }
 
 /* На телефоне новую операцию открывает плавающая кнопка — дубль в шапке убираем. */

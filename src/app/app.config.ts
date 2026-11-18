@@ -1,4 +1,4 @@
-import { ApplicationConfig, isDevMode, provideZoneChangeDetection } from '@angular/core';
+import { ApplicationConfig, ErrorHandler, isDevMode, provideZoneChangeDetection } from '@angular/core';
 import { provideRouter, withPreloading, withViewTransitions, PreloadAllModules } from '@angular/router';
 import { provideServiceWorker } from '@angular/service-worker';
 import { getApp, initializeApp, provideFirebaseApp } from '@angular/fire/app';
@@ -8,9 +8,11 @@ import { getAnalytics, provideAnalytics } from '@angular/fire/analytics';
 
 import { routes } from './app.routes';
 import { environment } from '../environments/environment';
+import { AppErrorHandler } from './core/app-error-handler';
 
 export const appConfig: ApplicationConfig = {
   providers: [
+    { provide: ErrorHandler, useClass: AppErrorHandler },
     provideZoneChangeDetection({ eventCoalescing: true }),
     provideRouter(routes, withViewTransitions({ skipInitialTransition: true }), withPreloading(PreloadAllModules)),
     provideFirebaseApp(() => initializeApp(environment.firebase)),

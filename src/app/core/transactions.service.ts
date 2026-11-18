@@ -2,6 +2,7 @@ import { Injectable, computed, inject } from '@angular/core';
 import { Timestamp, doc, getDoc, increment, serverTimestamp, setDoc, writeBatch } from '@angular/fire/firestore';
 
 import { Transaction, TransactionDraft } from './models';
+import { ImportDraft } from './import';
 import { round2 } from './money';
 import { todayKey } from './day-key';
 import { UserCollectionService } from './user-collection.service';
@@ -75,8 +76,7 @@ export class TransactionsService extends UserCollectionService<Transaction> {
   }
 
   /** Возвращает удалённую операцию (кнопка «Отменить»): тот же документ и те же балансы. */
-  async restore(tx: Transaction): Promise<void> {
-    if (!this.isReady) {
+  async restore(tx: Transaction): Promise<void> {    if (!this.isReady) {
       return;
     }
     const applied = tx.applied ?? tx.date <= todayKey();
@@ -98,6 +98,51 @@ export class TransactionsService extends UserCollectionService<Transaction> {
       await this.applyDeltas(batch, tx, +1);
     }
     await batch.commit();
+  }
+
+  /**
+   * Импорт пачки операций из CSV. Флаг `applied` берём из файла: плановая
+   * строка не должна молча стать проведённой. Возвращает id для отката.
+   */
+  async importDrafts(drafts: readonly ImportDraft[]): Promise<Array<{ id: string; draft: ImportDraft }>> {
+    if (!this.isReady || drafts.length === 0) {
+      return [];
+    }
+    const created: Array<{ id: string; draft: ImportDraft }> = [];
+
+    for (let start = 0; start < drafts.length; start += 80) {
+      const chunk = drafts.slice(start, start + 80);
+      const batch = writeBatch(this.firestore);
+      for (const draft of chunk) {
+        const ref = doc(this.colRef());
+        const { applied, ...data } = draft;
+        batch.set(ref, { ...data, applied, createdAt: serverTimestamp() });
+        if (applied) {
+          await this.applyDeltas(batch, draft, +1);
+        }
+        created.push({ id: ref.id, draft });
+      }
+      await batch.commit();
+    }
+
+    return created;
+  }
+
+  /** Откат импорта: удаляет созданные операции и разворачивает балансы. */
+  async undoImport(entries: readonly { id: string; draft: ImportDraft }[]): Promise<void> {
+    if (!this.isReady || entries.length === 0) {
+      return;
+    }
+    for (let start = 0; start < entries.length; start += 80) {
+      const batch = writeBatch(this.firestore);
+      for (const entry of entries.slice(start, start + 80)) {
+        batch.delete(this.docRef(entry.id));
+        if (entry.draft.applied) {
+          await this.applyDeltas(batch, entry.draft, -1);
+        }
+      }
+      await batch.commit();
+    }
   }
 
   /** Создаёт операцию из вхождения повторяющегося правила (кнопка «Записать»/подтверждение). */

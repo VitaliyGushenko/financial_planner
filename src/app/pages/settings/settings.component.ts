@@ -12,9 +12,13 @@ import { RemindersService } from '../../core/reminders.service';
 import { GoalsService } from '../../core/goals.service';
 import { RecurringService } from '../../core/recurring.service';
 import { TransactionsService } from '../../core/transactions.service';
-import { buildBackup, downloadText, transactionsToCsv } from '../../core/export';
+import { buildBackup, downloadText, transactionsToCsv, Backup, BackupInput } from '../../core/export';
+import { ImportPlan, ParsedRow, parseBackupFile, parseTransactionsCsv, planImport } from '../../core/import';
+import { BackupService } from '../../core/backup.service';
+import { ToastService } from '../../ui/toast.service';
 import { todayKey } from '../../core/day-key';
-import { IconComponent } from '../../ui/icon.component';
+import { IconComponent, IconName } from '../../ui/icon.component';
+import { CATEGORY_ICONS, categoryIconName } from '../../ui/category-icons';
 
 @Component({
   selector: 'app-settings',
@@ -29,13 +33,14 @@ export class SettingsComponent {
   private readonly transactionsService = inject(TransactionsService);
   private readonly recurringService = inject(RecurringService);
   private readonly goalsService = inject(GoalsService);
+  private readonly backupService = inject(BackupService);
+  private readonly toast = inject(ToastService);
   readonly curr = inject(CurrencyService);
   readonly theme = inject(ThemeService);
   readonly reminders = inject(RemindersService);
 
   readonly accounts = this.accountsService.accounts;
   readonly total = computed(() => this.accountsService.total());
-
   readonly incomeCategories = this.categoriesService.incomeCategories;
   readonly expenseCategories = this.categoriesService.expenseCategories;
 
@@ -86,6 +91,16 @@ export class SettingsComponent {
     );
   }
 
+  readonly categoryIcons = CATEGORY_ICONS;
+
+  iconOf(category: Category): IconName {
+    return categoryIconName(category.icon, category.kind);
+  }
+
+  saveIcon(category: Category, icon: string): void {
+    void this.categoriesService.setIcon(category.id, icon || null);
+  }
+
   /** CSV с операциями — открывается в Excel. */
   exportCsv(): void {
     const csv = transactionsToCsv({
@@ -111,6 +126,156 @@ export class SettingsComponent {
       JSON.stringify(backup, null, 2),
       'application/json',
     );
+  }
+
+  // ----- Импорт -----
+
+  readonly importError = signal('');
+  readonly importBusy = signal(false);
+  readonly csvPreview = signal<{ fileName: string; rowsData: ParsedRow[]; plan: ImportPlan } | null>(null);
+  readonly backupPreview = signal<{
+    fileName: string;
+    backup: Backup;
+    counts: { accounts: number; categories: number; transactions: number; recurring: number; goals: number };
+  } | null>(null);
+
+  async onImportFile(event: Event): Promise<void> {
+    const input = event.target as HTMLInputElement;
+    const file = input.files?.[0];
+    input.value = '';
+    if (!file) {
+      return;
+    }
+
+    this.cancelImport();
+    const text = await file.text();
+
+    if (file.name.toLowerCase().endsWith('.json')) {
+      const { backup, error } = parseBackupFile(text);
+      if (!backup) {
+        this.importError.set(error ?? 'Не удалось прочитать файл.');
+        return;
+      }
+      this.backupPreview.set({
+        fileName: file.name,
+        backup,
+        counts: {
+          accounts: backup.accounts.length,
+          categories: backup.categories.length,
+          transactions: backup.transactions.length,
+          recurring: backup.recurring.length,
+          goals: backup.goals.length,
+        },
+      });
+      return;
+    }
+
+    const parsed = parseTransactionsCsv(text);
+    if (!parsed.rows.length) {
+      this.importError.set(parsed.errors[0] ?? 'В файле нет строк для импорта.');
+      return;
+    }
+    this.csvPreview.set({
+      fileName: file.name,
+      rowsData: parsed.rows,
+      plan: this.buildCsvPlan(parsed.rows),
+    });
+  }
+
+  missingNames(plan: ImportPlan): string {
+    return plan.missingCategories.map((item) => item.name).join(', ');
+  }
+
+  private buildCsvPlan(rows: ParsedRow[]): ImportPlan {
+    return planImport({
+      rows,
+      accounts: this.accountsService.accounts(),
+      categories: this.categoriesService.categories(),
+      transactions: this.transactionsService.transactions(),
+      today: todayKey(),
+    });
+  }
+
+  cancelImport(): void {
+    this.importError.set('');
+    this.csvPreview.set(null);
+    this.backupPreview.set(null);
+  }
+
+  async confirmImport(): Promise<void> {
+    if (this.importBusy()) {
+      return;
+    }
+    this.importBusy.set(true);
+    this.importError.set('');
+
+    try {
+      const csv = this.csvPreview();
+      const backup = this.backupPreview();
+
+      if (csv) {
+        let plan = csv.plan;
+        const additions: Category[] = [];
+        for (const missing of plan.missingCategories) {
+          const id = await this.categoriesService.create(missing.name, missing.kind);
+          if (id) {
+            additions.push({
+              id,
+              name: missing.name,
+              kind: missing.kind,
+              subcategories: [],
+              sortOrder: 999,
+            });
+          }
+        }
+        if (additions.length) {
+          plan = planImport({
+            rows: csv.rowsData,
+            accounts: this.accountsService.accounts(),
+            categories: [...this.categoriesService.categories(), ...additions],
+            transactions: this.transactionsService.transactions(),
+            today: todayKey(),
+          });
+        }
+
+        const created = await this.transactionsService.importDrafts(plan.drafts);
+        this.csvPreview.set(null);
+        this.toast.show(
+          `Импортировано операций: ${created.length}` +
+            (plan.duplicates ? `, пропущено дубликатов: ${plan.duplicates}` : ''),
+          { action: { label: 'Отменить', run: () => this.transactionsService.undoImport(created) } },
+        );
+        return;
+      }
+
+      if (backup) {
+        const snapshot: BackupInput = {
+          accounts: this.accountsService.accounts(),
+          categories: this.categoriesService.categories(),
+          transactions: this.transactionsService.transactions(),
+          recurring: this.recurringService.rules(),
+          goals: this.goalsService.goals(),
+        };
+        await this.backupService.replaceAll(backup.backup);
+        this.backupPreview.set(null);
+        this.toast.show('Данные восстановлены из бэкапа', {
+          action: { label: 'Отменить', run: () => this.backupService.replaceAll(snapshot) },
+        });
+      }
+    } catch (error) {
+      this.importError.set(
+        'Не удалось импортировать: ' + (error instanceof Error ? error.message : String(error)),
+      );
+    } finally {
+      this.importBusy.set(false);
+    }
+  }
+
+  /** Пустой шаблон CSV, чтобы заполнить в Excel. */
+  downloadCsvTemplate(): void {
+    const header = 'Дата;Тип;Сумма;Счёт;Счёт зачисления;Категория;Подкатегория;Заметка;Проведена';
+    const sample = '2026-11-18;Расход;1500;Карта;;Продукты;Супермаркет;Пример строки;да';
+    downloadText('operations-template.csv', `\uFEFF${header}\r\n${sample}\r\n`, 'text/csv;charset=utf-8');
   }
 
   async removeAccount(account: Account): Promise<void> {

@@ -268,7 +268,7 @@
 
     @if (groups().length) {
       <div class="rows">
-        @for (group of groups(); track group.key) {
+        @for (group of visibleGroups(); track group.key) {
           <div class="day-group">
             <div class="day-head-row">
               <span class="day-label">{{ group.label }}</span>
@@ -283,7 +283,14 @@
             </div>
             @for (tx of group.items; track tx.id) {
               <div class="row">
-                <span class="kind-dot" [class]="tx.kind"></span>
+                <span
+                  class="cat-badge"
+                  [class.income]="tx.kind === 'income'"
+                  [class.expense]="tx.kind === 'expense'"
+                  [class.transfer]="tx.kind === 'transfer'"
+                >
+                  <app-icon [name]="iconOf(tx)" />
+                </span>
                 <div class="row-main">
                   <div class="row-title">{{ categoryName(tx) }}</div>
                   <div class="row-sub">
@@ -300,6 +307,11 @@
           </div>
         }
       </div>
+      @if (hasMoreDays()) {
+        <button type="button" class="btn btn-ghost btn-block show-more" (click)="showMoreDays()">
+          Показать ещё
+        </button>
+      }
     } @else if (hasFilters()) {
       <div class="empty-state">
         Ничего не найдено.

@@ -20,6 +20,29 @@
   </a>
 }
 
+@if (showOnboarding()) {
+  <div class="card onboarding-card">
+    <h2 class="card-title">С чего начать</h2>
+    <a class="onboarding-step" routerLink="/settings" [class.done]="accounts().length > 0">
+      <span class="step-num">1</span>
+      <span>{{ accounts().length ? 'Счёт добавлен' : 'Добавьте счёт' }}</span>
+    </a>
+    <a
+      class="onboarding-step"
+      routerLink="/operations"
+      [queryParams]="{ new: '1' }"
+      [class.done]="transactionsCount() > 0"
+    >
+      <span class="step-num">2</span>
+      <span>{{ transactionsCount() ? 'Операции уже есть' : 'Запишите первую операцию' }}</span>
+    </a>
+    <a class="onboarding-step" routerLink="/planner" [class.done]="goalsCount() > 0">
+      <span class="step-num">3</span>
+      <span>{{ goalsCount() ? 'Цель поставлена' : 'Поставьте цель покупки' }}</span>
+    </a>
+  </div>
+}
+
 <div class="grid-2">
   <div>
     <div class="card pulse-card">
@@ -107,6 +130,29 @@
   </div>
 
   <div>
+    <div class="card digest-card">
+      <h2 class="card-title">Неделя в цифрах</h2>
+      <div class="digest-main">
+        <span class="digest-net" [class.negative]="digest().net < 0" [class.positive]="digest().net > 0">
+          {{ digestNet() }}
+        </span>
+        @if (digestChangeLabel(); as label) {
+          <span class="delta" [class.bad]="digestChangeBad()" [class.good]="digestChangeGood()">
+            {{ label }}
+          </span>
+        }
+      </div>
+      <div class="digest-rows">
+        <div><span class="muted small">Доходы</span><strong class="positive">+{{ money(digest().income) }}</strong></div>
+        <div><span class="muted small">Расходы</span><strong class="negative">−{{ money(digest().expense) }}</strong></div>
+      </div>
+      @if (digest().topCategory; as top) {
+        <p class="muted small digest-note">Больше всего — {{ top.title }} ({{ money(top.amount) }})</p>
+      } @else {
+        <p class="muted small digest-note">На этой неделе трат не было.</p>
+      }
+    </div>
+
     <div class="card">
       <h2 class="card-title">Ближайшие 2 недели</h2>
       @if (upcoming().length) {

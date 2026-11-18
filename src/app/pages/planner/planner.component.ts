@@ -212,6 +212,15 @@ export class PlannerComponent {
     this.buyError.set('');
   }
 
+  /** Праздник после покупки: короткое конфетти. */
+  readonly celebrate = signal(false);
+  readonly confetti = Array.from({ length: 18 }, (_, index) => ({
+    left: Math.round(4 + Math.random() * 92),
+    delay: Math.round(Math.random() * 250),
+    duration: 900 + Math.round(Math.random() * 500),
+    color: ['#1a7f4b', '#7a5cd6', '#e8a13c', '#d64545', '#2f7fd1'][index % 5],
+  }));
+
   async confirmBuying(goal: Goal): Promise<void> {
     if (!this.buyForm.accountId) {
       this.buyError.set('Выберите счёт, с которого списать покупку.');
@@ -232,6 +241,8 @@ export class PlannerComponent {
     });
     await this.goalsService.markDone(goal.id);
     this.cancelBuying();
+    this.celebrate.set(true);
+    setTimeout(() => this.celebrate.set(false), 1600);
   }
 
   markDone(goalId: string): void {

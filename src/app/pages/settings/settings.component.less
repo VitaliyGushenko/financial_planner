@@ -12,10 +12,42 @@
   }
 }
 
-.budget-edit {  display: flex;
+/* ----- Импорт ----- */
+
+.import-preview {
+  margin-top: 12px;
+  padding: 12px;
+  border: 1px solid var(--border-soft);
+  border-radius: var(--radius-md);
+  background: var(--surface-2);
+}
+
+.import-head {
+  margin-bottom: 4px;
+}
+
+.import-errors {
+  margin: 8px 0 0;
+  padding-left: 18px;
+  font-size: 13px;
+  color: var(--expense);
+}
+
+.btn-danger-solid {
+  background: var(--expense);
+  color: var(--on-primary);
+  box-shadow: none;
+
+  &:hover {
+    background: var(--expense);
+    filter: brightness(0.94);
+  }
+}
+
+.budget-edit {
+  display: flex;
   align-items: center;
   gap: 8px;
-  margin-top: 6px;
 
   label {
     font-size: 12px;
@@ -25,6 +57,32 @@
 
   input {
     width: 130px;
+    padding: 5px 9px;
+    font-size: 13px;
+  }
+}
+
+.cat-settings {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+  margin-top: 6px;
+}
+
+.icon-edit {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+
+  app-icon {
+    --icon-size: 18px;
+    color: var(--muted);
+  }
+
+  select {
+    width: auto;
+    min-width: 130px;
     padding: 5px 9px;
     font-size: 13px;
   }
