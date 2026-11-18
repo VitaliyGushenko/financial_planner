@@ -112,12 +112,13 @@
 }
 
 .pulse-value {
-  font-size: 40px;
+  font-size: clamp(30px, 9vw, 40px);
   font-weight: 800;
   line-height: 1.05;
   letter-spacing: -0.03em;
   margin-top: 4px;
   font-variant-numeric: tabular-nums;
+  overflow-wrap: anywhere;
 }
 
 .pulse-meta {
@@ -212,6 +213,7 @@
   font-weight: 800;
   letter-spacing: -0.02em;
   font-variant-numeric: tabular-nums;
+  overflow-wrap: anywhere;
 }
 
 .digest-rows {

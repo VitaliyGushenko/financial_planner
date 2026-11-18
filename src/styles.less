@@ -98,6 +98,10 @@ body {
   height: 100%;
   /* iOS не раздувает текст при повороте экрана. */
   -webkit-text-size-adjust: 100%;
+  /* Длинные суммы не должны «расширять» layout-viewport на телефоне:
+     иначе фиксированный таб-бар становится шире экрана. `clip` (а не hidden)
+     не ломает position: sticky у шапки. */
+  overflow-x: clip;
 }
 
 body {
@@ -909,7 +913,7 @@ body.modal-open {
 
 .grid-2 {
   display: grid;
-  grid-template-columns: 1fr 1fr;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
   gap: 14px;
   align-items: start;
 }
@@ -1129,7 +1133,7 @@ app-icon {
 
 @media (max-width: 800px) {
   .grid-2 {
-    grid-template-columns: 1fr;
+    grid-template-columns: minmax(0, 1fr);
   }
 
   .app-header-inner {
