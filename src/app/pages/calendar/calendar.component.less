@@ -60,6 +60,37 @@
   gap: 4px;
 }
 
+/* Смена месяца: новый месяц въезжает в сторону листания. */
+.cal-weeks.slide-left {
+  animation: cal-slide-left 240ms var(--ease-out);
+}
+
+.cal-weeks.slide-right {
+  animation: cal-slide-right 240ms var(--ease-out);
+}
+
+@keyframes cal-slide-left {
+  from {
+    opacity: 0;
+    transform: translateX(-14px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@keyframes cal-slide-right {
+  from {
+    opacity: 0;
+    transform: translateX(14px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
 .cal-weekdays {
   margin-bottom: 4px;
 

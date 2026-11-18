@@ -7,6 +7,13 @@ import { CategoriesService } from '../../core/categories.service';
 import { CurrencyService } from '../../core/currency.service';
 import { Account, AccountType, Category, CategoryKind } from '../../core/models';
 import { round2 } from '../../core/money';
+import { ThemeService } from '../../core/theme.service';
+import { RemindersService } from '../../core/reminders.service';
+import { GoalsService } from '../../core/goals.service';
+import { RecurringService } from '../../core/recurring.service';
+import { TransactionsService } from '../../core/transactions.service';
+import { buildBackup, downloadText, transactionsToCsv } from '../../core/export';
+import { todayKey } from '../../core/day-key';
 import { IconComponent } from '../../ui/icon.component';
 
 @Component({
@@ -19,7 +26,12 @@ export class SettingsComponent {
   private readonly auth = inject(AuthService);
   private readonly accountsService = inject(AccountsService);
   private readonly categoriesService = inject(CategoriesService);
+  private readonly transactionsService = inject(TransactionsService);
+  private readonly recurringService = inject(RecurringService);
+  private readonly goalsService = inject(GoalsService);
   readonly curr = inject(CurrencyService);
+  readonly theme = inject(ThemeService);
+  readonly reminders = inject(RemindersService);
 
   readonly accounts = this.accountsService.accounts;
   readonly total = computed(() => this.accountsService.total());
@@ -71,6 +83,33 @@ export class SettingsComponent {
     void this.categoriesService.setBudget(
       category.id,
       Number.isFinite(value) && value > 0 ? value : null,
+    );
+  }
+
+  /** CSV с операциями — открывается в Excel. */
+  exportCsv(): void {
+    const csv = transactionsToCsv({
+      transactions: this.transactionsService.transactions(),
+      categories: this.categoriesService.categories(),
+      accounts: this.accountsService.accounts(),
+    });
+    // BOM — чтобы Excel понял UTF-8.
+    downloadText(`operations-${todayKey()}.csv`, `\uFEFF${csv}`, 'text/csv;charset=utf-8');
+  }
+
+  /** Полный бэкап всех коллекций. */
+  exportJson(): void {
+    const backup = buildBackup({
+      accounts: this.accountsService.accounts(),
+      categories: this.categoriesService.categories(),
+      transactions: this.transactionsService.transactions(),
+      recurring: this.recurringService.rules(),
+      goals: this.goalsService.goals(),
+    });
+    downloadText(
+      `financial-planner-${todayKey()}.json`,
+      JSON.stringify(backup, null, 2),
+      'application/json',
     );
   }
 

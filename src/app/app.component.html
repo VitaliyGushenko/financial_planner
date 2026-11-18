@@ -31,6 +31,7 @@
         <span class="app-username total-chip" [title]="'Всего на счетах: ' + total()">{{ total() }}</span>
         <div class="user-menu">
           <button type="button" class="user-btn" (click)="toggleMenu(); $event.stopPropagation()" [attr.aria-expanded]="menuOpen()">
+            <span class="avatar" aria-hidden="true">{{ initials() }}</span>
             <span class="name">{{ displayName() }}</span>
             <span class="caret">▾</span>
           </button>

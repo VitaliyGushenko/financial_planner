@@ -10,6 +10,7 @@ import { TransactionsService } from '../../core/transactions.service';
 import { StatsPeriod, balanceSeries, buildStats, fillMonths, lastMonths, periodRange } from '../../core/stats';
 import { DayKey, todayKey } from '../../core/day-key';
 import { buildBudgets } from '../../core/budgets';
+import { compareMonths } from '../../core/compare';
 import { CountUpDirective } from '../../ui/count-up.directive';
 
 Chart.register(...registerables);
@@ -88,6 +89,26 @@ export class StatsComponent {
 
   budgetWidth(progress: number): number {
     return Math.min(100, Math.max(0, progress * 100));
+  }
+
+  /** Сравнение с прошлым месяцем: суммы, дельты и выросшие категории. */
+  readonly comparison = computed(() =>
+    compareMonths({
+      transactions: this.transactionsService.transactions(),
+      categories: this.categoriesService.categories(),
+      month: this.today,
+    }),
+  );
+
+  percentLabel(value: number | null): string {
+    if (value === null) {
+      return '—';
+    }
+    const rounded = Math.round(Math.abs(value) * 100);
+    if (rounded === 0) {
+      return '0%';
+    }
+    return `${value > 0 ? '+' : '−'}${rounded}%`;
   }
 
   private readonly donutCanvas = viewChild<ElementRef<HTMLCanvasElement>>('donut');

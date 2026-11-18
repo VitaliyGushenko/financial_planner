@@ -32,6 +32,62 @@
   }
 }
 
+.compare-card {
+  margin-bottom: 14px;
+}
+
+.compare-grid {
+  display: grid;
+  gap: 8px;
+}
+
+.compare-row {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+  font-size: 14px;
+}
+
+.compare-values {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 8px;
+  font-variant-numeric: tabular-nums;
+}
+
+.delta {
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: var(--surface-2);
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 700;
+
+  &.good {
+    background: var(--income-soft);
+    color: var(--income);
+  }
+
+  &.bad {
+    background: var(--expense-soft);
+    color: var(--expense);
+  }
+}
+
+.growth {
+  display: grid;
+  gap: 6px;
+  margin-top: 12px;
+}
+
+.growth-row {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+  font-size: 13px;
+}
+
 .budgets-card {
   margin-bottom: 14px;
 

@@ -124,11 +124,15 @@ export class CalendarComponent {
     return { income, expense };
   });
 
+  /** Направление анимации смены месяца: '' | 'left' | 'right'. */
+  readonly slide = signal<'' | 'left' | 'right'>('');
+
   prevMonth(): void {
     const [y, m] = this.month().split('-').map(Number);
     const nm = m === 1 ? 12 : m - 1;
     const ny = m === 1 ? y - 1 : y;
     this.month.set(`${ny}-${String(nm).padStart(2, '0')}`);
+    this.flashSlide('left');
   }
 
   nextMonth(): void {
@@ -136,6 +140,14 @@ export class CalendarComponent {
     const nm = m === 12 ? 1 : m + 1;
     const ny = m === 12 ? y + 1 : y;
     this.month.set(`${ny}-${String(nm).padStart(2, '0')}`);
+    this.flashSlide('right');
+  }
+
+  /** Перезапускает CSS-анимацию, даже если месяц листают в ту же сторону. */
+  private flashSlide(direction: 'left' | 'right'): void {
+    this.slide.set('');
+    setTimeout(() => this.slide.set(direction), 0);
+    setTimeout(() => this.slide.set(''), 280);
   }
 
   select(cell: CalendarCell): void {

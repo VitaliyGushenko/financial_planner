@@ -143,6 +143,46 @@
 }
 
 <div class="card">
+  <h2 class="card-title">Данные</h2>
+  <p class="muted small">
+    Резервная копия или таблица для Excel. CSV — операции с датами, счетами и категориями;
+    JSON — все данные приложения. Файлы содержат только ваши записи.
+  </p>
+  <div class="form-actions">
+    <button class="btn btn-ghost" type="button" (click)="exportCsv()">Скачать CSV</button>
+    <button class="btn btn-ghost" type="button" (click)="exportJson()">Скачать JSON</button>
+  </div>
+</div>
+
+<div class="card">
+  <h2 class="card-title">Оформление</h2>
+  <p class="muted small">Тема интерфейса. «Как в системе» — подстраивается под настройку телефона или компьютера.</p>
+  <div class="seg theme-seg">
+    <button type="button" [class.active]="theme.mode() === 'system'" (click)="theme.set('system')">Как в системе</button>
+    <button type="button" [class.active]="theme.mode() === 'light'" (click)="theme.set('light')">Светлая</button>
+    <button type="button" [class.active]="theme.mode() === 'dark'" (click)="theme.set('dark')">Тёмная</button>
+  </div>
+</div>
+
+<div class="card">
+  <h2 class="card-title">Напоминания</h2>
+  <p class="muted small">
+    Бейдж с числом платежей на иконке приложения и уведомление, когда есть что подтвердить.
+    Напоминание приходит при открытии приложения — системный push при закрытом приложении
+    потребовал бы серверной части.
+  </p>
+  @if (reminders.permission() === 'unsupported') {
+    <p class="form-notice">Этот браузер не поддерживает уведомления.</p>
+  } @else if (reminders.permission() === 'granted') {
+    <p><span class="badge badge-income">Уведомления разрешены</span></p>
+  } @else if (reminders.permission() === 'denied') {
+    <p class="form-error">Уведомления запрещены в настройках браузера — разрешите их для сайта.</p>
+  } @else {
+    <button class="btn" type="button" (click)="reminders.requestPermission()">Разрешить уведомления</button>
+  }
+</div>
+
+<div class="card">
   <h2 class="card-title">Профиль</h2>
   <form (ngSubmit)="saveProfile()" class="form-row">
     <div class="field">

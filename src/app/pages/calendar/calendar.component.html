@@ -33,8 +33,13 @@
     }
   </div>
 
-  @for (week of weeks(); track $index) {
-    <div class="cal-grid">
+  <div
+    class="cal-weeks"
+    [class.slide-left]="slide() === 'left'"
+    [class.slide-right]="slide() === 'right'"
+  >
+    @for (week of weeks(); track $index) {
+      <div class="cal-grid">
       @for (cell of week.cells; track cell.key) {
         <button
           type="button"
@@ -60,8 +65,9 @@
           }
         </button>
       }
-    </div>
-  }
+      </div>
+    }
+  </div>
 </div>
 
 <app-modal [open]="selected() !== null" [title]="selectedTitle()" (closed)="selected.set(null)">

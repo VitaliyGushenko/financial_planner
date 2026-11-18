@@ -44,6 +44,46 @@
   </div>
 </div>
 
+<div class="card compare-card">
+  <h2 class="card-title">Этот месяц и прошлый</h2>
+  <div class="compare-grid">
+    <div class="compare-row">
+      <span>Доходы</span>
+      <span class="compare-values">
+        <strong>{{ money(comparison().current.income) }}</strong>
+        <span
+          class="delta"
+          [class.good]="comparison().incomeDelta > 0"
+          [class.bad]="comparison().incomeDelta < 0"
+        >{{ percentLabel(comparison().incomePercent) }}</span>
+      </span>
+    </div>
+    <div class="compare-row">
+      <span>Расходы</span>
+      <span class="compare-values">
+        <strong>{{ money(comparison().current.expense) }}</strong>
+        <span
+          class="delta"
+          [class.bad]="comparison().expenseDelta > 0"
+          [class.good]="comparison().expenseDelta < 0"
+        >{{ percentLabel(comparison().expensePercent) }}</span>
+      </span>
+    </div>
+  </div>
+
+  @if (comparison().growth.length) {
+    <div class="growth">
+      <div class="muted small">Больше всего выросли:</div>
+      @for (item of comparison().growth; track item.categoryId) {
+        <div class="growth-row">
+          <span>{{ item.title }}</span>
+          <span class="negative">+{{ money(item.delta) }}</span>
+        </div>
+      }
+    </div>
+  }
+</div>
+
 @if (budgets().lines.length) {
   <div class="card budgets-card">
     <h2 class="card-title">Бюджеты на месяц</h2>

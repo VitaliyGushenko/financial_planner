@@ -7,11 +7,14 @@ import { CurrencyService } from '../../core/currency.service';
 import { GoalsService } from '../../core/goals.service';
 import { ProjectionService } from '../../core/projection.service';
 import { TransactionsService } from '../../core/transactions.service';
+import { RecurringService } from '../../core/recurring.service';
 import { ModalComponent } from '../../ui/modal.component';
 import { IconComponent } from '../../ui/icon.component';
 import { advisePurchase, PurchaseAdvice } from '../../core/advisor';
+import { buildProjection } from '../../core/projection';
+import { round2 } from '../../core/money';
 import { Category, Goal } from '../../core/models';
-import { DayKey, formatDayKeyRelative, todayKey } from '../../core/day-key';
+import { DayKey, diffInDays, formatDayKeyRelative, pluralRu, todayKey } from '../../core/day-key';
 
 @Component({
   selector: 'app-planner',
@@ -25,6 +28,7 @@ export class PlannerComponent {
   private readonly transactionsService = inject(TransactionsService);
   private readonly accountsService = inject(AccountsService);
   private readonly categoriesService = inject(CategoriesService);
+  private readonly recurringService = inject(RecurringService);
   private readonly currency = inject(CurrencyService);
   readonly curr = this.currency;
 
@@ -76,6 +80,73 @@ export class PlannerComponent {
     const projection = this.projection();
     return projection.futureKeys.filter((k) => (projection.days.get(k)?.balance ?? 0) < 0);
   });
+
+  // ----- «Что если»: экономия на будущих расходах -----
+
+  /** Сколько процентов трат «урезаем» — 0…50. */
+  readonly saving = signal(0);
+  readonly whatIfGoalId = signal<string | null>(null);
+
+  readonly whatIfGoal = computed<Goal | null>(() => {
+    const goals = this.goals();
+    if (!goals.length) {
+      return null;
+    }
+    return goals.find((goal) => goal.id === this.whatIfGoalId()) ?? goals[0];
+  });
+
+  /** Проекция с уменьшенными будущими расходами (правила и плановые операции). */
+  private readonly whatIfProjection = computed(() => {
+    const factor = 1 - this.saving() / 100;
+    const today = this.todayMarker;
+    const transactions = this.transactionsService
+      .transactions()
+      .map((tx) =>
+        tx.date > today && tx.kind === 'expense'
+          ? { ...tx, amount: round2(tx.amount * factor) }
+          : tx,
+      );
+    const rules = this.recurringService
+      .rules()
+      .map((rule) => (rule.kind === 'expense' ? { ...rule, amount: round2(rule.amount * factor) } : rule));
+
+    return buildProjection({
+      accounts: this.accountsService.accounts(),
+      transactions,
+      rules,
+      categories: this.categoriesService.categories(),
+      today,
+    });
+  });
+
+  readonly whatIfAdvice = computed<PurchaseAdvice | null>(() => {
+    const goal = this.whatIfGoal();
+    if (!goal) {
+      return null;
+    }
+    return advisePurchase(this.whatIfProjection(), goal.amount, {
+      deadline: goal.deadline,
+      currency: this.currency.currency(),
+    });
+  });
+
+  /** На сколько дней раньше можно купить при текущей экономии. */
+  readonly whatIfGain = computed<number | null>(() => {
+    const goal = this.whatIfGoal();
+    if (!goal) {
+      return null;
+    }
+    const base = this.goalAdvices().get(goal.id)?.recommendedDate ?? null;
+    const next = this.whatIfAdvice()?.recommendedDate ?? null;
+    if (!base || !next) {
+      return null;
+    }
+    return Math.max(0, diffInDays(base, next));
+  });
+
+  gainLabel(days: number): string {
+    return `${days} ${pluralRu(days, 'день', 'дня', 'дней')}`;
+  }
 
   addGoal(): void {
     const amount = Number(this.quick.amount);

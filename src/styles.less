@@ -44,37 +44,46 @@
   --glass-blur: saturate(1.6) blur(20px);
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    color-scheme: dark;
+.theme-dark() {
+  color-scheme: dark;
 
-    --bg: #0c1117;
-    --bg-glow-1: rgba(63, 191, 127, 0.14);
-    --bg-glow-2: rgba(122, 92, 214, 0.16);
-    --surface: #151c24;
-    --surface-2: #1b242d;
-    --glass: rgba(21, 28, 36, 0.72);
-    --glass-strong: rgba(18, 24, 31, 0.86);
-    --border: #27313d;
-    --border-soft: rgba(255, 255, 255, 0.09);
-    --text: #e8eef4;
-    --muted: #96a4b3;
-    --primary: #2f9f66;
-    --primary-dark: #3fbf7f;
-    --primary-soft: rgba(63, 191, 127, 0.16);
-    --on-primary: #08130d;
-    --income: #46c98a;
-    --income-soft: rgba(70, 201, 138, 0.16);
-    --expense: #f07a7a;
-    --expense-soft: rgba(240, 122, 122, 0.14);
-    --expense-border: rgba(240, 122, 122, 0.38);
-    --transfer: #a48bf0;
-    --transfer-soft: rgba(164, 139, 240, 0.16);
-    --warn: #e3b34a;
-    --warn-soft: rgba(227, 179, 74, 0.16);
-    --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.4);
-    --shadow: 0 12px 34px rgba(0, 0, 0, 0.45), 0 2px 6px rgba(0, 0, 0, 0.3);
-    --shadow-lg: 0 28px 70px rgba(0, 0, 0, 0.6);
+  --bg: #0c1117;
+  --bg-glow-1: rgba(63, 191, 127, 0.14);
+  --bg-glow-2: rgba(122, 92, 214, 0.16);
+  --surface: #151c24;
+  --surface-2: #1b242d;
+  --glass: rgba(21, 28, 36, 0.72);
+  --glass-strong: rgba(18, 24, 31, 0.86);
+  --border: #27313d;
+  --border-soft: rgba(255, 255, 255, 0.09);
+  --text: #e8eef4;
+  --muted: #96a4b3;
+  --primary: #2f9f66;
+  --primary-dark: #3fbf7f;
+  --primary-soft: rgba(63, 191, 127, 0.16);
+  --on-primary: #08130d;
+  --income: #46c98a;
+  --income-soft: rgba(70, 201, 138, 0.16);
+  --expense: #f07a7a;
+  --expense-soft: rgba(240, 122, 122, 0.14);
+  --expense-border: rgba(240, 122, 122, 0.38);
+  --transfer: #a48bf0;
+  --transfer-soft: rgba(164, 139, 240, 0.16);
+  --warn: #e3b34a;
+  --warn-soft: rgba(227, 179, 74, 0.16);
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.4);
+  --shadow: 0 12px 34px rgba(0, 0, 0, 0.45), 0 2px 6px rgba(0, 0, 0, 0.3);
+  --shadow-lg: 0 28px 70px rgba(0, 0, 0, 0.6);
+}
+
+/* Ручной выбор темы важнее системной настройки. */
+:root[data-theme='dark'] {
+  .theme-dark();
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme='light']) {
+    .theme-dark();
   }
 }
 
@@ -789,6 +798,20 @@ body.modal-open {
     white-space: nowrap;
   }
 
+  .avatar {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 24px;
+    height: 24px;
+    border-radius: 50%;
+    background: var(--primary-soft);
+    color: var(--primary-dark);
+    font-size: 11px;
+    font-weight: 800;
+    letter-spacing: 0.02em;
+  }
+
   .caret {
     font-size: 10px;
     color: var(--muted);
@@ -1315,7 +1338,11 @@ app-icon {
   }
 
   .user-btn .name {
-    max-width: 84px;
+    display: none;
+  }
+
+  .user-btn {
+    padding: 4px 8px 4px 4px;
   }
 
   .page-head h1 {

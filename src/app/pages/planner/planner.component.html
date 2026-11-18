@@ -23,6 +23,59 @@
   </div>
 }
 
+<div class="card what-if">
+  <h2 class="card-title">Что если экономить?</h2>
+  @if (whatIfGoal(); as goal) {
+    <div class="what-if-head">
+      @if (goals().length > 1) {
+        <select
+          class="what-if-select"
+          [value]="goal.id"
+          (change)="whatIfGoalId.set($any($event.target).value)"
+          aria-label="Цель"
+        >
+          @for (item of goals(); track item.id) {
+            <option [value]="item.id">{{ item.title }} — {{ money(item.amount) }}</option>
+          }
+        </select>
+      } @else {
+        <span class="what-if-goal">{{ goal.title }} — {{ money(goal.amount) }}</span>
+      }
+      <span class="what-if-saving">−{{ saving() }}%</span>
+    </div>
+
+    <input
+      class="what-if-slider"
+      type="range"
+      min="0"
+      max="50"
+      step="5"
+      [value]="saving()"
+      (input)="saving.set(+$any($event.target).value)"
+      aria-label="Насколько сократить траты"
+    />
+
+    <div class="what-if-result">
+      <div class="what-if-line">
+        <span class="muted small">Сейчас</span>
+        <strong>{{ dateLabel(adviceFor(goal.id)?.recommendedDate ?? null) }}</strong>
+      </div>
+      <div class="what-if-line">
+        <span class="muted small">При экономии {{ saving() }}%</span>
+        <strong class="positive">{{ dateLabel(whatIfAdvice()?.recommendedDate ?? null) }}</strong>
+      </div>
+    </div>
+
+    @if (whatIfGain(); as gain) {
+      <p class="what-if-note">На {{ gainLabel(gain) }} раньше</p>
+    }
+  } @else {
+    <p class="muted small">
+      Добавьте цель — и приложение покажет, насколько раньше её можно купить, если сократить траты.
+    </p>
+  }
+</div>
+
 <div class="card">
   <h2 class="card-title">Цели ({{ goals().length }})</h2>
   @if (goals().length) {

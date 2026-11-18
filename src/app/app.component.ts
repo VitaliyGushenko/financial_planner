@@ -6,6 +6,9 @@ import { filter, map, startWith } from 'rxjs';
 import { AuthService } from './core/auth.service';
 import { AccountsService } from './core/accounts.service';
 import { CurrencyService } from './core/currency.service';
+import { PendingService } from './core/pending.service';
+import { RemindersService } from './core/reminders.service';
+import { ThemeService } from './core/theme.service';
 import { IconComponent } from './ui/icon.component';
 import { ToastComponent } from './ui/toast.component';
 import { UpdateBannerComponent } from './ui/update-banner.component';
@@ -25,12 +28,21 @@ export class AppComponent {
   private readonly accounts = inject(AccountsService);
   private readonly currency = inject(CurrencyService);
   private readonly router = inject(Router);
+  private readonly pending = inject(PendingService);
+  private readonly reminders = inject(RemindersService);
+  // Инжектим на старте: сервис применяет сохранённую тему сразу после загрузки.
+  private readonly theme = inject(ThemeService);
 
   readonly isReady = this.auth.isReady;
   readonly isAuthenticated = this.auth.isAuthenticated;
   readonly displayName = computed(
     () => this.auth.profile()?.displayName || this.auth.user()?.email || '',
   );
+  /** Инициалы для аватара в шапке: «QA Проверка» → «QП». */
+  readonly initials = computed(() => {
+    const parts = this.displayName().trim().split(/\s+/).filter(Boolean).slice(0, 2);
+    return parts.map((part) => part[0]?.toUpperCase() ?? '').join('') || '?';
+  });
   readonly total = computed(() => this.currency.format(this.accounts.total()));
 
   /** Разделы нижнего таб-бара: порядок задаёт позицию «пилюли». */
@@ -56,6 +68,13 @@ export class AppComponent {
         const returnUrl = this.router.url;
         void this.router.navigate(['/auth'], { queryParams: { returnUrl } });
       }
+    });
+
+    // Бейдж с числом платежей + напоминание (не чаще раза в день).
+    effect(() => {
+      const items = this.isAuthenticated() ? this.pending.items() : [];
+      this.reminders.setBadge(items.length);
+      this.reminders.notifyPending(items);
     });
   }
 
