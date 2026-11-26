@@ -33,6 +33,8 @@ export interface StatsResult {
   avgPerDay: number;
   /** Расходы по категориям, по убыванию суммы. */
   byCategory: CategoryTotal[];
+  /** Доходы по категориям, по убыванию суммы. */
+  incomeByCategory: CategoryTotal[];
   byMonth: MonthTotals[];
 }
 
@@ -56,6 +58,7 @@ export function buildStats(input: StatsInput): StatsResult {
   let income = 0;
   let expense = 0;
   const byCategory = new Map<string, number>();
+  const incomeByCategory = new Map<string, number>();
   const byMonth = new Map<string, MonthTotals>();
 
   for (const tx of input.transactions) {
@@ -72,6 +75,8 @@ export function buildStats(input: StatsInput): StatsResult {
     const totals = byMonth.get(month) ?? { month, income: 0, expense: 0 };
     if (tx.kind === 'income') {
       totals.income = round2(totals.income + amount);
+      const categoryId = tx.categoryId || '__income__';
+      incomeByCategory.set(categoryId, round2((incomeByCategory.get(categoryId) || 0) + amount));
     } else {
       totals.expense = round2(totals.expense + amount);
       // Структура расходов — только расходные категории.
@@ -95,6 +100,20 @@ export function buildStats(input: StatsInput): StatsResult {
     })
     .sort((a, b) => b.amount - a.amount);
 
+  const incomeTotal = income || 0;
+  const incomeCategories: CategoryTotal[] = [...incomeByCategory.entries()]
+    .map(([categoryId, amount]) => {
+      const cat = categoryById.get(categoryId);
+      const title = cat?.name ?? 'Без категории';
+      return {
+        categoryId,
+        title,
+        amount,
+        share: incomeTotal > 0 && amount > 0 ? amount / incomeTotal : 0,
+      };
+    })
+    .sort((a, b) => b.amount - a.amount);
+
   const daysCount = Math.max(1, diffInDays(input.to, input.from) + 1);
 
   return {
@@ -104,6 +123,7 @@ export function buildStats(input: StatsInput): StatsResult {
     daysCount,
     avgPerDay: round2(expense / daysCount),
     byCategory: categories,
+    incomeByCategory: incomeCategories,
     byMonth: [...byMonth.values()].sort((a, b) => a.month.localeCompare(b.month)),
   };
 }

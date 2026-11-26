@@ -23,15 +23,15 @@
 }
 
 <div class="kpi-grid">
-  <div class="card kpi">
-    <div class="kpi-label">Доходы</div>
+  <div class="card kpi kpi-income">
+    <div class="kpi-label">Доходы за период</div>
     <div class="kpi-value positive" [appCountUp]="stats().income" [appCountUpFormat]="moneyFn">{{ money(stats().income) }}</div>
   </div>
-  <div class="card kpi">
-    <div class="kpi-label">Расходы</div>
+  <div class="card kpi kpi-expense">
+    <div class="kpi-label">Расходы за период</div>
     <div class="kpi-value negative" [appCountUp]="stats().expense" [appCountUpFormat]="moneyFn">{{ money(stats().expense) }}</div>
   </div>
-  <div class="card kpi">
+  <div class="card kpi kpi-net">
     <div class="kpi-label">Сальдо</div>
     <div class="kpi-value" [class.positive]="stats().net >= 0" [class.negative]="stats().net < 0">
       {{ stats().net >= 0 ? '+' : '' }}{{ money(stats().net) }}
@@ -44,41 +44,516 @@
   </div>
 </div>
 
-<div class="card compare-card">
-  <h2 class="card-title">Этот месяц и прошлый</h2>
-  <div class="compare-grid">
-    <div class="compare-row">
-      <span>Доходы</span>
-      <span class="compare-values">
-        <strong>{{ money(comparison().current.income) }}</strong>
-        <span
-          class="delta"
-          [class.good]="comparison().incomeDelta > 0"
-          [class.bad]="comparison().incomeDelta < 0"
-        >{{ percentLabel(comparison().incomePercent) }}</span>
-      </span>
+<!-- ===== ДЕТАЛЬНОЕ СРАВНЕНИЕ ДВУХ ВЫБРАННЫХ МЕСЯЦЕВ ===== -->
+<div class="card deep-compare-card">
+  <div class="deep-compare-head">
+    <div>
+      <span class="eyebrow">Детальное сравнение</span>
+      <h2 class="card-title">Сравнение двух месяцев по всем статьям</h2>
     </div>
-    <div class="compare-row">
-      <span>Расходы</span>
-      <span class="compare-values">
-        <strong>{{ money(comparison().current.expense) }}</strong>
-        <span
-          class="delta"
-          [class.bad]="comparison().expenseDelta > 0"
-          [class.good]="comparison().expenseDelta < 0"
-        >{{ percentLabel(comparison().expensePercent) }}</span>
-      </span>
+    <div class="preset-chips">
+      <button
+        type="button"
+        class="chip-btn"
+        [class.active]="compareMonthA() === prevMonthKey && compareMonthB() === currentMonthKey"
+        (click)="setComparePreset('prev')"
+      >
+        Прошлый → Этот
+      </button>
+      <button
+        type="button"
+        class="chip-btn"
+        [class.active]="compareMonthA() === yearAgoMonthKey && compareMonthB() === currentMonthKey"
+        (click)="setComparePreset('yearAgo')"
+      >
+        Год назад → Этот
+      </button>
     </div>
   </div>
 
-  @if (comparison().growth.length) {
-    <div class="growth">
-      <div class="muted small">Больше всего выросли:</div>
-      @for (item of comparison().growth; track item.categoryId) {
-        <div class="growth-row">
-          <span>{{ item.title }}</span>
-          <span class="negative">+{{ money(item.delta) }}</span>
+  <!-- Выбор Месяца А и Месяца Б -->
+  <div class="month-duo-picker">
+    <div class="month-select-box month-a">
+      <span class="month-tag">Месяц А (база)</span>
+      <select
+        aria-label="Базовый месяц А"
+        [ngModel]="compareMonthA()"
+        (ngModelChange)="compareMonthA.set($event)"
+      >
+        @for (m of availableMonths(); track m) {
+          <option [value]="m">{{ monthFullLabel(m) }}</option>
+        }
+      </select>
+    </div>
+
+    <button
+      type="button"
+      class="swap-months-btn"
+      (click)="swapCompareMonths()"
+      title="Поменять месяцы местами"
+      aria-label="Поменять месяцы местами"
+    >
+      ⇄
+    </button>
+
+    <div class="month-select-box month-b">
+      <span class="month-tag">Месяц Б (сравнение)</span>
+      <select
+        aria-label="Сравниваемый месяц Б"
+        [ngModel]="compareMonthB()"
+        (ngModelChange)="compareMonthB.set($event)"
+      >
+        @for (m of availableMonths(); track m) {
+          <option [value]="m">{{ monthFullLabel(m) }}</option>
+        }
+      </select>
+    </div>
+  </div>
+
+  <!-- Сводное табло Месяц А vs Месяц Б -->
+  <div class="scoreboard-grid">
+    <div class="score-box">
+      <div class="score-head">
+        <span class="score-title">Доходы</span>
+        <span
+          class="delta"
+          [class.good]="detailedComparison().incomeDelta > 0"
+          [class.bad]="detailedComparison().incomeDelta < 0"
+        >
+          {{ percentLabel(detailedComparison().incomePercent, detailedComparison().pointA.income, detailedComparison().pointB.income) }}
+        </span>
+      </div>
+      <div class="score-compare">
+        <div class="score-col">
+          <span class="muted small">{{ monthLabel(detailedComparison().monthA) }}</span>
+          <span class="score-val">{{ money(detailedComparison().pointA.income) }}</span>
         </div>
+        <span class="score-arrow">→</span>
+        <div class="score-col">
+          <span class="muted small">{{ monthLabel(detailedComparison().monthB) }}</span>
+          <strong class="score-val positive">{{ money(detailedComparison().pointB.income) }}</strong>
+        </div>
+      </div>
+      <div
+        class="score-delta-line"
+        [class.positive]="detailedComparison().incomeDelta > 0"
+        [class.negative]="detailedComparison().incomeDelta < 0"
+      >
+        Разница: {{ signedDelta(detailedComparison().incomeDelta) }}
+      </div>
+    </div>
+
+    <div class="score-box">
+      <div class="score-head">
+        <span class="score-title">Расходы</span>
+        <span
+          class="delta"
+          [class.bad]="detailedComparison().expenseDelta > 0"
+          [class.good]="detailedComparison().expenseDelta < 0"
+        >
+          {{ percentLabel(detailedComparison().expensePercent, detailedComparison().pointA.expense, detailedComparison().pointB.expense) }}
+        </span>
+      </div>
+      <div class="score-compare">
+        <div class="score-col">
+          <span class="muted small">{{ monthLabel(detailedComparison().monthA) }}</span>
+          <span class="score-val">{{ money(detailedComparison().pointA.expense) }}</span>
+        </div>
+        <span class="score-arrow">→</span>
+        <div class="score-col">
+          <span class="muted small">{{ monthLabel(detailedComparison().monthB) }}</span>
+          <strong class="score-val negative">{{ money(detailedComparison().pointB.expense) }}</strong>
+        </div>
+      </div>
+      <div
+        class="score-delta-line"
+        [class.negative]="detailedComparison().expenseDelta > 0"
+        [class.positive]="detailedComparison().expenseDelta < 0"
+      >
+        Разница: {{ signedDelta(detailedComparison().expenseDelta) }}
+      </div>
+    </div>
+
+    <div class="score-box">
+      <div class="score-head">
+        <span class="score-title">Итог (Сальдо)</span>
+        <span
+          class="delta"
+          [class.good]="detailedComparison().netDelta > 0"
+          [class.bad]="detailedComparison().netDelta < 0"
+        >
+          {{ signedDelta(detailedComparison().netDelta) }}
+        </span>
+      </div>
+      <div class="score-compare">
+        <div class="score-col">
+          <span class="muted small">{{ monthLabel(detailedComparison().monthA) }}</span>
+          <span
+            class="score-val"
+            [class.positive]="detailedComparison().pointA.net > 0"
+            [class.negative]="detailedComparison().pointA.net < 0"
+          >
+            {{ money(detailedComparison().pointA.net) }}
+          </span>
+        </div>
+        <span class="score-arrow">→</span>
+        <div class="score-col">
+          <span class="muted small">{{ monthLabel(detailedComparison().monthB) }}</span>
+          <strong
+            class="score-val"
+            [class.positive]="detailedComparison().pointB.net > 0"
+            [class.negative]="detailedComparison().pointB.net < 0"
+          >
+            {{ money(detailedComparison().pointB.net) }}
+          </strong>
+        </div>
+      </div>
+      <div class="score-delta-line muted">
+        Норма сбережений: {{ (detailedComparison().pointA.savingsRate * 100).toFixed(0) }}% → {{ (detailedComparison().pointB.savingsRate * 100).toFixed(0) }}%
+      </div>
+    </div>
+  </div>
+
+  <!-- Авто-инсайты -->
+  @if (compareInsights().length) {
+    <div class="insights-strip">
+      @for (insight of compareInsights(); track insight.text) {
+        <div class="insight-pill" [class]="insight.tone">
+          <span class="insight-dot"></span>
+          <span>{{ insight.text }}</span>
+        </div>
+      }
+    </div>
+  }
+
+  <!-- Панель управления таблицей сравнения -->
+  <div class="compare-toolbar">
+    <div class="seg">
+      <button type="button" [class.active]="compareFilter() === 'all'" (click)="compareFilter.set('all')">
+        Все ({{ sortedExpenseComparison().length + sortedIncomeComparison().length }})
+      </button>
+      <button type="button" [class.active]="compareFilter() === 'expense'" (click)="compareFilter.set('expense')">
+        Расходы ({{ sortedExpenseComparison().length }})
+      </button>
+      <button type="button" [class.active]="compareFilter() === 'income'" (click)="compareFilter.set('income')">
+        Доходы ({{ sortedIncomeComparison().length }})
+      </button>
+    </div>
+
+    <div class="compare-toolbar-right">
+      <div class="seg">
+        <button
+          type="button"
+          [class.active]="compareView() === 'butterfly'"
+          (click)="compareView.set('butterfly')"
+          title="Зеркальная диаграмма (Butterfly)"
+        >
+          Зеркало
+        </button>
+        <button
+          type="button"
+          [class.active]="compareView() === 'bars'"
+          (click)="compareView.set('bars')"
+          title="Двойные прогресс-бары"
+        >
+          Полосы
+        </button>
+      </div>
+
+      <select
+        class="sort-select"
+        aria-label="Сортировка статей"
+        [ngModel]="compareSort()"
+        (ngModelChange)="compareSort.set($event)"
+      >
+        <option value="delta">По размеру изменения (Δ)</option>
+        <option value="amount">По максимальной сумме</option>
+        <option value="percent">По % изменения</option>
+      </select>
+    </div>
+  </div>
+
+  <!-- Статьи РАСХОДОВ по каждой категории -->
+  @if (compareFilter() === 'all' || compareFilter() === 'expense') {
+    <div class="compare-section">
+      <div class="compare-section-head">
+        <h3 class="section-subtitle">
+          <span class="kind-dot expense"></span>
+          Статьи расходов по категориям ({{ sortedExpenseComparison().length }})
+        </h3>
+        <span class="muted small">
+          {{ monthLabel(detailedComparison().monthA) }}: {{ money(detailedComparison().pointA.expense) }}
+          · {{ monthLabel(detailedComparison().monthB) }}: {{ money(detailedComparison().pointB.expense) }}
+        </span>
+      </div>
+
+      @if (sortedExpenseComparison().length) {
+        <div class="compare-cat-list">
+          @for (item of sortedExpenseComparison(); track item.categoryId) {
+            <div
+              class="compare-cat-card"
+              [class.has-subs]="item.subcategories.length > 0"
+              [class.expanded]="isCategoryExpanded('exp_' + item.categoryId)"
+            >
+              <div
+                class="compare-cat-main"
+                (click)="item.subcategories.length ? toggleCategoryExpand('exp_' + item.categoryId) : null"
+              >
+                <div class="compare-cat-header">
+                  <div class="compare-cat-title">
+                    <span class="cat-icon-badge expense">
+                      <app-icon [name]="itemIcon(item)" />
+                    </span>
+                    <div>
+                      <div class="cat-title-line">
+                        <strong>{{ item.title }}</strong>
+                        @if (item.subcategories.length) {
+                          <span class="sub-toggle-badge">
+                            {{ item.subcategories.length }} подкат. {{ isCategoryExpanded('exp_' + item.categoryId) ? '▴' : '▾' }}
+                          </span>
+                        }
+                      </div>
+                      <div class="muted small">
+                        Доля в расходах: {{ (item.shareA * 100).toFixed(0) }}% → {{ (item.shareB * 100).toFixed(0) }}%
+                        · операций: {{ item.txCountA }} → {{ item.txCountB }}
+                      </div>
+                    </div>
+                  </div>
+
+                  <div class="compare-cat-delta">
+                    <span
+                      class="delta-amount"
+                      [class.good]="item.tone === 'good'"
+                      [class.bad]="item.tone === 'bad'"
+                    >
+                      {{ signedDelta(item.delta) }}
+                    </span>
+                    <span
+                      class="delta"
+                      [class.good]="item.tone === 'good'"
+                      [class.bad]="item.tone === 'bad'"
+                    >
+                      {{ percentLabel(item.percent, item.monthA, item.monthB) }}
+                    </span>
+                  </div>
+                </div>
+
+                @if (compareView() === 'butterfly') {
+                  <!-- Зеркальная визуализация (Butterfly) -->
+                  <div class="butterfly-row">
+                    <div class="butterfly-side left">
+                      <span class="bf-val muted">{{ money(item.monthA) }}</span>
+                      <div class="bf-track">
+                        <div class="bf-fill month-a-fill" [style.width.%]="item.barRatioA * 100"></div>
+                      </div>
+                    </div>
+                    <div class="butterfly-divider"></div>
+                    <div class="butterfly-side right">
+                      <div class="bf-track">
+                        <div
+                          class="bf-fill month-b-fill"
+                          [class.good]="item.tone === 'good'"
+                          [class.bad]="item.tone === 'bad'"
+                          [style.width.%]="item.barRatioB * 100"
+                        ></div>
+                      </div>
+                      <strong class="bf-val">{{ money(item.monthB) }}</strong>
+                    </div>
+                  </div>
+                } @else {
+                  <!-- Двойные параллельные бары -->
+                  <div class="dual-bars">
+                    <div class="dual-bar-line">
+                      <span class="dual-month muted">{{ monthLabel(detailedComparison().monthA) }}</span>
+                      <div class="dual-track">
+                        <div class="dual-fill month-a-fill" [style.width.%]="item.barRatioA * 100"></div>
+                      </div>
+                      <span class="dual-sum muted">{{ money(item.monthA) }}</span>
+                    </div>
+                    <div class="dual-bar-line">
+                      <span class="dual-month">{{ monthLabel(detailedComparison().monthB) }}</span>
+                      <div class="dual-track">
+                        <div
+                          class="dual-fill month-b-fill"
+                          [class.good]="item.tone === 'good'"
+                          [class.bad]="item.tone === 'bad'"
+                          [style.width.%]="item.barRatioB * 100"
+                        ></div>
+                      </div>
+                      <strong class="dual-sum">{{ money(item.monthB) }}</strong>
+                    </div>
+                  </div>
+                }
+              </div>
+
+              <!-- Детализация по подкатегориям -->
+              @if (item.subcategories.length && isCategoryExpanded('exp_' + item.categoryId)) {
+                <div class="subcategories-breakdown">
+                  @for (sub of item.subcategories; track sub.subcategoryId) {
+                    <div class="sub-compare-row">
+                      <span class="sub-title">↳ {{ sub.title }}</span>
+                      <span class="sub-values">
+                        <span class="muted">{{ money(sub.monthA) }}</span>
+                        <span>→</span>
+                        <strong>{{ money(sub.monthB) }}</strong>
+                        <span
+                          class="delta"
+                          [class.good]="sub.delta < 0"
+                          [class.bad]="sub.delta > 0"
+                        >
+                          {{ signedDelta(sub.delta) }} ({{ percentLabel(sub.percent, sub.monthA, sub.monthB) }})
+                        </span>
+                      </span>
+                    </div>
+                  }
+                </div>
+              }
+            </div>
+          }
+        </div>
+      } @else {
+        <div class="empty-state">За выбранные два месяца подтверждённых расходов нет</div>
+      }
+    </div>
+  }
+
+  <!-- Статьи ДОХОДОВ по каждой категории -->
+  @if (compareFilter() === 'all' || compareFilter() === 'income') {
+    <div class="compare-section">
+      <div class="compare-section-head">
+        <h3 class="section-subtitle">
+          <span class="kind-dot income"></span>
+          Статьи доходов по категориям ({{ sortedIncomeComparison().length }})
+        </h3>
+        <span class="muted small">
+          {{ monthLabel(detailedComparison().monthA) }}: {{ money(detailedComparison().pointA.income) }}
+          · {{ monthLabel(detailedComparison().monthB) }}: {{ money(detailedComparison().pointB.income) }}
+        </span>
+      </div>
+
+      @if (sortedIncomeComparison().length) {
+        <div class="compare-cat-list">
+          @for (item of sortedIncomeComparison(); track item.categoryId) {
+            <div
+              class="compare-cat-card"
+              [class.has-subs]="item.subcategories.length > 0"
+              [class.expanded]="isCategoryExpanded('inc_' + item.categoryId)"
+            >
+              <div
+                class="compare-cat-main"
+                (click)="item.subcategories.length ? toggleCategoryExpand('inc_' + item.categoryId) : null"
+              >
+                <div class="compare-cat-header">
+                  <div class="compare-cat-title">
+                    <span class="cat-icon-badge income">
+                      <app-icon [name]="itemIcon(item)" />
+                    </span>
+                    <div>
+                      <div class="cat-title-line">
+                        <strong>{{ item.title }}</strong>
+                        @if (item.subcategories.length) {
+                          <span class="sub-toggle-badge">
+                            {{ item.subcategories.length }} подкат. {{ isCategoryExpanded('inc_' + item.categoryId) ? '▴' : '▾' }}
+                          </span>
+                        }
+                      </div>
+                      <div class="muted small">
+                        Доля в доходах: {{ (item.shareA * 100).toFixed(0) }}% → {{ (item.shareB * 100).toFixed(0) }}%
+                        · операций: {{ item.txCountA }} → {{ item.txCountB }}
+                      </div>
+                    </div>
+                  </div>
+
+                  <div class="compare-cat-delta">
+                    <span
+                      class="delta-amount"
+                      [class.good]="item.tone === 'good'"
+                      [class.bad]="item.tone === 'bad'"
+                    >
+                      {{ signedDelta(item.delta) }}
+                    </span>
+                    <span
+                      class="delta"
+                      [class.good]="item.tone === 'good'"
+                      [class.bad]="item.tone === 'bad'"
+                    >
+                      {{ percentLabel(item.percent, item.monthA, item.monthB) }}
+                    </span>
+                  </div>
+                </div>
+
+                @if (compareView() === 'butterfly') {
+                  <div class="butterfly-row">
+                    <div class="butterfly-side left">
+                      <span class="bf-val muted">{{ money(item.monthA) }}</span>
+                      <div class="bf-track">
+                        <div class="bf-fill month-a-fill" [style.width.%]="item.barRatioA * 100"></div>
+                      </div>
+                    </div>
+                    <div class="butterfly-divider"></div>
+                    <div class="butterfly-side right">
+                      <div class="bf-track">
+                        <div
+                          class="bf-fill month-b-fill"
+                          [class.good]="item.tone === 'good'"
+                          [class.bad]="item.tone === 'bad'"
+                          [style.width.%]="item.barRatioB * 100"
+                        ></div>
+                      </div>
+                      <strong class="bf-val">{{ money(item.monthB) }}</strong>
+                    </div>
+                  </div>
+                } @else {
+                  <div class="dual-bars">
+                    <div class="dual-bar-line">
+                      <span class="dual-month muted">{{ monthLabel(detailedComparison().monthA) }}</span>
+                      <div class="dual-track">
+                        <div class="dual-fill month-a-fill" [style.width.%]="item.barRatioA * 100"></div>
+                      </div>
+                      <span class="dual-sum muted">{{ money(item.monthA) }}</span>
+                    </div>
+                    <div class="dual-bar-line">
+                      <span class="dual-month">{{ monthLabel(detailedComparison().monthB) }}</span>
+                      <div class="dual-track">
+                        <div
+                          class="dual-fill month-b-fill"
+                          [class.good]="item.tone === 'good'"
+                          [class.bad]="item.tone === 'bad'"
+                          [style.width.%]="item.barRatioB * 100"
+                        ></div>
+                      </div>
+                      <strong class="dual-sum">{{ money(item.monthB) }}</strong>
+                    </div>
+                  </div>
+                }
+              </div>
+
+              @if (item.subcategories.length && isCategoryExpanded('inc_' + item.categoryId)) {
+                <div class="subcategories-breakdown">
+                  @for (sub of item.subcategories; track sub.subcategoryId) {
+                    <div class="sub-compare-row">
+                      <span class="sub-title">↳ {{ sub.title }}</span>
+                      <span class="sub-values">
+                        <span class="muted">{{ money(sub.monthA) }}</span>
+                        <span>→</span>
+                        <strong>{{ money(sub.monthB) }}</strong>
+                        <span
+                          class="delta"
+                          [class.good]="sub.delta > 0"
+                          [class.bad]="sub.delta < 0"
+                        >
+                          {{ signedDelta(sub.delta) }} ({{ percentLabel(sub.percent, sub.monthA, sub.monthB) }})
+                        </span>
+                      </span>
+                    </div>
+                  }
+                </div>
+              }
+            </div>
+          }
+        </div>
+      } @else {
+        <div class="empty-state">За выбранные два месяца подтверждённых доходов нет</div>
       }
     </div>
   }
@@ -114,27 +589,56 @@
 
 <div class="grid-2">
   <div class="card chart-card">
-    <h2 class="card-title">Расходы по категориям</h2>
+    <div class="card-head-flex">
+      <h2 class="card-title">Структура по категориям</h2>
+      <div class="seg">
+        <button
+          type="button"
+          [class.active]="structureKind() === 'expense'"
+          (click)="structureKind.set('expense')"
+        >
+          Расходы
+        </button>
+        <button
+          type="button"
+          [class.active]="structureKind() === 'income'"
+          (click)="structureKind.set('income')"
+        >
+          Доходы
+        </button>
+      </div>
+    </div>
     <div class="donut-wrap">
       <canvas #donut></canvas>
     </div>
-    @if (stats().expense === 0) {
-      <div class="empty-state">Нет подтверждённых расходов за период</div>
+    @if (structureTotal() === 0) {
+      <div class="empty-state">
+        Нет подтверждённых {{ structureKind() === 'expense' ? 'расходов' : 'доходов' }} за период
+      </div>
     }
   </div>
 
   <div class="card">
-    <h2 class="card-title">Топ категорий расходов</h2>
-    @if (stats().byCategory.length) {
+    <h2 class="card-title">
+      Топ категорий {{ structureKind() === 'expense' ? 'расходов' : 'доходов' }}
+    </h2>
+    @if (structureCategories().length) {
       <div class="rows">
-        @for (cat of stats().byCategory.slice(0, 7); track cat.categoryId) {
+        @for (cat of structureCategories().slice(0, 8); track cat.categoryId; let idx = $index) {
           <div class="cat-row">
             <div class="cat-line">
-              <span class="cat-name">{{ cat.title }}</span>
+              <span class="cat-name">
+                <span class="cat-color-dot" [style.background]="categoryColor(idx)"></span>
+                {{ cat.title }}
+              </span>
               <span class="cat-sum">{{ money(cat.amount) }} · {{ (cat.share * 100).toFixed(0) }}%</span>
             </div>
             <div class="bar-track">
-              <div class="bar-fill" [style.width.%]="cat.share * 100"></div>
+              <div
+                class="bar-fill"
+                [style.width.%]="cat.share * 100"
+                [style.background]="categoryColor(idx)"
+              ></div>
             </div>
           </div>
         }
