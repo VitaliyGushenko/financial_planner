@@ -2,6 +2,30 @@
   margin-bottom: 14px;
 }
 
+.op-modal-ambient {
+  position: relative;
+  border-radius: var(--radius-md);
+  padding: 6px;
+  margin: -6px -6px 8px;
+  transition: background 320ms var(--ease-out);
+
+  &.ambient-expense {
+    background: radial-gradient(320px 100px at 20% 0%, var(--expense-soft), transparent 75%);
+  }
+
+  &.ambient-income {
+    background: radial-gradient(320px 100px at 50% 0%, var(--income-soft), transparent 75%);
+  }
+
+  &.ambient-transfer {
+    background: radial-gradient(320px 100px at 80% 0%, var(--transfer-soft), transparent 75%);
+  }
+
+  .kind-seg {
+    margin-bottom: 0;
+  }
+}
+
 .pending-card {
   margin-bottom: 14px;
   border-left: 4px solid var(--warn);

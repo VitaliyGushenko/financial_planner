@@ -72,12 +72,14 @@
       <p class="form-notice">{{ voiceNotice() }}</p>
     }
 
-    <div class="seg kind-seg">
-      @for (kind of kinds; track kind) {
-        <button type="button" [class]="form.kind === kind ? 'active ' + kind : ''" (click)="form.kind = kind; onKindChange()">
-          {{ kindLabels[kind] }}
-        </button>
-      }
+    <div class="op-modal-ambient" [class]="'ambient-' + form.kind">
+      <div class="seg kind-seg">
+        @for (kind of kinds; track kind) {
+          <button type="button" [class]="form.kind === kind ? 'active ' + kind : ''" (click)="form.kind = kind; onKindChange()">
+            {{ kindLabels[kind] }}
+          </button>
+        }
+      </div>
     </div>
 
     <form (ngSubmit)="save()" class="op-form">

@@ -223,6 +223,7 @@ export class OperationsComponent {
   }
 
   async confirmPending(item: PendingItem): Promise<void> {
+    navigator.vibrate?.(12);
     const amount = this.amountOf(item);
     if (item.txId) {
       // Плановая разовая операция: фиксируем фактическую сумму.
@@ -299,6 +300,7 @@ export class OperationsComponent {
   }
 
   onKindChange(): void {
+    navigator.vibrate?.(8);
     this.form.categoryId = '';
     this.form.subcategoryId = '';
     this.formError.set('');

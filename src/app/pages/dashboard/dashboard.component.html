@@ -45,61 +45,130 @@
 
 <div class="grid-2">
   <div>
-    <div class="card pulse-card">
-      <div class="pulse-head">
-        <span class="pulse-label">Можно потратить сегодня</span>
-        <span class="pulse-total">на счетах {{ total() }}</span>
-      </div>
+    <!-- 3D Flip Card: «Можно потратить сегодня» -->
+    <div class="pulse-3d-scene" [class.flipped]="pulseFlipped()">
+      <div class="pulse-3d-inner">
+        <!-- Лицевая сторона -->
+        <div class="card pulse-card pulse-face pulse-front" appTilt3d>
+          <div class="tilt-glare" aria-hidden="true"></div>
+          <div class="pulse-head">
+            <span class="pulse-label">Можно потратить сегодня</span>
+            <div class="pulse-head-right">
+              <span class="pulse-total">на счетах {{ total() }}</span>
+              <button
+                type="button"
+                class="flip-info-btn"
+                (click)="togglePulseFlip()"
+                title="Как это рассчитано (3D-разворот)"
+                aria-label="Как это рассчитано"
+              >
+                ?
+              </button>
+            </div>
+          </div>
 
-      <div class="pulse-value" [appCountUp]="safe().amount" [appCountUpFormat]="moneyFn">
-        {{ money(safe().amount) }}
-      </div>
+          <div class="pulse-value" [appCountUp]="safe().amount" [appCountUpFormat]="moneyFn">
+            {{ money(safe().amount) }}
+          </div>
 
-      <div class="pulse-meta">
-        @if (safe().nextIncomeDate) {
-          <span class="pulse-chip">до дохода {{ daysLabel() }}</span>
-        }
-        <span class="pulse-chip" [class.danger]="safe().minBalance < 0">
-          минимум {{ money(safe().minBalance) }} · {{ formatDay(safe().minBalanceDate) }}
-        </span>
-      </div>
-
-      <svg class="pulse-spark" viewBox="0 0 240 64" preserveAspectRatio="none" aria-hidden="true">
-        <path class="pulse-area" [attr.d]="sparkArea()"></path>
-        <path class="pulse-line" [attr.d]="sparkLine()"></path>
-      </svg>
-
-      @if (budget().totalBudget > 0) {
-        <a class="pulse-budget" routerLink="/stats">
-          <span>
-            Бюджет месяца: {{ money(budget().totalSpent) }} из {{ money(budget().totalBudget) }}
-            @if (budget().overCount) {
-              · превышений: {{ budget().overCount }}
+          <div class="pulse-meta">
+            @if (safe().nextIncomeDate) {
+              <span class="pulse-chip">до дохода {{ daysLabel() }}</span>
             }
-          </span>
-          <span class="pulse-budget-track">
-            <span
-              class="pulse-budget-fill"
-              [class.over]="budget().progress > 1"
-              [style.width.%]="budgetWidth()"
-            ></span>
-          </span>
-        </a>
-      }
+            <span class="pulse-chip" [class.danger]="safe().minBalance < 0">
+              минимум {{ money(safe().minBalance) }} · {{ formatDay(safe().minBalanceDate) }}
+            </span>
+          </div>
+
+          <svg class="pulse-spark" viewBox="0 0 240 64" preserveAspectRatio="none" aria-hidden="true">
+            <path class="pulse-area" [attr.d]="sparkArea()"></path>
+            <path class="pulse-line" [attr.d]="sparkLine()"></path>
+            <circle class="spark-today-halo" [attr.cx]="sparkTodayX()" [attr.cy]="sparkTodayY()" r="6"></circle>
+            <circle class="spark-today-dot" [attr.cx]="sparkTodayX()" [attr.cy]="sparkTodayY()" r="3"></circle>
+          </svg>
+
+          @if (budget().totalBudget > 0) {
+            <a class="pulse-budget" routerLink="/stats">
+              <span>
+                Бюджет месяца: {{ money(budget().totalSpent) }} из {{ money(budget().totalBudget) }}
+                @if (budget().overCount) {
+                  · превышений: {{ budget().overCount }}
+                }
+              </span>
+              <span class="pulse-budget-track">
+                <span
+                  class="pulse-budget-fill"
+                  [class.over]="budget().progress > 1"
+                  [style.width.%]="budgetWidth()"
+                ></span>
+              </span>
+            </a>
+          }
+        </div>
+
+        <!-- Обратная 3D-сторона карточки с формулой расчёта -->
+        <div class="card pulse-card pulse-face pulse-back">
+          <div class="pulse-head">
+            <span class="pulse-label">Как считается безопасная сумма</span>
+            <button
+              type="button"
+              class="flip-info-btn active"
+              (click)="togglePulseFlip()"
+              aria-label="Вернуться"
+            >
+              ✕
+            </button>
+          </div>
+          <div class="flip-explain">
+            <div class="flip-row">
+              <span>Сейчас на всех счетах</span>
+              <strong>{{ total() }}</strong>
+            </div>
+            <div class="flip-row">
+              <span>Худший остаток за 30 дней ({{ formatDay(safe().minBalanceDate) }})</span>
+              <strong [class.negative]="safe().minBalance < 0">{{ money(safe().minBalance) }}</strong>
+            </div>
+            @if (safe().nextIncomeDate) {
+              <div class="flip-row">
+                <span>Ближайший плановый доход</span>
+                <strong>через {{ daysLabel() }} ({{ formatDay(safe().nextIncomeDate!) }})</strong>
+              </div>
+            }
+            <p class="muted small flip-note">
+              Мы вычитаем все будущие обязательные расходы до следующего дохода и делим свободный остаток на оставшиеся дни, чтобы вы гарантированно не ушли в минус.
+            </p>
+          </div>
+        </div>
+      </div>
     </div>
 
+    <!-- Интерактивные 3D-карты счетов с голографическим бликом -->
     <div class="card">
-      <h2 class="card-title">Счета</h2>
+      <div class="card-head-row">
+        <h2 class="card-title">Счета</h2>
+        <span class="muted small">{{ total() }}</span>
+      </div>
       @if (accounts().length) {
-        <div class="rows">
+        <div class="wallet-cards-grid">
           @for (acc of accounts(); track acc.id) {
-            <div class="row">
-              <app-icon class="acc-icon" [name]="acc.type === 'cash' ? 'wallet' : 'card'" />
-              <div class="row-main">
-                <div class="row-title">{{ acc.name }}</div>
-                <div class="row-sub">{{ acc.type === 'cash' ? 'Наличные' : 'Карта' }}</div>
+            <div
+              class="wallet-3d-card"
+              [class.is-cash]="acc.type === 'cash'"
+              [class.is-card]="acc.type === 'card'"
+              appTilt3d
+            >
+              <div class="tilt-glare" aria-hidden="true"></div>
+              <div class="wallet-card-top">
+                <span class="wallet-chip">
+                  <app-icon [name]="acc.type === 'cash' ? 'wallet' : 'card'" />
+                </span>
+                <span class="wallet-type-badge">{{ acc.type === 'cash' ? 'Наличные' : 'Карта' }}</span>
               </div>
-              <span class="row-amount">{{ money(acc.balance) }}</span>
+              <div class="wallet-card-name">{{ acc.name }}</div>
+              <div class="wallet-card-balance">{{ money(acc.balance) }}</div>
+              <div class="wallet-share-bar">
+                <div class="wallet-share-fill" [style.width.%]="accountShare(acc.balance)"></div>
+              </div>
             </div>
           }
         </div>
@@ -130,7 +199,8 @@
   </div>
 
   <div>
-    <div class="card digest-card">
+    <div class="card digest-card" appTilt3d>
+      <div class="tilt-glare" aria-hidden="true"></div>
       <h2 class="card-title">Неделя в цифрах</h2>
       <div class="digest-main">
         <span class="digest-net" [class.negative]="digest().net < 0" [class.positive]="digest().net > 0">

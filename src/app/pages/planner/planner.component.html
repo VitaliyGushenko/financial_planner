@@ -83,6 +83,19 @@
       @for (goal of goals(); track goal.id) {
         <div class="goal">
           <div class="goal-head">
+            <div class="goal-ring-box" [class.done]="adviceFor(goal.id)?.canBuyNow">
+              <svg class="goal-ring-svg" viewBox="0 0 44 44" aria-hidden="true">
+                <circle class="goal-ring-track" cx="22" cy="22" r="18"></circle>
+                <circle
+                  class="goal-ring-fill"
+                  cx="22"
+                  cy="22"
+                  r="18"
+                  [attr.stroke-dasharray]="goalRingDash(goal)"
+                ></circle>
+              </svg>
+              <span class="goal-ring-pct">{{ goalProgress(goal) }}%</span>
+            </div>
             <div class="row-main">
               <div class="row-title">{{ goal.title }}</div>
               <div class="row-sub">
@@ -216,8 +229,11 @@
   </div>
 </app-modal>
 
-@if (celebrate()) {
+    @if (celebrate()) {
   <div class="confetti" aria-hidden="true">
+    <div class="coin-3d-wrap">
+      <div class="coin-3d">✓</div>
+    </div>
     @for (piece of confetti; track $index) {
       <span
         [style.left.%]="piece.left"

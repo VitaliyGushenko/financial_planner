@@ -84,9 +84,41 @@
   }
 }
 
-.pulse-card {  position: relative;
-  overflow: hidden;
+/* ----- 3D Flip Scene для главной карточки Дашборда ----- */
+
+.pulse-3d-scene {
+  perspective: 1100px;
   margin-bottom: 14px;
+
+  &.flipped .pulse-3d-inner {
+    transform: rotateY(180deg);
+  }
+}
+
+.pulse-3d-inner {
+  position: relative;
+  display: grid;
+  transform-style: preserve-3d;
+  transition: transform 560ms var(--ease-spring);
+}
+
+.pulse-face {
+  grid-area: 1 / 1;
+  backface-visibility: hidden;
+  -webkit-backface-visibility: hidden;
+  margin: 0 !important;
+}
+
+.pulse-back {
+  transform: rotateY(180deg);
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+}
+
+.pulse-card {
+  position: relative;
+  overflow: hidden;
   background:
     radial-gradient(520px 220px at 100% 0%, var(--primary-soft), transparent 70%),
     var(--glass);
@@ -94,9 +126,62 @@
 
 .pulse-head {
   display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.pulse-head-right {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.flip-info-btn {
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  border: 1px solid var(--border);
+  background: var(--surface);
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 800;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  transition: transform var(--dur-fast) var(--ease-spring), background var(--dur-fast) var(--ease-out),
+    color var(--dur-fast) var(--ease-out);
+
+  &:hover,
+  &.active {
+    background: var(--primary-soft);
+    color: var(--primary-dark);
+    border-color: transparent;
+    transform: scale(1.08);
+  }
+}
+
+.flip-explain {
+  display: grid;
+  gap: 8px;
+  margin-top: 10px;
+  font-size: 13px;
+}
+
+.flip-row {
+  display: flex;
   align-items: baseline;
   justify-content: space-between;
   gap: 10px;
+  padding-bottom: 6px;
+  border-bottom: 1px dashed var(--border-soft);
+  font-variant-numeric: tabular-nums;
+}
+
+.flip-note {
+  margin: 4px 0 0;
+  line-height: 1.4;
 }
 
 .pulse-label {
@@ -112,13 +197,15 @@
 }
 
 .pulse-value {
-  font-size: clamp(30px, 9vw, 40px);
+  font-size: clamp(26px, 8vw, 38px);
   font-weight: 800;
   line-height: 1.05;
   letter-spacing: -0.03em;
   margin-top: 4px;
   font-variant-numeric: tabular-nums;
-  overflow-wrap: anywhere;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .pulse-meta {
@@ -147,20 +234,55 @@
   width: 100%;
   height: 64px;
   margin-top: 10px;
+  overflow: visible;
 }
 
 .pulse-line {
   fill: none;
   stroke: var(--primary);
-  stroke-width: 2;
+  stroke-width: 2.2;
   stroke-linecap: round;
   stroke-linejoin: round;
   vector-effect: non-scaling-stroke;
+  stroke-dasharray: 600;
+  stroke-dashoffset: 600;
+  animation: spark-draw 1.1s var(--ease-out) forwards;
 }
 
 .pulse-area {
   fill: var(--primary-soft);
-  opacity: 0.75;
+  opacity: 0;
+  animation: fade-in 0.8s 0.25s var(--ease-out) forwards;
+}
+
+.spark-today-dot {
+  fill: var(--primary);
+}
+
+.spark-today-halo {
+  fill: var(--primary);
+  opacity: 0.28;
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: halo-pulse 2.2s ease-in-out infinite;
+}
+
+@keyframes spark-draw {
+  to {
+    stroke-dashoffset: 0;
+  }
+}
+
+@keyframes halo-pulse {
+  0%,
+  100% {
+    transform: scale(0.85);
+    opacity: 0.35;
+  }
+  50% {
+    transform: scale(1.75);
+    opacity: 0.08;
+  }
 }
 
 .pulse-budget {
@@ -191,15 +313,141 @@
   }
 }
 
-.acc-icon {
-  --icon-size: 20px;
+/* ----- 3D-карты счетов (Apple Wallet / Revolut Style) ----- */
+
+.card-head-row {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 10px;
+  margin-bottom: 12px;
+
+  .card-title {
+    margin: 0;
+  }
+}
+
+.wallet-cards-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
+  gap: 12px;
+  perspective: 900px;
+}
+
+.wallet-3d-card {
+  position: relative;
+  overflow: hidden;
+  padding: 14px 16px;
+  border-radius: 16px;
+  border: 1px solid var(--border-soft);
+  background:
+    radial-gradient(240px 140px at 100% 0%, var(--primary-soft), transparent 72%),
+    var(--surface-2);
+  box-shadow: var(--shadow-sm);
+  transform: perspective(900px) rotateX(var(--tilt-rx, 0deg)) rotateY(var(--tilt-ry, 0deg));
+  transition: transform 180ms var(--ease-out), box-shadow 180ms var(--ease-out);
+  will-change: transform;
+
+  &.is-card {
+    background:
+      radial-gradient(240px 140px at 100% 0%, var(--transfer-soft), transparent 72%),
+      var(--surface-2);
+
+    .wallet-chip {
+      background: var(--transfer-soft);
+      color: var(--transfer);
+    }
+
+    .wallet-share-fill {
+      background: var(--transfer);
+    }
+  }
+
+  &.is-cash {
+    .wallet-chip {
+      background: var(--income-soft);
+      color: var(--income);
+    }
+
+    .wallet-share-fill {
+      background: var(--income);
+    }
+  }
+
+  &:hover {
+    box-shadow: var(--shadow);
+  }
+}
+
+.wallet-card-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 10px;
+}
+
+.wallet-chip {
+  width: 32px;
+  height: 32px;
+  border-radius: 10px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  --icon-size: 18px;
+}
+
+.wallet-type-badge {
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
   color: var(--muted);
+}
+
+.wallet-card-name {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--muted);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.wallet-card-balance {
+  font-size: 19px;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  font-variant-numeric: tabular-nums;
+  margin-top: 2px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.wallet-share-bar {
+  height: 4px;
+  border-radius: 999px;
+  background: var(--border-soft);
+  margin-top: 10px;
+  overflow: hidden;
+}
+
+.wallet-share-fill {
+  height: 100%;
+  border-radius: 999px;
+  background: var(--primary);
+  transition: width var(--dur-slow) var(--ease-out);
 }
 
 /* ----- Неделя в цифрах ----- */
 
 .digest-card {
+  position: relative;
+  overflow: hidden;
   margin-bottom: 14px;
+  transform: perspective(900px) rotateX(var(--tilt-rx, 0deg)) rotateY(var(--tilt-ry, 0deg));
+  transition: transform 180ms var(--ease-out);
 }
 
 .digest-main {

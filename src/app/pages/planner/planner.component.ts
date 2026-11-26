@@ -178,6 +178,27 @@ export class PlannerComponent {
     return this.goalAdvices().get(goalId) ?? null;
   }
 
+  /** Прогресс готовности к покупке цели (0…100) для 3D/SVG-кольца. */
+  goalProgress(goal: Goal): number {
+    const advice = this.adviceFor(goal.id);
+    if (advice?.canBuyNow) {
+      return 100;
+    }
+    const total = this.accountsService.total();
+    if (goal.amount <= 0) {
+      return 0;
+    }
+    const raw = Math.round((Math.max(0, total) / goal.amount) * 100);
+    return Math.min(95, Math.max(5, raw));
+  }
+
+  /** Длина дуги SVG-кольца (окружность r=18 => 2*pi*18 ≈ 113.1). */
+  goalRingDash(goal: Goal): string {
+    const circumference = 113.1;
+    const filled = (this.goalProgress(goal) / 100) * circumference;
+    return `${filled.toFixed(1)} ${circumference}`;
+  }
+
   dateLabel(key: DayKey | null): string {
     if (!key) {
       return '—';
@@ -240,6 +261,7 @@ export class PlannerComponent {
       note: `Покупка: ${goal.title}`,
     });
     await this.goalsService.markDone(goal.id);
+    navigator.vibrate?.([15, 40, 20]);
     this.cancelBuying();
     this.celebrate.set(true);
     setTimeout(() => this.celebrate.set(false), 1600);

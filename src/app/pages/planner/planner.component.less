@@ -198,7 +198,97 @@
 .goal-head {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 10px;
+}
+
+.goal-ring-box {
+  position: relative;
+  width: 44px;
+  height: 44px;
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+
+  .goal-ring-svg {
+    width: 44px;
+    height: 44px;
+    transform: rotate(-90deg);
+  }
+
+  .goal-ring-track {
+    fill: none;
+    stroke: var(--surface-2);
+    stroke-width: 4;
+  }
+
+  .goal-ring-fill {
+    fill: none;
+    stroke: var(--transfer);
+    stroke-width: 4;
+    stroke-linecap: round;
+    filter: drop-shadow(0 0 4px rgba(122, 92, 214, 0.35));
+    transition: stroke-dasharray 650ms var(--ease-out), stroke 300ms var(--ease-out);
+  }
+
+  &.done .goal-ring-fill {
+    stroke: var(--income);
+    filter: drop-shadow(0 0 5px rgba(26, 127, 75, 0.45));
+  }
+
+  .goal-ring-pct {
+    position: absolute;
+    font-size: 10px;
+    font-weight: 800;
+    font-variant-numeric: tabular-nums;
+    color: var(--text);
+  }
+}
+
+/* 3D-вращающаяся медаль/монета при выполнении цели */
+.coin-3d-wrap {
+  position: fixed;
+  top: 24%;
+  left: 50%;
+  transform: translateX(-50%);
+  perspective: 800px;
+  z-index: 75;
+}
+
+.coin-3d {
+  width: 68px;
+  height: 68px;
+  border-radius: 50%;
+  background: radial-gradient(circle at 30% 30%, #46c98a, #1a7f4b 70%);
+  color: #ffffff;
+  font-size: 32px;
+  font-weight: 900;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow:
+    0 14px 35px rgba(26, 127, 75, 0.45),
+    inset 0 0 0 4px rgba(255, 255, 255, 0.3);
+  animation: coin-spin-3d 1.5s var(--ease-spring) forwards;
+}
+
+@keyframes coin-spin-3d {
+  0% {
+    opacity: 0;
+    transform: scale(0.3) rotateY(0deg);
+  }
+  40% {
+    opacity: 1;
+    transform: scale(1.12) rotateY(360deg);
+  }
+  80% {
+    opacity: 1;
+    transform: scale(1) rotateY(720deg);
+  }
+  100% {
+    opacity: 0;
+    transform: scale(0.8) translateY(-24px) rotateY(720deg);
+  }
 }
 
 .goal-advice {

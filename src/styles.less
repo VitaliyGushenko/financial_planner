@@ -1412,6 +1412,55 @@ app-icon {
   animation: none;
 }
 
+/* ----- 3D-блик (Glare) и живое свечение фона (Aurora) ----- */
+
+.tilt-glare {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  border-radius: inherit;
+  opacity: var(--glare-opacity, 0);
+  background: radial-gradient(
+    260px circle at var(--glare-x, 50%) var(--glare-y, 50%),
+    rgba(255, 255, 255, 0.24),
+    transparent 65%
+  );
+  transition: opacity var(--dur) var(--ease-out);
+}
+
+:root[data-theme='dark'] .tilt-glare {
+  background: radial-gradient(
+    260px circle at var(--glare-x, 50%) var(--glare-y, 50%),
+    rgba(255, 255, 255, 0.1),
+    transparent 65%
+  );
+}
+
+/* Пружинный микро-отклик кнопок сегментов и табов */
+.seg button,
+.tabs button {
+  transition: background var(--dur-fast) var(--ease-out), color var(--dur-fast) var(--ease-out),
+    box-shadow var(--dur-fast) var(--ease-out), transform var(--dur-fast) var(--ease-spring);
+
+  &:active {
+    transform: scale(0.95);
+  }
+}
+
+.seg button.active,
+.tabs button.active {
+  animation: pill-pop 240ms var(--ease-spring);
+}
+
+@keyframes pill-pop {
+  0% {
+    transform: scale(0.94);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+
 /* ----- Доступность: уважаем системную настройку «меньше движения» ----- */
 
 @media (prefers-reduced-motion: reduce) {

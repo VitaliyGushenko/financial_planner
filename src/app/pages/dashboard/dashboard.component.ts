@@ -1,4 +1,4 @@
-import { Component, computed, inject } from '@angular/core';
+import { Component, computed, inject, signal } from '@angular/core';
 import { RouterLink } from '@angular/router';
 
 import { AccountsService } from '../../core/accounts.service';
@@ -15,6 +15,7 @@ import { buildDigest } from '../../core/digest';
 import { safeToSpend } from '../../core/safe-to-spend';
 import { CountUpDirective } from '../../ui/count-up.directive';
 import { IconComponent } from '../../ui/icon.component';
+import { Tilt3dDirective } from '../../ui/tilt-3d.directive';
 
 interface UpcomingDay {
   key: DayKey;
@@ -25,7 +26,7 @@ interface UpcomingDay {
 
 @Component({
   selector: 'app-dashboard',
-  imports: [RouterLink, CountUpDirective, IconComponent],
+  imports: [RouterLink, CountUpDirective, IconComponent, Tilt3dDirective],
   templateUrl: './dashboard.component.html',
   styleUrl: './dashboard.component.less',
 })
@@ -38,9 +39,27 @@ export class DashboardComponent {
   private readonly currency = inject(CurrencyService);
   private readonly goalsService = inject(GoalsService);
 
-  readonly total = computed(() => this.currency.format(this.accountsService.total()));
+  readonly totalNum = computed(() => this.accountsService.total());
+  readonly total = computed(() => this.currency.format(this.totalNum()));
   readonly moneyFn = (value: number) => this.currency.format(value);
   readonly accounts = this.accountsService.accounts;
+
+  /** Перевёрнута ли 3D-карточка «Можно потратить сегодня» для просмотра формулы расчёта. */
+  readonly pulseFlipped = signal(false);
+
+  togglePulseFlip(): void {
+    navigator.vibrate?.(10);
+    this.pulseFlipped.set(!this.pulseFlipped());
+  }
+
+  /** Доля счёта в общем балансе (0…100). */
+  accountShare(balance: number): number {
+    const tot = this.totalNum();
+    if (tot <= 0 || balance <= 0) {
+      return 0;
+    }
+    return Math.min(100, Math.round((balance / tot) * 100));
+  }
 
   // ----- Онбординг: три шага, пока не пройдены все -----
   readonly transactionsCount = computed(() => this.transactionsService.real().length);
@@ -72,16 +91,20 @@ export class DashboardComponent {
     return days === null ? '' : `${days} ${pluralRu(days, 'день', 'дня', 'дней')}`;
   });
 
-  /** Спарклайн: 14 дней назад и 14 вперёд — видно, куда движется баланс. */
+  /** Спарклайн: 14 дней назад и 14 вперёд — видно, куда движется баланс + координаты точки «Сегодня». */
   private readonly spark = computed(() => {
     const projection = this.projection();
     const index = projection.keys.indexOf(projection.today);
-    const keys = projection.keys.slice(Math.max(0, index - 14), index + 15);
+    const start = Math.max(0, index - 14);
+    const keys = projection.keys.slice(start, index + 15);
+    const todayLocalIndex = index - start;
     const values = keys.map((key) => projection.days.get(key)?.balance ?? 0);
-    return sparkPath(values, 240, 64);
+    return sparkPath(values, 240, 64, todayLocalIndex);
   });
   readonly sparkLine = computed(() => this.spark().line);
   readonly sparkArea = computed(() => this.spark().area);
+  readonly sparkTodayX = computed(() => this.spark().todayX);
+  readonly sparkTodayY = computed(() => this.spark().todayY);
 
   /** «Неделя в цифрах»: доходы/расходы, сравнение и топ-категория. */
   readonly digest = computed(() =>
@@ -179,6 +202,7 @@ export class DashboardComponent {
     if (!event.rule) {
       return;
     }
+    navigator.vibrate?.(12);
     void this.transactionsService.recordFromRule(
       {
         ruleId: event.rule.id,
@@ -195,20 +219,32 @@ export class DashboardComponent {
   }
 }
 
-/** Точки спарклайна → путь линии и замкнутая область под ней. */
-function sparkPath(values: number[], width: number, height: number): { line: string; area: string } {
+/** Точки спарклайна → путь линии, замкнутая область и координаты маркера «Сегодня». */
+function sparkPath(
+  values: number[],
+  width: number,
+  height: number,
+  todayIndex: number,
+): { line: string; area: string; todayX: number; todayY: number } {
   if (!values.length) {
-    return { line: '', area: '' };
+    return { line: '', area: '', todayX: width / 2, todayY: height / 2 };
   }
   const min = Math.min(...values);
   const max = Math.max(...values);
   const span = max - min || 1;
   const step = values.length > 1 ? width / (values.length - 1) : width;
-  const points = values.map((value, index) => {
+  const coords = values.map((value, index) => {
     const x = index * step;
-    const y = height - 2 - ((value - min) / span) * (height - 6);
-    return `${x.toFixed(1)} ${y.toFixed(1)}`;
+    const y = height - 4 - ((value - min) / span) * (height - 10);
+    return { x, y };
   });
+  const points = coords.map((c) => `${c.x.toFixed(1)} ${c.y.toFixed(1)}`);
   const line = points.map((point, index) => `${index === 0 ? 'M' : 'L'}${point}`).join(' ');
-  return { line, area: `${line} L${width} ${height} L0 ${height} Z` };
+  const safeToday = Math.max(0, Math.min(coords.length - 1, todayIndex));
+  return {
+    line,
+    area: `${line} L${width} ${height} L0 ${height} Z`,
+    todayX: Number(coords[safeToday].x.toFixed(1)),
+    todayY: Number(coords[safeToday].y.toFixed(1)),
+  };
 }
