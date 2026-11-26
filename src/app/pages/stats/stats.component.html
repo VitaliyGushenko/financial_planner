@@ -138,7 +138,7 @@
   @if (compareExpanded()) {
     <div class="compare-table-wrap">
       <!-- Таблица расходов -->
-      <div class="table-section-title">Расходы по категориям</div>
+      <div class="table-section-title">Расходы по категориям, {{ currency.symbol() }}</div>
       @if (tableExpenses().length) {
         <table class="compare-table">
           <thead>
@@ -153,14 +153,14 @@
             @for (item of tableExpenses(); track item.categoryId) {
               <tr>
                 <td class="cat-cell">{{ item.title }}</td>
-                <td class="num muted">{{ money(item.monthA) }}</td>
-                <td class="num">{{ money(item.monthB) }}</td>
+                <td class="num muted">{{ numOnly(item.monthA) }}</td>
+                <td class="num">{{ numOnly(item.monthB) }}</td>
                 <td
                   class="num delta-cell"
                   [class.negative]="item.delta > 0"
                   [class.positive]="item.delta < 0"
                 >
-                  {{ signedDelta(item.delta) }}
+                  {{ signedNumDelta(item.delta) }}
                 </td>
               </tr>
             }
@@ -171,7 +171,7 @@
       }
 
       <!-- Таблица доходов -->
-      <div class="table-section-title">Доходы по категориям</div>
+      <div class="table-section-title">Доходы по категориям, {{ currency.symbol() }}</div>
       @if (tableIncomes().length) {
         <table class="compare-table">
           <thead>
@@ -186,14 +186,14 @@
             @for (item of tableIncomes(); track item.categoryId) {
               <tr>
                 <td class="cat-cell">{{ item.title }}</td>
-                <td class="num muted">{{ money(item.monthA) }}</td>
-                <td class="num">{{ money(item.monthB) }}</td>
+                <td class="num muted">{{ numOnly(item.monthA) }}</td>
+                <td class="num">{{ numOnly(item.monthB) }}</td>
                 <td
                   class="num delta-cell"
                   [class.positive]="item.delta > 0"
                   [class.negative]="item.delta < 0"
                 >
-                  {{ signedDelta(item.delta) }}
+                  {{ signedNumDelta(item.delta) }}
                 </td>
               </tr>
             }

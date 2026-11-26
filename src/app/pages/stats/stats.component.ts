@@ -40,7 +40,7 @@ export class StatsComponent {
   private readonly transactionsService = inject(TransactionsService);
   private readonly categoriesService = inject(CategoriesService);
   private readonly projectionService = inject(ProjectionService);
-  private readonly currency = inject(CurrencyService);
+  readonly currency = inject(CurrencyService);
   private readonly destroyRef = inject(DestroyRef);
 
   readonly today = todayKey();
@@ -162,11 +162,23 @@ export class StatsComponent {
     return `${value > 0 ? '+' : '−'}${rounded}%`;
   }
 
-  signedDelta(delta: number): string {
+  /** Компактное число для таблицы без повтора символа валюты в каждой колонке. */
+  numOnly(value: number | null | undefined): string {
+    if (value === null || value === undefined || Number.isNaN(value)) {
+      return '—';
+    }
+    return value.toLocaleString('ru-RU', {
+      minimumFractionDigits: value % 1 === 0 ? 0 : 2,
+      maximumFractionDigits: 2,
+    });
+  }
+
+  /** Разница со знаком для таблицы без дублирования символа валюты. */
+  signedNumDelta(delta: number): string {
     if (delta === 0) {
       return '0';
     }
-    return `${delta > 0 ? '+' : '−'}${this.money(Math.abs(delta))}`;
+    return `${delta > 0 ? '+' : '−'}${this.numOnly(Math.abs(delta))}`;
   }
 
   budgetIcon(categoryId: string): IconName {
@@ -233,17 +245,26 @@ export class StatsComponent {
         if (!meta.data.length) {
           return;
         }
-        const point = meta.data[0] as unknown as { x: number; y: number };
+        const arc = meta.data[0] as unknown as { x: number; y: number; innerRadius?: number };
         const ctx = chart.ctx;
         ctx.save();
         ctx.textAlign = 'center';
         ctx.textBaseline = 'middle';
         ctx.fillStyle = cssVar('--text', '#1d2530');
-        ctx.font = "800 20px -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif";
-        ctx.fillText(centerTotal, point.x, point.y - 10);
+
+        // Подгоняем размер шрифта под внутренний радиус бублика, чтобы сумма не налезала на кольцо.
+        const maxWidth = (arc.innerRadius ? arc.innerRadius * 2 : 120) * 0.84;
+        let fontSize = 16;
+        ctx.font = `800 ${fontSize}px -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif`;
+        while (fontSize > 11 && ctx.measureText(centerTotal).width > maxWidth) {
+          fontSize -= 1;
+          ctx.font = `800 ${fontSize}px -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif`;
+        }
+
+        ctx.fillText(centerTotal, arc.x, arc.y - 8);
         ctx.fillStyle = cssVar('--muted', '#66717f');
-        ctx.font = "13px -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif";
-        ctx.fillText('расходы', point.x, point.y + 14);
+        ctx.font = "12px -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif";
+        ctx.fillText('расходы', arc.x, arc.y + 12);
         ctx.restore();
       },
     };
@@ -263,7 +284,7 @@ export class StatsComponent {
       },
       options: {
         maintainAspectRatio: false,
-        cutout: '64%',
+        cutout: '70%',
         animation: REDUCED_MOTION
           ? false
           : { animateRotate: true, animateScale: true, duration: 800, easing: 'easeOutQuart' as const },

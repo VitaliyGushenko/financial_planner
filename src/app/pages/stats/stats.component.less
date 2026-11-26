@@ -28,10 +28,12 @@
   }
 
   .kpi-value {
-    font-size: clamp(18px, 5.4vw, 22px);
+    font-size: clamp(15px, 4.1vw, 21px);
     font-weight: 800;
     font-variant-numeric: tabular-nums;
-    overflow-wrap: anywhere;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
   }
 }
 
@@ -142,7 +144,6 @@
   margin-top: 14px;
   padding-top: 12px;
   border-top: 1px solid var(--border-soft);
-  overflow-x: auto;
 }
 
 .table-section-title {
@@ -162,15 +163,26 @@
 
 .compare-table {
   width: 100%;
+  table-layout: fixed;
   border-collapse: collapse;
   font-size: 13px;
   font-variant-numeric: tabular-nums;
 
   th,
   td {
-    padding: 8px 6px;
+    padding: 8px 4px;
     border-bottom: 1px solid var(--border-soft);
     text-align: left;
+  }
+
+  th:first-child,
+  td:first-child {
+    width: 34%;
+  }
+
+  th.num,
+  td.num {
+    width: 22%;
   }
 
   th {
@@ -186,7 +198,6 @@
 
   .cat-cell {
     font-weight: 600;
-    max-width: 180px;
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
@@ -332,21 +343,20 @@
 }
 
 @media (max-width: 640px) {
-  /* Периоды — одна прокручиваемая строка вместо переноса в два ряда. */
+  /* Периоды умещаются целиком на одном экране без обрезки «Год» и «Свой». */
   .period-seg {
+    display: flex;
     flex-wrap: nowrap;
     width: 100%;
     max-width: 100%;
     min-width: 0;
-    overflow-x: auto;
-    scrollbar-width: none;
-
-    &::-webkit-scrollbar {
-      display: none;
-    }
+    justify-content: space-between;
 
     button {
-      flex: 0 0 auto;
+      flex: 1 1 auto;
+      padding: 7px 6px;
+      font-size: 12.5px;
+      white-space: nowrap;
     }
   }
 
@@ -355,11 +365,7 @@
 
     th,
     td {
-      padding: 6px 4px;
-    }
-
-    .cat-cell {
-      max-width: 110px;
+      padding: 6px 2px;
     }
   }
 
