@@ -12,6 +12,7 @@
   gap: 14px;
   margin-bottom: 14px;
 
+  // Внутри грида отступы даёт gap: глобальное .card + .card сдвигало карточки вниз.
   .card {
     margin-top: 0;
   }
@@ -19,26 +20,6 @@
 
 .kpi {
   min-width: 0;
-  position: relative;
-  overflow: hidden;
-
-  &.kpi-income {
-    background:
-      radial-gradient(240px 120px at 100% 0%, var(--income-soft), transparent 72%),
-      var(--glass);
-  }
-
-  &.kpi-expense {
-    background:
-      radial-gradient(240px 120px at 100% 0%, var(--expense-soft), transparent 72%),
-      var(--glass);
-  }
-
-  &.kpi-net {
-    background:
-      radial-gradient(240px 120px at 100% 0%, var(--transfer-soft), transparent 72%),
-      var(--glass);
-  }
 
   .kpi-label {
     font-size: 13px;
@@ -54,568 +35,63 @@
   }
 }
 
-/* ===== Лаборатория сравнения двух месяцев ===== */
-
-.deep-compare-card {
+.compare-card {
   margin-bottom: 14px;
-  background:
-    radial-gradient(640px 260px at 0% 0%, var(--primary-soft), transparent 68%),
-    radial-gradient(540px 260px at 100% 0%, var(--transfer-soft), transparent 68%),
-    var(--glass);
 }
 
-.deep-compare-head {
+.compare-top-bar {
   display: flex;
-  align-items: flex-start;
+  align-items: center;
   justify-content: space-between;
-  gap: 12px;
+  gap: 10px;
   flex-wrap: wrap;
-  margin-bottom: 14px;
+  margin-bottom: 12px;
 
   .card-title {
-    margin: 2px 0 0;
-    font-size: 18px;
+    margin: 0;
   }
 }
 
-.eyebrow {
-  display: inline-block;
-  font-size: 11px;
-  font-weight: 800;
-  text-transform: uppercase;
-  letter-spacing: 0.06em;
-  color: var(--primary);
-}
-
-.preset-chips {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 6px;
-}
-
-.chip-btn {
-  padding: 6px 12px;
-  border-radius: 999px;
-  border: 1px solid var(--border);
-  background: var(--surface);
-  color: var(--muted);
-  font: inherit;
-  font-size: 12px;
-  font-weight: 600;
-  cursor: pointer;
-  transition: all var(--dur-fast) var(--ease-out);
-
-  &:hover {
-    color: var(--text);
-    border-color: var(--primary);
-  }
-
-  &.active {
-    background: var(--primary-soft);
-    color: var(--primary-dark);
-    border-color: transparent;
-  }
-}
-
-.month-duo-picker {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
-  gap: 10px;
+.month-selects-inline {
+  display: inline-flex;
   align-items: center;
-  margin-bottom: 16px;
-}
-
-.month-select-box {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-  padding: 10px 14px;
-  border-radius: var(--radius-md);
-  background: var(--surface);
-  border: 1px solid var(--border-soft);
-  box-shadow: var(--shadow-sm);
-
-  .month-tag {
-    font-size: 11px;
-    font-weight: 700;
-    text-transform: uppercase;
-    letter-spacing: 0.04em;
-    color: var(--muted);
-  }
-
-  &.month-b .month-tag {
-    color: var(--primary);
-  }
+  gap: 8px;
+  flex-wrap: wrap;
 
   select {
-    border: none;
-    padding: 2px 0;
-    background: transparent;
-    font-weight: 700;
-    font-size: 15px;
-    cursor: pointer;
-
-    &:focus {
-      box-shadow: none;
-    }
-  }
-}
-
-.swap-months-btn {
-  width: 40px;
-  height: 40px;
-  border-radius: 50%;
-  border: 1px solid var(--border);
-  background: var(--surface);
-  color: var(--text);
-  font-size: 18px;
-  font-weight: 700;
-  cursor: pointer;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  box-shadow: var(--shadow-sm);
-  transition: transform var(--dur) var(--ease-spring), background var(--dur-fast) var(--ease-out);
-
-  &:hover {
-    background: var(--primary-soft);
-    color: var(--primary-dark);
-    transform: rotate(180deg);
-  }
-}
-
-/* ----- Сводное табло ----- */
-
-.scoreboard-grid {
-  display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 12px;
-  margin-bottom: 14px;
-}
-
-.score-box {
-  padding: 14px;
-  border-radius: var(--radius-md);
-  background: var(--surface);
-  border: 1px solid var(--border-soft);
-  box-shadow: var(--shadow-sm);
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-  min-width: 0;
-}
-
-.score-head {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 8px;
-
-  .score-title {
+    width: auto;
+    padding: 5px 10px;
     font-size: 13px;
-    font-weight: 700;
-    color: var(--muted);
+    font-weight: 600;
+    border-radius: var(--radius-sm);
   }
 }
 
-.score-compare {
+.compare-grid {
+  display: grid;
+  gap: 8px;
+}
+
+.compare-row {
   display: flex;
+  flex-wrap: wrap;
   align-items: baseline;
   justify-content: space-between;
-  gap: 8px;
-  flex-wrap: wrap;
+  gap: 8px 12px;
+  font-size: 14px;
 }
 
-.score-col {
-  display: flex;
-  flex-direction: column;
+.compare-values {
+  display: inline-flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: flex-end;
+  gap: 8px;
   min-width: 0;
+  font-variant-numeric: tabular-nums;
 
-  .score-val {
-    font-size: 16px;
-    font-weight: 800;
-    font-variant-numeric: tabular-nums;
+  strong {
     overflow-wrap: anywhere;
-  }
-}
-
-.score-arrow {
-  color: var(--muted);
-  font-weight: 700;
-}
-
-.score-delta-line {
-  font-size: 12px;
-  font-weight: 600;
-  font-variant-numeric: tabular-nums;
-  padding-top: 6px;
-  border-top: 1px solid var(--border-soft);
-}
-
-/* ----- Авто-инсайты ----- */
-
-.insights-strip {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-  margin-bottom: 16px;
-}
-
-.insight-pill {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 8px 12px;
-  border-radius: var(--radius-sm);
-  background: var(--surface);
-  border: 1px solid var(--border-soft);
-  font-size: 13px;
-  font-weight: 600;
-
-  .insight-dot {
-    width: 8px;
-    height: 8px;
-    border-radius: 50%;
-    flex: none;
-    background: var(--muted);
-  }
-
-  &.good {
-    background: var(--income-soft);
-    color: var(--income);
-    .insight-dot {
-      background: var(--income);
-    }
-  }
-
-  &.bad {
-    background: var(--expense-soft);
-    color: var(--expense);
-    .insight-dot {
-      background: var(--expense);
-    }
-  }
-}
-
-/* ----- Панель фильтров и сортировки сравнения ----- */
-
-.compare-toolbar {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 10px;
-  flex-wrap: wrap;
-  margin-bottom: 16px;
-}
-
-.compare-toolbar-right {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  flex-wrap: wrap;
-}
-
-.sort-select {
-  width: auto;
-  padding: 7px 12px;
-  font-size: 13px;
-  font-weight: 600;
-  border-radius: 999px;
-}
-
-/* ----- Секции категорий (Расходы / Доходы) ----- */
-
-.compare-section {
-  margin-top: 16px;
-}
-
-.compare-section-head {
-  display: flex;
-  align-items: baseline;
-  justify-content: space-between;
-  gap: 10px;
-  flex-wrap: wrap;
-  margin-bottom: 10px;
-}
-
-.section-subtitle {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  font-size: 15px;
-  margin: 0;
-}
-
-.kind-dot {
-  display: inline-block;
-  width: 10px;
-  height: 10px;
-  border-radius: 50%;
-
-  &.income {
-    background: var(--income);
-  }
-
-  &.expense {
-    background: var(--expense);
-  }
-}
-
-.compare-cat-list {
-  display: grid;
-  gap: 10px;
-}
-
-.compare-cat-card {
-  background: var(--surface);
-  border: 1px solid var(--border-soft);
-  border-radius: var(--radius-md);
-  padding: 12px 14px;
-  transition: border-color var(--dur-fast) var(--ease-out), box-shadow var(--dur-fast) var(--ease-out);
-
-  &.has-subs .compare-cat-main {
-    cursor: pointer;
-  }
-
-  &:hover {
-    border-color: var(--border);
-    box-shadow: var(--shadow-sm);
-  }
-}
-
-.compare-cat-header {
-  display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: 10px;
-  margin-bottom: 10px;
-}
-
-.compare-cat-title {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  min-width: 0;
-}
-
-.cat-icon-badge {
-  width: 34px;
-  height: 34px;
-  border-radius: 10px;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  flex: none;
-  background: var(--surface-2);
-  color: var(--muted);
-
-  &.expense {
-    background: var(--expense-soft);
-    color: var(--expense);
-  }
-
-  &.income {
-    background: var(--income-soft);
-    color: var(--income);
-  }
-}
-
-.cat-title-line {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  flex-wrap: wrap;
-}
-
-.sub-toggle-badge {
-  font-size: 11px;
-  font-weight: 700;
-  padding: 1px 7px;
-  border-radius: 999px;
-  background: var(--surface-2);
-  color: var(--muted);
-}
-
-.compare-cat-delta {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  flex-shrink: 0;
-  font-variant-numeric: tabular-nums;
-
-  .delta-amount {
-    font-weight: 700;
-    font-size: 14px;
-
-    &.good {
-      color: var(--income);
-    }
-
-    &.bad {
-      color: var(--expense);
-    }
-  }
-}
-
-/* ----- Butterfly (Зеркальная диаграмма) ----- */
-
-.butterfly-row {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) 2px minmax(0, 1fr);
-  gap: 10px;
-  align-items: center;
-  font-variant-numeric: tabular-nums;
-}
-
-.butterfly-divider {
-  width: 2px;
-  height: 22px;
-  background: var(--border);
-  border-radius: 2px;
-}
-
-.butterfly-side {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  min-width: 0;
-
-  &.left {
-    justify-content: flex-end;
-
-    .bf-track {
-      display: flex;
-      justify-content: flex-end;
-    }
-  }
-
-  .bf-val {
-    font-size: 13px;
-    white-space: nowrap;
-  }
-
-  .bf-track {
-    flex: 1;
-    height: 10px;
-    border-radius: 999px;
-    background: var(--surface-2);
-    overflow: hidden;
-    min-width: 40px;
-  }
-
-  .bf-fill {
-    height: 100%;
-    border-radius: 999px;
-    min-width: 3px;
-    transition: width var(--dur-slow) var(--ease-out);
-
-    &.month-a-fill {
-      background: var(--muted);
-      opacity: 0.55;
-    }
-
-    &.month-b-fill {
-      background: var(--primary);
-
-      &.good {
-        background: var(--income);
-      }
-
-      &.bad {
-        background: var(--expense);
-      }
-    }
-  }
-}
-
-/* ----- Двойные полосы (Dual Bars) ----- */
-
-.dual-bars {
-  display: grid;
-  gap: 6px;
-  font-variant-numeric: tabular-nums;
-}
-
-.dual-bar-line {
-  display: grid;
-  grid-template-columns: 60px minmax(0, 1fr) auto;
-  align-items: center;
-  gap: 8px;
-  font-size: 12px;
-
-  .dual-month {
-    font-weight: 600;
-    white-space: nowrap;
-  }
-
-  .dual-track {
-    height: 8px;
-    border-radius: 999px;
-    background: var(--surface-2);
-    overflow: hidden;
-  }
-
-  .dual-fill {
-    height: 100%;
-    border-radius: 999px;
-    min-width: 3px;
-    transition: width var(--dur-slow) var(--ease-out);
-
-    &.month-a-fill {
-      background: var(--muted);
-      opacity: 0.5;
-    }
-
-    &.month-b-fill {
-      background: var(--primary);
-
-      &.good {
-        background: var(--income);
-      }
-
-      &.bad {
-        background: var(--expense);
-      }
-    }
-  }
-
-  .dual-sum {
-    min-width: 78px;
-    text-align: right;
-    white-space: nowrap;
-  }
-}
-
-/* ----- Раскрытие подкатегорий ----- */
-
-.subcategories-breakdown {
-  margin-top: 10px;
-  padding-top: 10px;
-  border-top: 1px dashed var(--border);
-  display: grid;
-  gap: 6px;
-}
-
-.sub-compare-row {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 10px;
-  flex-wrap: wrap;
-  font-size: 13px;
-  padding-left: 10px;
-
-  .sub-title {
-    color: var(--muted);
-    font-weight: 600;
-  }
-
-  .sub-values {
-    display: inline-flex;
-    align-items: center;
-    gap: 6px;
-    flex-wrap: wrap;
-    font-variant-numeric: tabular-nums;
   }
 }
 
@@ -635,6 +111,94 @@
   &.bad {
     background: var(--expense-soft);
     color: var(--expense);
+  }
+}
+
+.highlights-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 12px 20px;
+  margin-top: 12px;
+}
+
+.growth {
+  display: grid;
+  gap: 6px;
+}
+
+.growth-row {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+  font-size: 13px;
+  font-variant-numeric: tabular-nums;
+}
+
+.compare-toggle-btn {
+  margin-top: 12px;
+}
+
+.compare-table-wrap {
+  margin-top: 14px;
+  padding-top: 12px;
+  border-top: 1px solid var(--border-soft);
+  overflow-x: auto;
+}
+
+.table-section-title {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--muted);
+  margin: 12px 0 6px;
+
+  &:first-child {
+    margin-top: 0;
+  }
+}
+
+.empty-inline {
+  padding: 6px 0;
+}
+
+.compare-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+  font-variant-numeric: tabular-nums;
+
+  th,
+  td {
+    padding: 8px 6px;
+    border-bottom: 1px solid var(--border-soft);
+    text-align: left;
+  }
+
+  th {
+    font-size: 12px;
+    font-weight: 700;
+    color: var(--muted);
+    white-space: nowrap;
+  }
+
+  tbody tr:last-child td {
+    border-bottom: none;
+  }
+
+  .cat-cell {
+    font-weight: 600;
+    max-width: 180px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .num {
+    text-align: right;
+    white-space: nowrap;
+  }
+
+  .delta-cell {
+    font-weight: 700;
   }
 }
 
@@ -706,19 +270,6 @@
   }
 }
 
-.card-head-flex {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 10px;
-  flex-wrap: wrap;
-  margin-bottom: 10px;
-
-  .card-title {
-    margin: 0;
-  }
-}
-
 .chart-card {
   display: flex;
   flex-direction: column;
@@ -728,14 +279,6 @@
   position: relative;
   height: 260px;
   flex: 1;
-}
-
-.cat-color-dot {
-  display: inline-block;
-  width: 9px;
-  height: 9px;
-  border-radius: 50%;
-  margin-right: 6px;
 }
 
 .cat-row {
@@ -748,8 +291,6 @@
     margin-bottom: 4px;
 
     .cat-name {
-      display: inline-flex;
-      align-items: center;
       font-weight: 600;
       overflow: hidden;
       text-overflow: ellipsis;
@@ -788,10 +329,6 @@
   .kpi-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
-
-  .scoreboard-grid {
-    grid-template-columns: minmax(0, 1fr);
-  }
 }
 
 @media (max-width: 640px) {
@@ -813,30 +350,16 @@
     }
   }
 
-  .month-duo-picker {
-    grid-template-columns: minmax(0, 1fr);
+  .compare-table {
+    font-size: 12px;
 
-    .swap-months-btn {
-      margin: 0 auto;
-      transform: rotate(90deg);
-    }
-  }
-
-  .butterfly-row {
-    grid-template-columns: minmax(0, 1fr);
-    gap: 4px;
-
-    .butterfly-divider {
-      display: none;
+    th,
+    td {
+      padding: 6px 4px;
     }
 
-    .butterfly-side.left {
-      justify-content: flex-start;
-      flex-direction: row-reverse;
-
-      .bf-track {
-        justify-content: flex-start;
-      }
+    .cat-cell {
+      max-width: 110px;
     }
   }
 

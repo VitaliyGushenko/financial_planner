@@ -9,12 +9,7 @@ import { TransactionsService } from '../../core/transactions.service';
 import { StatsPeriod, balanceSeries, buildStats, fillMonths, lastMonths, periodRange } from '../../core/stats';
 import { DayKey, addMonthsToKey, todayKey } from '../../core/day-key';
 import { buildBudgets } from '../../core/budgets';
-import {
-  CategoryComparisonItem,
-  availableComparisonMonths,
-  compareMonths,
-  compareTwoMonths,
-} from '../../core/compare';
+import { availableComparisonMonths, compareTwoMonths } from '../../core/compare';
 import { CountUpDirective } from '../../ui/count-up.directive';
 import { IconComponent, IconName } from '../../ui/icon.component';
 import { categoryIconName } from '../../ui/category-icons';
@@ -34,10 +29,6 @@ function cssVar(name: string, fallback: string): string {
 
 const REDUCED_MOTION = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 const CHART_ANIMATION = REDUCED_MOTION ? false : { duration: 700, easing: 'easeOutQuart' as const };
-
-export type CompareKindFilter = 'all' | 'expense' | 'income';
-export type CompareSortKey = 'delta' | 'amount' | 'percent';
-export type CompareViewMode = 'bars' | 'butterfly';
 
 @Component({
   selector: 'app-stats',
@@ -64,23 +55,16 @@ export class StatsComponent {
   readonly customFrom = signal(todayKey().slice(0, 8) + '01');
   readonly customTo = signal(todayKey());
 
-  /** Переключатель бублика и топа категорий: расходы или доходы. */
-  readonly structureKind = signal<'expense' | 'income'>('expense');
-
-  // ----- Детальное сравнение 2 выбранных месяцев -----
+  // ----- Сравнение 2 выбранных месяцев (по умолчанию детальная таблица свёрнута) -----
   readonly currentMonthKey = this.today.slice(0, 7);
   readonly prevMonthKey = addMonthsToKey(`${this.currentMonthKey}-01`, -1).slice(0, 7);
-  readonly yearAgoMonthKey = addMonthsToKey(`${this.currentMonthKey}-01`, -12).slice(0, 7);
 
-  /** Базовый месяц (Месяц А — с чем сравниваем). */
+  /** Месяц 1 (базовый, по умолчанию прошлый месяц). */
   readonly compareMonthA = signal<string>(this.prevMonthKey);
-  /** Целевой месяц (Месяц Б — который анализируем). */
+  /** Месяц 2 (сравниваемый, по умолчанию текущий месяц). */
   readonly compareMonthB = signal<string>(this.currentMonthKey);
-
-  readonly compareFilter = signal<CompareKindFilter>('all');
-  readonly compareSort = signal<CompareSortKey>('delta');
-  readonly compareView = signal<CompareViewMode>('butterfly');
-  readonly expandedCategories = signal<Set<string>>(new Set());
+  /** Свёрнуто по умолчанию, чтобы не сдвигать остальную аналитику. */
+  readonly compareExpanded = signal<boolean>(false);
 
   readonly availableMonths = computed(() =>
     availableComparisonMonths(this.transactionsService.transactions(), this.today, 18),
@@ -105,15 +89,6 @@ export class StatsComponent {
     }),
   );
 
-  /** Активный список категорий для бублика и топа (расходы или доходы). */
-  readonly structureCategories = computed(() =>
-    this.structureKind() === 'expense' ? this.stats().byCategory : this.stats().incomeByCategory,
-  );
-
-  readonly structureTotal = computed(() =>
-    this.structureKind() === 'expense' ? this.stats().expense : this.stats().income,
-  );
-
   /** Доходы/расходы по месяцам за последние 12 месяцев. */
   readonly monthly = computed(() =>
     fillMonths(lastMonths(this.today, 12), this.transactionsService.transactions()),
@@ -132,16 +107,7 @@ export class StatsComponent {
     return Math.min(100, Math.max(0, progress * 100));
   }
 
-  /** Сравнение с прошлым месяцем (базовое). */
-  readonly comparison = computed(() =>
-    compareMonths({
-      transactions: this.transactionsService.transactions(),
-      categories: this.categoriesService.categories(),
-      month: this.today,
-    }),
-  );
-
-  /** Полное сравнение двух произвольно выбранных месяцев по всем статьям доходов и расходов. */
+  /** Сравнение двух выбранных месяцев по всем статьям расходов и доходов. */
   readonly detailedComparison = computed(() =>
     compareTwoMonths({
       transactions: this.transactionsService.transactions(),
@@ -151,110 +117,42 @@ export class StatsComponent {
     }),
   );
 
-  readonly sortedExpenseComparison = computed(() =>
-    this.sortComparisonItems(this.detailedComparison().expenseCategories, this.compareSort()),
-  );
-
-  readonly sortedIncomeComparison = computed(() =>
-    this.sortComparisonItems(this.detailedComparison().incomeCategories, this.compareSort()),
-  );
-
-  /** Умные авто-выводы по двум выбранным месяцам. */
-  readonly compareInsights = computed(() => {
-    const cmp = this.detailedComparison();
-    const labelA = this.monthFullLabel(cmp.monthA);
-    const labelB = this.monthFullLabel(cmp.monthB);
-    const list: { tone: 'good' | 'bad' | 'neutral'; text: string }[] = [];
-
-    if (cmp.expenseCategories.length === 0 && cmp.incomeCategories.length === 0) {
-      return list;
-    }
-
-    if (cmp.netDelta > 0) {
-      list.push({
-        tone: 'good',
-        text: `Чистое сальдо в ${labelB} выше на ${this.money(cmp.netDelta)} по сравнению с ${labelA}.`,
-      });
-    } else if (cmp.netDelta < 0) {
-      list.push({
-        tone: 'bad',
-        text: `Сальдо в ${labelB} ниже на ${this.money(Math.abs(cmp.netDelta))}, чем в ${labelA}.`,
-      });
-    }
-
-    const biggestGrowth = [...cmp.expenseCategories]
+  /** Категории расходов, которые больше всего выросли (подорожали). */
+  readonly topGrownExpenses = computed(() =>
+    [...this.detailedComparison().expenseCategories]
       .filter((c) => c.delta > 0)
-      .sort((a, b) => b.delta - a.delta)[0];
-    if (biggestGrowth) {
-      list.push({
-        tone: 'bad',
-        text: `Сильнее всего вырос расход «${biggestGrowth.title}»: +${this.money(biggestGrowth.delta)} (${this.percentLabel(biggestGrowth.percent)}).`,
-      });
-    }
+      .sort((a, b) => b.delta - a.delta)
+      .slice(0, 3),
+  );
 
-    const biggestDrop = [...cmp.expenseCategories]
+  /** Категории расходов, которые больше всего снизились (подешевели). */
+  readonly topReducedExpenses = computed(() =>
+    [...this.detailedComparison().expenseCategories]
       .filter((c) => c.delta < 0)
-      .sort((a, b) => a.delta - b.delta)[0];
-    if (biggestDrop) {
-      list.push({
-        tone: 'good',
-        text: `Больше всего сэкономлено в «${biggestDrop.title}»: −${this.money(Math.abs(biggestDrop.delta))} (${this.percentLabel(biggestDrop.percent)}).`,
-      });
-    }
+      .sort((a, b) => a.delta - b.delta)
+      .slice(0, 3),
+  );
 
-    return list;
-  });
+  /** Все статьи расходов для таблицы (по убыванию максимальной суммы). */
+  readonly tableExpenses = computed(() =>
+    [...this.detailedComparison().expenseCategories].sort(
+      (a, b) => Math.max(b.monthA, b.monthB) - Math.max(a.monthA, a.monthB),
+    ),
+  );
 
-  private sortComparisonItems(
-    items: readonly CategoryComparisonItem[],
-    sortKey: CompareSortKey,
-  ): CategoryComparisonItem[] {
-    const copy = [...items];
-    copy.sort((a, b) => {
-      if (sortKey === 'amount') {
-        return Math.max(b.monthA, b.monthB) - Math.max(a.monthA, a.monthB);
-      }
-      if (sortKey === 'percent') {
-        const pa = a.percent === null ? (a.monthB > 0 ? 999 : 0) : Math.abs(a.percent);
-        const pb = b.percent === null ? (b.monthB > 0 ? 999 : 0) : Math.abs(b.percent);
-        return pb - pa || Math.abs(b.delta) - Math.abs(a.delta);
-      }
-      return Math.abs(b.delta) - Math.abs(a.delta) || Math.max(b.monthA, b.monthB) - Math.max(a.monthA, a.monthB);
-    });
-    return copy;
+  /** Все статьи доходов для таблицы (по убыванию максимальной суммы). */
+  readonly tableIncomes = computed(() =>
+    [...this.detailedComparison().incomeCategories].sort(
+      (a, b) => Math.max(b.monthA, b.monthB) - Math.max(a.monthA, a.monthB),
+    ),
+  );
+
+  toggleCompareExpanded(): void {
+    this.compareExpanded.set(!this.compareExpanded());
   }
 
-  swapCompareMonths(): void {
-    const a = this.compareMonthA();
-    const b = this.compareMonthB();
-    this.compareMonthA.set(b);
-    this.compareMonthB.set(a);
-  }
-
-  setComparePreset(preset: 'prev' | 'yearAgo'): void {
-    this.compareMonthB.set(this.currentMonthKey);
-    this.compareMonthA.set(preset === 'prev' ? this.prevMonthKey : this.yearAgoMonthKey);
-  }
-
-  toggleCategoryExpand(key: string): void {
-    const next = new Set(this.expandedCategories());
-    if (next.has(key)) {
-      next.delete(key);
-    } else {
-      next.add(key);
-    }
-    this.expandedCategories.set(next);
-  }
-
-  isCategoryExpanded(key: string): boolean {
-    return this.expandedCategories().has(key);
-  }
-
-  percentLabel(value: number | null, monthA = 0, monthB = 0): string {
+  percentLabel(value: number | null): string {
     if (value === null) {
-      if (monthA === 0 && monthB > 0) {
-        return 'Новое';
-      }
       return '—';
     }
     const rounded = Math.round(Math.abs(value) * 100);
@@ -273,15 +171,6 @@ export class StatsComponent {
 
   budgetIcon(categoryId: string): IconName {
     return categoryIconName(this.categoriesService.byId().get(categoryId)?.icon, 'expense');
-  }
-
-  itemIcon(item: { categoryId: string; icon?: string; kind: 'income' | 'expense' }): IconName {
-    const icon = item.icon ?? this.categoriesService.byId().get(item.categoryId)?.icon;
-    return categoryIconName(icon, item.kind);
-  }
-
-  categoryColor(index: number): string {
-    return DONUT_PALETTE[index % DONUT_PALETTE.length];
   }
 
   private readonly donutCanvas = viewChild<ElementRef<HTMLCanvasElement>>('donut');
@@ -333,13 +222,10 @@ export class StatsComponent {
     if (!canvas) {
       return;
     }
-    const kind = this.structureKind();
-    const data = this.structureCategories().filter((c) => c.amount > 0);
-    const totalSum = this.structureTotal();
-    const centerTotal = this.currency.format(totalSum);
-    const defaultSubtitle = kind === 'expense' ? 'расходы' : 'доходы';
-    const formatMoney = (v: number) => this.currency.format(v);
-
+    const data = this.stats()
+      .byCategory.filter((c) => c.categoryId !== '__income__' && c.amount > 0);
+    // Сумма рисуется на канвасе (а не HTML-слоем), чтобы тултип всегда был поверх.
+    const centerTotal = this.currency.format(this.stats().expense);
     const centerPlugin: Plugin<'doughnut'> = {
       id: 'donutCenter',
       afterDatasetsDraw(chart) {
@@ -348,31 +234,16 @@ export class StatsComponent {
           return;
         }
         const point = meta.data[0] as unknown as { x: number; y: number };
-        const active = chart.getActiveElements();
-        let mainText = centerTotal;
-        let subText = defaultSubtitle;
-
-        if (active.length > 0) {
-          const idx = active[0].index;
-          const item = data[idx];
-          if (item) {
-            mainText = formatMoney(item.amount);
-            const pct = Math.round(item.share * 100);
-            const shortTitle = item.title.length > 14 ? item.title.slice(0, 13) + '…' : item.title;
-            subText = `${shortTitle} · ${pct}%`;
-          }
-        }
-
         const ctx = chart.ctx;
         ctx.save();
         ctx.textAlign = 'center';
         ctx.textBaseline = 'middle';
         ctx.fillStyle = cssVar('--text', '#1d2530');
-        ctx.font = "800 19px -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif";
-        ctx.fillText(mainText, point.x, point.y - 9);
+        ctx.font = "800 20px -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif";
+        ctx.fillText(centerTotal, point.x, point.y - 10);
         ctx.fillStyle = cssVar('--muted', '#66717f');
-        ctx.font = "600 12px -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif";
-        ctx.fillText(subText, point.x, point.y + 13);
+        ctx.font = "13px -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif";
+        ctx.fillText('расходы', point.x, point.y + 14);
         ctx.restore();
       },
     };
@@ -387,13 +258,12 @@ export class StatsComponent {
             backgroundColor: data.map((_, i) => DONUT_PALETTE[i % DONUT_PALETTE.length]),
             borderWidth: 2,
             borderColor: cssVar('--surface', '#ffffff'),
-            hoverOffset: 8,
           },
         ],
       },
       options: {
         maintainAspectRatio: false,
-        cutout: '66%',
+        cutout: '64%',
         animation: REDUCED_MOTION
           ? false
           : { animateRotate: true, animateScale: true, duration: 800, easing: 'easeOutQuart' as const },
@@ -458,19 +328,8 @@ export class StatsComponent {
       return;
     }
     const series = balanceSeries(this.projectionService.projection());
+    // На телефоне «20.08.2026» не помещается — оставляем день и месяц.
     const labels = series.labels.map((k) => `${k.slice(8, 10)}.${k.slice(5, 7)}`);
-    const ctx2d = canvas.getContext('2d');
-    const factGrad = ctx2d ? ctx2d.createLinearGradient(0, 0, 0, 260) : undefined;
-    if (factGrad) {
-      factGrad.addColorStop(0, 'rgba(26, 127, 75, 0.28)');
-      factGrad.addColorStop(1, 'rgba(26, 127, 75, 0.0)');
-    }
-    const forecastGrad = ctx2d ? ctx2d.createLinearGradient(0, 0, 0, 260) : undefined;
-    if (forecastGrad) {
-      forecastGrad.addColorStop(0, 'rgba(122, 92, 214, 0.22)');
-      forecastGrad.addColorStop(1, 'rgba(122, 92, 214, 0.0)');
-    }
-
     this.balanceChart?.destroy();
     this.balanceChart = new Chart(canvas, {
       type: 'line',
@@ -481,24 +340,18 @@ export class StatsComponent {
             label: 'Факт',
             data: series.fact,
             borderColor: cssVar('--primary', '#1a7f4b'),
-            backgroundColor: factGrad,
-            fill: true,
-            borderWidth: 2.5,
+            borderWidth: 2,
             pointRadius: 0,
-            pointHoverRadius: 5,
-            tension: 0.25,
+            tension: 0.2,
           },
           {
             label: 'Прогноз',
             data: series.forecast,
             borderColor: cssVar('--transfer', '#7a5cd6'),
-            backgroundColor: forecastGrad,
-            fill: true,
-            borderWidth: 2.5,
+            borderWidth: 2,
             borderDash: [6, 4],
             pointRadius: 0,
-            pointHoverRadius: 5,
-            tension: 0.25,
+            tension: 0.2,
           },
         ],
       },
@@ -525,6 +378,7 @@ export class StatsComponent {
 
 function fromMonthKey(month: string): string {
   const [y, m] = month.split('-').map(Number);
+  // Короткий формат «дек. 25» — длинные подписи наезжают друг на друга на телефоне.
   return new Date(Date.UTC(y, m - 1, 1))
     .toLocaleDateString('ru-RU', { month: 'short', year: '2-digit' })
     .replace(/ г\.$/, '');
