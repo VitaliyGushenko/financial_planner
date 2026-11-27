@@ -199,13 +199,15 @@
               }
             </div>
           </div>
-          <button class="btn btn-ghost btn-sm" type="button" (click)="toggleRule(rule)">
-            {{ rule.enabled === false ? 'Включить' : 'Выключить' }}
-          </button>
-          <button class="btn btn-ghost btn-sm" type="button" (click)="startEditRule(rule)">Изменить</button>
-          <button class="btn btn-danger btn-sm" type="button" (click)="removeRule(rule)" aria-label="Удалить правило">
-            <app-icon name="close" />
-          </button>
+          <div class="rule-actions">
+            <button class="btn btn-ghost btn-sm" type="button" (click)="toggleRule(rule)">
+              {{ rule.enabled === false ? 'Включить' : 'Выключить' }}
+            </button>
+            <button class="btn btn-ghost btn-sm" type="button" (click)="startEditRule(rule)">Изменить</button>
+            <button class="btn btn-danger btn-sm" type="button" (click)="removeRule(rule)" aria-label="Удалить правило">
+              <app-icon name="close" />
+            </button>
+          </div>
         </div>
       }
     </div>

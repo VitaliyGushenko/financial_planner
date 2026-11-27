@@ -267,9 +267,10 @@
 
 .rule-row {
   display: flex;
-  align-items: center;
+  align-items: flex-start;
+  flex-wrap: wrap;
   gap: 8px;
-  padding: 8px 4px;
+  padding: 10px 4px;
   border-bottom: 1px solid var(--border-soft);
 
   &:last-child {
@@ -278,6 +279,36 @@
 
   &.off {
     opacity: 0.55;
+  }
+
+  .row-main {
+    flex: 1 1 200px;
+    min-width: 0;
+  }
+
+  /* В списке правил текст важнее кнопок: не обрезаем и не ломаем по буквам. */
+  .row-title {
+    white-space: normal;
+    overflow: visible;
+    text-overflow: clip;
+    overflow-wrap: break-word;
+  }
+
+  .row-sub {
+    overflow-wrap: break-word;
+  }
+}
+
+.rule-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex: 0 0 auto;
+  margin-left: auto;
+
+  @media (max-width: 640px) {
+    width: 100%;
+    margin-left: 0;
   }
 }
 
