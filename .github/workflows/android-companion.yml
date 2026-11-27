@@ -25,9 +25,30 @@ jobs:
 
       - name: Build debug APK
         working-directory: android-companion
-        run: gradle assembleDebug --no-daemon --stacktrace
+        run: |
+          set -o pipefail
+          gradle assembleDebug --no-daemon --stacktrace 2>&1 | tee build.log
+
+      - name: Show build errors
+        if: failure()
+        working-directory: android-companion
+        run: |
+          tail -n 12 build.log | while IFS= read -r line; do
+            line="${line//'%'/'%25'}"
+            line="${line//$'\r'/'%0D'}"
+            line="${line//$'\n'/'%0A'}"
+            echo "::error::$line"
+          done
 
       - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: android-build-log
+          path: android-companion/build.log
+          if-no-files-found: ignore
+
+      - uses: actions/upload-artifact@v4
+        if: success()
         with:
           name: financial-planner-companion-debug
           path: android-companion/app/build/outputs/apk/debug/*.apk
