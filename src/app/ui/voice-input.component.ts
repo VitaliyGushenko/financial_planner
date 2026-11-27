@@ -1,7 +1,7 @@
 import { Component, effect, inject, input, output } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 
-import { SpeechService } from '../core/voice/speech.service';
+import { MicStatus, SpeechService } from '../core/voice/speech.service';
 import { IconComponent } from './icon.component';
 import { ModalComponent } from './modal.component';
 
@@ -46,22 +46,41 @@ import { ModalComponent } from './modal.component';
         <p class="form-error">{{ error() }}</p>
       }
 
+      <!-- Проверка микрофона: показывает, приходит ли звук вообще -->
+      <div class="mic-check">
+        <button
+          type="button"
+          class="btn btn-ghost btn-sm"
+          [disabled]="micStatus() === 'checking'"
+          (click)="checkMic()"
+        >
+          <app-icon name="mic" />
+          {{ micStatus() === 'checking' ? 'Проверяю…' : 'Проверить микрофон' }}
+        </button>
+        @if (micStatus() !== 'idle' && micStatus() !== 'checking') {
+          <span class="mic-verdict" [class.ok]="micStatus() === 'ok'" [class.bad]="micStatus() === 'silent' || micStatus() === 'denied' || micStatus() === 'unsupported'">
+            {{ micLabel(micStatus()) }}
+          </span>
+        }
+      </div>
+
       <div class="field voice-text">
         <label for="voiceText">Текст фразы</label>
         <textarea
           id="voiceText"
           name="voiceText"
           rows="3"
+          #voiceText
           [(ngModel)]="text"
           placeholder="Например: такси двести пятьдесят вчера"
         ></textarea>
       </div>
 
       <p class="muted small voice-note">
-        Распознавание делает браузер (в Chrome — через серверы Google), поэтому нужен интернет.
-        Если микрофон браузера не срабатывает — нажмите <strong>микрофон на клавиатуре</strong>
-        прямо в поле выше: текст попадёт сюда, а разбор фразы будет тем же.
-        Запись в журнал произойдёт только после кнопки «Добавить» в форме.
+        Если кнопка «Говорить» не срабатывает — нажмите
+        <strong>микрофон на клавиатуре</strong> прямо в поле выше: текст попадёт сюда,
+        а разбор фразы будет тем же. Запись в журнал произойдёт только после кнопки
+        «Добавить» в форме.
       </p>
 
       <div class="form-actions">
@@ -109,6 +128,28 @@ import { ModalComponent } from './modal.component';
       animation-delay: 360ms;
     }
 
+    .mic-check {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      flex-wrap: wrap;
+      margin: 12px 0 4px;
+    }
+
+    .mic-verdict {
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--muted);
+    }
+
+    .mic-verdict.ok {
+      color: var(--income);
+    }
+
+    .mic-verdict.bad {
+      color: var(--expense);
+    }
+
     @keyframes voice-bar {
       0%,
       100% {
@@ -133,6 +174,7 @@ export class VoiceInputComponent {
   readonly listening = this.speech.listening;
   readonly error = this.speech.error;
   readonly phase = this.speech.phase;
+  readonly micStatus = this.speech.micStatus;
 
   text = '';
 
@@ -151,6 +193,7 @@ export class VoiceInputComponent {
         this.speech.cancel();
         this.text = '';
         this.speech.error.set(null);
+        this.speech.micStatus.set('idle');
       }
     });
   }
@@ -164,6 +207,27 @@ export class VoiceInputComponent {
     const heard = await this.speech.listen();
     if (heard) {
       this.text = heard;
+    }
+  }
+
+  async checkMic(): Promise<void> {
+    await this.speech.probeMic();
+  }
+
+  micLabel(status: MicStatus): string {
+    switch (status) {
+      case 'ok':
+        return 'Микрофон слышит звук';
+      case 'silent':
+        return 'Микрофон не передаёт звук';
+      case 'denied':
+        return 'Доступ к микрофону запрещён';
+      case 'unsupported':
+        return 'Браузер не даёт доступ к микрофону';
+      case 'checking':
+        return 'Проверяю…';
+      default:
+        return '';
     }
   }
 

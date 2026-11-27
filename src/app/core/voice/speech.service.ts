@@ -6,13 +6,14 @@ import { Injectable, NgZone, inject, signal } from '@angular/core';
  * Работает в Chrome/Edge/Safari (webkit-префикс) и только по HTTPS:
  * распознавание в Chrome облачное и требует интернета.
  *
- * Особенности мобильных браузеров (главное — не сломать их):
- * - Chrome Android НЕ поддерживает continuous: при continuous = true сессия
- *   обрывается без результатов, поэтому всегда continuous = false.
- * - На Android финальный текст часто приходит только после stop()/audioend,
- *   а onend может вообще не прийти — поэтому есть несколько предохранителей:
- *   авто-финализация после паузы в результатах, реакция на audioend и таймер
- *   завершения после ручного stop().
+ * Особенности мобильных браузеров:
+ * - Chrome Android НЕ поддерживает continuous и processLocally: сессия с
+ *   continuous = true обрывается, офлайн-распознавания на Android нет.
+ * - Иногда движок стартует и сразу завершается без результата и без ошибки
+ *   (сервис Google недоступен из мобильной сети). Поэтому есть один
+ *   автоматический повтор с другим тегом языка, а затем — понятная подсказка.
+ * - Финальный текст на Android часто приходит только после stop()/audioend,
+ *   а onend может не прийти — поэтому есть таймеры-предохранители.
  * - Колбэки приходят вне зоны Angular, сигналы обновляем через zone.run.
  */
 
@@ -71,7 +72,7 @@ const ERROR_MESSAGES = new Map<string, string>([
   ['not-allowed', 'Нет доступа к микрофону. Разрешите его в настройках браузера.'],
   ['service-not-allowed', 'Браузер запретил распознавание речи.'],
   ['audio-capture', 'Микрофон не найден или занят другим приложением.'],
-  ['network', 'Нет связи с сервисом распознавания Google. Проверьте интернет или VPN.'],
+  ['network', 'Нет связи с сервисом распознавания Google. Проверьте интернет или включите VPN.'],
   ['language-not-supported', 'Русский язык не поддерживается распознаванием в этом браузере.'],
 ]);
 
@@ -83,6 +84,10 @@ const FINALIZE_DEBOUNCE_MS = 1800;
 const MAX_SESSION_MS = 60_000;
 /** Если распознавание не стартовало за это время — показываем ошибку. */
 const START_TIMEOUT_MS = 6000;
+/** Сессия короче этого времени без результата считается «движок не ответил». */
+const QUICK_FAILURE_MS = 5000;
+
+export type MicStatus = 'idle' | 'checking' | 'ok' | 'silent' | 'denied' | 'unsupported';
 
 interface ActiveSession {
   id: number;
@@ -102,6 +107,8 @@ export class SpeechService {
   private startTimer: ReturnType<typeof setTimeout> | null = null;
   private startRetryTimer: ReturnType<typeof setTimeout> | null = null;
   private started = false;
+  private quickFailure = false;
+  private cancelled = false;
 
   /** Доступно ли распознавание: есть API и страница открыта по HTTPS. */
   readonly supported = signal(recognitionCtor() !== null && window.isSecureContext);
@@ -111,26 +118,171 @@ export class SpeechService {
   readonly error = signal<string | null>(null);
   /** Служебное состояние для подсказок в интерфейсе. */
   readonly phase = signal<'idle' | 'starting' | 'listening' | 'finalizing'>('idle');
+  /** Результат проверки микрофона (отдельно от распознавания речи). */
+  readonly micStatus = signal<MicStatus>('idle');
 
   /** Слушать фразу. Возвращает распознанный текст или null, если ничего не услышали. */
-  listen(): Promise<string | null> {
+  async listen(): Promise<string | null> {
     const Ctor = recognitionCtor();
     if (!Ctor || !window.isSecureContext) {
       this.error.set('Распознавание речи недоступно: нужен HTTPS и поддерживаемый браузер.');
+      return null;
+    }
+
+    this.error.set(null);
+    this.micStatus.set('idle');
+    this.quickFailure = false;
+    this.cancelled = false;
+
+    // Первая попытка — штатный русский тег.
+    const first = await this.runAttempt('ru-RU', false);
+    if (first) {
+      return first;
+    }
+    // Окно закрыли — не показываем ошибок.
+    if (this.cancelled) {
+      return null;
+    }
+    // Явная ошибка (нет доступа, нет сети) — повтор не поможет.
+    if (this.error()) {
+      return null;
+    }
+    // Движок «промолчал» почти сразу — один повтор иногда прогревает сервис.
+    if (this.quickFailure) {
+      const second = await this.runAttempt('ru', true);
+      if (second) {
+        return second;
+      }
+      if (this.cancelled || this.error()) {
+        return null;
+      }
+    }
+
+    this.error.set(this.failureMessage());
+    return null;
+  }
+
+  /** Остановить запись досрочно — вернётся уже услышанное. */
+  stop(): void {
+    const active = this.active;
+    if (!active) {
+      return;
+    }
+    const recognition = this.recognition;
+    this.zone.run(() => this.phase.set('finalizing'));
+    try {
+      recognition?.stop();
+    } catch {
+      active.finish(this.bestText());
+      return;
+    }
+    // Android Chrome часто не присылает onend после stop() — завершаем сами.
+    this.stopTimer = setTimeout(() => {
+      if (this.active?.id === active.id) {
+        active.finish(this.bestText());
+      }
+    }, STOP_GRACE_MS);
+  }
+
+  /** Прервать сессию без результата и без сообщения об ошибке (закрытие окна). */
+  cancel(): void {
+    const active = this.active;
+    const recognition = this.recognition;
+    this.cancelled = true;
+    this.clearTimers();
+    this.recognition = null;
+    this.active = null;
+    this.sessionId++;
+    if (recognition) {
+      try {
+        recognition.abort();
+      } catch {
+        // ignore
+      }
+    }
+    this.zone.run(() => {
+      this.listening.set(false);
+      this.phase.set('idle');
+    });
+    // Разрешаем ожидающий promise, но без текста и без ошибки.
+    active?.finish(null, true);
+  }
+
+  /**
+   * Проверка микрофона отдельно от распознавания: показывает, приходит ли звук.
+   * Помогает понять, где проблема — в доступе/железе или в сервисе Google.
+   */
+  async probeMic(): Promise<MicStatus> {
+    this.micStatus.set('checking');
+    if (typeof navigator === 'undefined' || !navigator.mediaDevices?.getUserMedia) {
+      this.micStatus.set('unsupported');
+      return 'unsupported';
+    }
+    let stream: MediaStream | null = null;
+    let context: AudioContext | null = null;
+    try {
+      stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      context = new AudioContext();
+      const source = context.createMediaStreamSource(stream);
+      const analyser = context.createAnalyser();
+      analyser.fftSize = 1024;
+      source.connect(analyser);
+      const buffer = new Uint8Array(analyser.fftSize);
+      let peak = 0;
+      const until = Date.now() + 1600;
+      while (Date.now() < until) {
+        analyser.getByteTimeDomainData(buffer);
+        for (let i = 0; i < buffer.length; i++) {
+          const deviation = Math.abs(buffer[i] - 128);
+          if (deviation > peak) {
+            peak = deviation;
+          }
+        }
+        await new Promise((resolve) => setTimeout(resolve, 60));
+      }
+      const status: MicStatus = peak > 4 ? 'ok' : 'silent';
+      this.micStatus.set(status);
+      return status;
+    } catch {
+      this.micStatus.set('denied');
+      return 'denied';
+    } finally {
+      stream?.getTracks().forEach((track) => track.stop());
+      void context?.close();
+    }
+  }
+
+  private failureMessage(): string {
+    const mic = this.micStatus();
+    if (mic === 'silent') {
+      return 'Микрофон не передаёт звук. Проверьте, что он не занят другим приложением и не выключен.';
+    }
+    if (mic === 'denied') {
+      return 'Нет доступа к микрофону. Разрешите его для сайта в настройках Chrome.';
+    }
+    if (mic === 'ok') {
+      return 'Микрофон работает, но сервис распознавания Google не ответил. Используйте микрофон на клавиатуре в поле ниже или включите VPN.';
+    }
+    return 'Браузер не передал распознанный текст. Нажмите микрофон на клавиатуре в поле ниже — разбор фразы будет тем же.';
+  }
+
+  /** Одна попытка распознавания. isLast — показывать ли общую подсказку при пустом итоге. */
+  private runAttempt(lang: string, isLast: boolean): Promise<string | null> {
+    this.cancel();
+    this.cancelled = false;
+    this.transcript.set('');
+
+    const Ctor = recognitionCtor();
+    if (!Ctor) {
       return Promise.resolve(null);
     }
 
-    // Прошлую сессию закрываем, но её поздние колбэки больше не влияют на новую.
-    this.cancel();
-
-    this.error.set(null);
-    this.transcript.set('');
-    this.started = false;
-
     const id = ++this.sessionId;
+    const startedAt = Date.now();
+    this.started = false;
     const recognition = new Ctor();
     this.recognition = recognition;
-    recognition.lang = 'ru-RU';
+    recognition.lang = lang;
     // Chrome Android не поддерживает continuous — сессия с ним обрывается.
     recognition.continuous = false;
     recognition.interimResults = true;
@@ -150,14 +302,15 @@ export class SpeechService {
           this.recognition = null;
           this.active = null;
         }
+        const quick = !text && Date.now() - startedAt < QUICK_FAILURE_MS;
+        if (this.sessionId === id) {
+          this.quickFailure = quick;
+        }
         this.zone.run(() => {
           this.listening.set(false);
           this.phase.set('idle');
-          // Без текста и без явной ошибки пользователь не понимает, что случилось.
-          if (!text && !silent && !this.error()) {
-            this.error.set(
-              'Речь не распознана. Попробуйте ещё раз — или нажмите микрофон на клавиатуре в поле ниже.',
-            );
+          if (!text && !silent && !this.error() && isLast) {
+            this.error.set(this.failureMessage());
           }
         });
         resolve(text);
@@ -177,7 +330,6 @@ export class SpeechService {
           finish(this.bestText());
           return;
         }
-        // Если onend так и не придёт — завершаем сами.
         this.stopTimer = setTimeout(() => {
           if (this.active?.id === id) {
             active.finish(this.bestText());
@@ -228,7 +380,6 @@ export class SpeechService {
           }
         }
         const combined = `${finals} ${interim}`.trim();
-        // Колбэки приходят вне зоны Angular — сообщаем ему о сигналах вручную.
         this.zone.run(() => this.transcript.set(combined));
         // Результаты уже пришли — значит движок точно работает.
         this.started = true;
@@ -236,7 +387,6 @@ export class SpeechService {
           clearTimeout(this.startTimer);
           this.startTimer = null;
         }
-        // После паузы в речи финализируем: так текст гарантированно появится.
         if (combined) {
           scheduleFinalize();
         }
@@ -246,18 +396,15 @@ export class SpeechService {
         if (this.sessionId !== id) {
           return;
         }
-        // «aborted» — это наш собственный stop(), ошибку не показываем.
         if (event.error === 'aborted') {
           return;
         }
-        // Если что-то уже распознали, не пугаем ошибкой «речь не найдена».
         const heardSomething = this.transcript().trim().length > 0;
         if (event.error === 'no-speech' && heardSomething) {
           return;
         }
         const message = ERROR_MESSAGES.get(event.error) ?? 'Не удалось распознать речь.';
         this.zone.run(() => this.error.set(message));
-        // «network»/«not-allowed» — движок уже мёртв, не ждём onend.
         if (event.error === 'network' || event.error === 'not-allowed' || event.error === 'audio-capture') {
           finish(this.bestText());
         }
@@ -310,58 +457,12 @@ export class SpeechService {
         }
       }, START_TIMEOUT_MS);
 
-      // Предохранитель: не даём сессии висеть вечно.
       this.maxTimer = setTimeout(() => {
         if (this.active?.id === id) {
           requestFinalize();
         }
       }, MAX_SESSION_MS);
     });
-  }
-
-  /** Остановить запись досрочно — вернётся уже услышанное. */
-  stop(): void {
-    const active = this.active;
-    if (!active) {
-      return;
-    }
-    const recognition = this.recognition;
-    this.zone.run(() => this.phase.set('finalizing'));
-    try {
-      recognition?.stop();
-    } catch {
-      active.finish(this.bestText());
-      return;
-    }
-    // Android Chrome часто не присылает onend после stop() — завершаем сами.
-    this.stopTimer = setTimeout(() => {
-      if (this.active?.id === active.id) {
-        active.finish(this.bestText());
-      }
-    }, STOP_GRACE_MS);
-  }
-
-  /** Прервать сессию без результата и без сообщения об ошибке (закрытие окна). */
-  cancel(): void {
-    const active = this.active;
-    const recognition = this.recognition;
-    this.clearTimers();
-    this.recognition = null;
-    this.active = null;
-    this.sessionId++;
-    if (recognition) {
-      try {
-        recognition.abort();
-      } catch {
-        // ignore
-      }
-    }
-    this.zone.run(() => {
-      this.listening.set(false);
-      this.phase.set('idle');
-    });
-    // Разрешаем ожидающий promise, но без текста и без ошибки.
-    active?.finish(null, true);
   }
 
   private bestText(): string | null {
