@@ -11,13 +11,27 @@ android {
         applicationId = "by.finplanner.companion"
         minSdk = 26
         targetSdk = 34
-        versionCode = 2
-        versionName = "1.1"
+        versionCode = 3
+        versionName = "1.2"
+    }
+
+    // Постоянный ключ подписи: обновления ставятся поверх без удаления приложения.
+    signingConfigs {
+        create("companion") {
+            storeFile = file("../keystore/companion.jks")
+            storePassword = "companion123"
+            keyAlias = "companion"
+            keyPassword = "companion123"
+        }
     }
 
     buildTypes {
+        debug {
+            signingConfig = signingConfigs.getByName("companion")
+        }
         release {
             isMinifyEnabled = false
+            signingConfig = signingConfigs.getByName("companion")
         }
     }
 
