@@ -85,7 +85,7 @@ const MAX_SESSION_MS = 60_000;
 /** Если распознавание не стартовало за это время — показываем ошибку. */
 const START_TIMEOUT_MS = 6000;
 /** Сессия короче этого времени без результата считается «движок не ответил». */
-const QUICK_FAILURE_MS = 5000;
+const QUICK_FAILURE_MS = 8000;
 
 export type MicStatus = 'idle' | 'checking' | 'ok' | 'silent' | 'denied' | 'unsupported';
 
@@ -134,31 +134,38 @@ export class SpeechService {
     this.quickFailure = false;
     this.cancelled = false;
 
-    // Первая попытка — штатный русский тег.
-    const first = await this.runAttempt('ru-RU', false);
-    if (first) {
-      return first;
-    }
-    // Окно закрыли — не показываем ошибок.
-    if (this.cancelled) {
-      return null;
-    }
-    // Явная ошибка (нет доступа, нет сети) — повтор не поможет.
-    if (this.error()) {
-      return null;
-    }
-    // Движок «промолчал» почти сразу — один повтор иногда прогревает сервис.
-    if (this.quickFailure) {
-      const second = await this.runAttempt('ru', true);
-      if (second) {
-        return second;
+    // Разные сборки Chrome на Android по-разному переживают настройки:
+    // пробуем несколько конфигураций, пока одна не отдаст текст.
+    const attempts: { lang: string | null; interim: boolean }[] = [
+      { lang: 'ru-RU', interim: true },
+      { lang: 'ru-RU', interim: false },
+      { lang: null, interim: false },
+    ];
+
+    for (let index = 0; index < attempts.length; index++) {
+      const attempt = attempts[index];
+      const isLast = index === attempts.length - 1;
+      const text = await this.runAttempt(attempt.lang, attempt.interim, isLast);
+      if (text) {
+        return text;
       }
-      if (this.cancelled || this.error()) {
+      // Окно закрыли — не показываем ошибок и не продолжаем.
+      if (this.cancelled) {
         return null;
+      }
+      // Явная ошибка (нет доступа, нет сети) — другие конфигурации не помогут.
+      if (this.error()) {
+        return null;
+      }
+      // Движок отработал не мгновенно — возможно, просто не было речи: не долбим.
+      if (!this.quickFailure) {
+        break;
       }
     }
 
-    this.error.set(this.failureMessage());
+    if (!this.cancelled && !this.error()) {
+      this.error.set(this.failureMessage());
+    }
     return null;
   }
 
@@ -267,7 +274,7 @@ export class SpeechService {
   }
 
   /** Одна попытка распознавания. isLast — показывать ли общую подсказку при пустом итоге. */
-  private runAttempt(lang: string, isLast: boolean): Promise<string | null> {
+  private runAttempt(lang: string | null, interim: boolean, isLast: boolean): Promise<string | null> {
     this.cancel();
     this.cancelled = false;
     this.transcript.set('');
@@ -282,10 +289,12 @@ export class SpeechService {
     this.started = false;
     const recognition = new Ctor();
     this.recognition = recognition;
-    recognition.lang = lang;
+    if (lang) {
+      recognition.lang = lang;
+    }
     // Chrome Android не поддерживает continuous — сессия с ним обрывается.
     recognition.continuous = false;
-    recognition.interimResults = true;
+    recognition.interimResults = interim;
     recognition.maxAlternatives = 1;
 
     return new Promise<string | null>((resolve) => {
@@ -434,11 +443,13 @@ export class SpeechService {
           try {
             recognition.start();
           } catch {
-            this.zone.run(() =>
-              this.error.set(
-                'Не удалось запустить микрофон. Закройте окно, подождите пару секунд и попробуйте снова.',
-              ),
-            );
+            if (isLast) {
+              this.zone.run(() =>
+                this.error.set(
+                  'Не удалось запустить микрофон. Закройте окно, подождите пару секунд и попробуйте снова.',
+                ),
+              );
+            }
             finish(null);
           }
         }, 400);
@@ -448,11 +459,13 @@ export class SpeechService {
       // Если движок так и не запустился (бывает на Android), объясняем это.
       this.startTimer = setTimeout(() => {
         if (this.sessionId === id && !this.started && !this.transcript().trim()) {
-          this.zone.run(() =>
-            this.error.set(
-              'Браузер не запустил распознавание. Проверьте разрешение на микрофон и попробуйте ещё раз.',
-            ),
-          );
+          if (isLast) {
+            this.zone.run(() =>
+              this.error.set(
+                'Браузер не запустил распознавание. Проверьте разрешение на микрофон и попробуйте ещё раз.',
+              ),
+            );
+          }
           finish(null);
         }
       }, START_TIMEOUT_MS);
