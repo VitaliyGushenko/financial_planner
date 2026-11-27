@@ -1,11 +1,15 @@
 import { Component, computed, effect, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
+import { RouterLink } from '@angular/router';
 
 import { AuthService } from '../../core/auth.service';
 import { AccountsService } from '../../core/accounts.service';
+import { BankInboxService } from '../../core/bank-inbox.service';
+import { BankRulesService } from '../../core/bank-rules.service';
 import { CategoriesService } from '../../core/categories.service';
 import { CurrencyService } from '../../core/currency.service';
-import { Account, AccountType, Category, CategoryKind } from '../../core/models';
+import { Account, AccountType, BankRule, Category, CategoryKind, Subcategory } from '../../core/models';
+import { pickBankRule, planBulkCategorization, parseKeywordsInput } from '../../core/bank-rules';
 import { round2 } from '../../core/money';
 import { ThemeService } from '../../core/theme.service';
 import { RemindersService } from '../../core/reminders.service';
@@ -24,7 +28,7 @@ import { CATEGORY_ICONS, categoryIconName } from '../../ui/category-icons';
 
 @Component({
   selector: 'app-settings',
-  imports: [FormsModule, IconComponent],
+  imports: [FormsModule, IconComponent, RouterLink],
   templateUrl: './settings.component.html',
   styleUrl: './settings.component.less',
 })
@@ -36,6 +40,8 @@ export class SettingsComponent {
   private readonly recurringService = inject(RecurringService);
   private readonly goalsService = inject(GoalsService);
   private readonly backupService = inject(BackupService);
+  private readonly bankRulesService = inject(BankRulesService);
+  private readonly bankInboxService = inject(BankInboxService);
   private readonly toast = inject(ToastService);
   readonly curr = inject(CurrencyService);
   readonly theme = inject(ThemeService);
@@ -51,7 +57,7 @@ export class SettingsComponent {
   readonly accountError = signal('');
   /** id счёта, который сейчас редактируется (баланс/название). */
   readonly editingAccountId = signal<string | null>(null);
-  accountEdit = { name: '', balance: null as number | null };
+  accountEdit = { name: '', balance: null as number | null, cardMask: '' };
 
   async addAccount(): Promise<void> {
     if (!this.accountForm.name.trim()) {
@@ -69,7 +75,11 @@ export class SettingsComponent {
 
   startEditAccount(account: Account): void {
     this.editingAccountId.set(account.id);
-    this.accountEdit = { name: account.name, balance: account.balance };
+    this.accountEdit = {
+      name: account.name,
+      balance: account.balance,
+      cardMask: account.cardMask ?? '',
+    };
   }
 
   async saveAccountEdit(): Promise<void> {
@@ -80,8 +90,19 @@ export class SettingsComponent {
     await this.accountsService.update(id, {
       name: this.accountEdit.name || 'Счёт',
       balance: round2(Number(this.accountEdit.balance) || 0),
+      cardMask: this.accountEdit.cardMask.replace(/\D/g, '').slice(-4),
     });
     this.editingAccountId.set(null);
+  }
+
+  /** Сохранение маски карты прямо в строке счёта. */
+  saveCardMask(account: Account, raw: string): void {
+    const mask = raw.replace(/\D/g, '').slice(-4);
+    if (mask === (account.cardMask ?? '')) {
+      return;
+    }
+    void this.accountsService.update(account.id, { cardMask: mask });
+    this.toast.show(mask ? `Карта *${mask} привязана к «${account.name}»` : 'Маска карты удалена');
   }
 
   /** Месячный лимит по категории; пустое значение — убрать бюджет. */
@@ -332,6 +353,208 @@ export class SettingsComponent {
 
   setSubInput(category: Category, value: string): void {
     this.subInputs.update((map) => ({ ...map, [category.id]: value }));
+  }
+
+  // ----- Автозаполнение из банка -----
+
+  readonly bankRules = this.bankRulesService.rules;
+  readonly bankInbox = this.bankInboxService.inbox;
+  readonly inboxCount = this.bankInboxService.count;
+
+  /** Операции без категории — то, что осталось разметить вручную. */
+  readonly uncategorizedCount = computed(
+    () =>
+      this.transactionsService
+        .transactions()
+        .filter((tx) => tx.applied !== false && tx.kind !== 'transfer' && !tx.categoryId).length,
+  );
+
+  ruleForm = {
+    keywords: '',
+    match: 'any' as 'any' | 'all',
+    kind: 'expense' as CategoryKind,
+    categoryId: '',
+    subcategoryId: '',
+    priority: 10,
+    enabled: true,
+  };
+  readonly editingRuleId = signal<string | null>(null);
+  readonly ruleError = signal('');
+  readonly ruleTester = signal('');
+  readonly applyingRules = signal(false);
+
+  /** Результат проверки правила по образцу текста уведомления. */
+  readonly testerResult = computed<{ tone: 'good' | 'bad'; text: string } | null>(() => {
+    const text = this.ruleTester().trim();
+    if (!text) {
+      return null;
+    }
+    const rules = this.bankRules();
+    const rule =
+      pickBankRule(rules, text, 'expense') ??
+      pickBankRule(rules, text, 'income');
+    if (!rule) {
+      return { tone: 'bad', text: 'Ни одно правило не сработало' };
+    }
+    const category = this.categoriesService.byId().get(rule.categoryId);
+    return {
+      tone: 'good',
+      text: `Сработает правило «${rule.keywords.join(', ')}» → ${category?.name ?? 'категория удалена'}`,
+    };
+  });
+
+  ruleCategories(): Category[] {
+    return this.ruleForm.kind === 'income' ? this.incomeCategories() : this.expenseCategories();
+  }
+
+  ruleSubcategories(): Subcategory[] {
+    return this.ruleCategories().find((c) => c.id === this.ruleForm.categoryId)?.subcategories ?? [];
+  }
+
+  onRuleKindChange(): void {
+    this.ruleForm.categoryId = '';
+    this.ruleForm.subcategoryId = '';
+  }
+
+  onRuleCategoryChange(): void {
+    this.ruleForm.subcategoryId = '';
+  }
+
+  startNewRule(): void {
+    this.editingRuleId.set(null);
+    this.ruleError.set('');
+    this.ruleForm = {
+      keywords: '',
+      match: 'any',
+      kind: 'expense',
+      categoryId: '',
+      subcategoryId: '',
+      priority: 10,
+      enabled: true,
+    };
+  }
+
+  startEditRule(rule: BankRule): void {
+    this.editingRuleId.set(rule.id);
+    this.ruleError.set('');
+    this.ruleForm = {
+      keywords: rule.keywords.join(', '),
+      match: rule.match ?? 'any',
+      kind: rule.kind,
+      categoryId: rule.categoryId,
+      subcategoryId: rule.subcategoryId ?? '',
+      priority: rule.priority ?? 0,
+      enabled: rule.enabled !== false,
+    };
+  }
+
+  cancelRuleForm(): void {
+    this.editingRuleId.set(null);
+    this.ruleError.set('');
+    this.ruleForm = { ...this.ruleForm, keywords: '', categoryId: '', subcategoryId: '' };
+  }
+
+  async saveRule(): Promise<void> {
+    const keywords = parseKeywordsInput(this.ruleForm.keywords);
+    if (!keywords.length) {
+      this.ruleError.set('Добавьте хотя бы одно ключевое слово.');
+      return;
+    }
+    if (!this.ruleForm.categoryId) {
+      this.ruleError.set('Выберите категорию.');
+      return;
+    }
+    const draft = {
+      keywords,
+      match: this.ruleForm.match,
+      kind: this.ruleForm.kind,
+      categoryId: this.ruleForm.categoryId,
+      subcategoryId: this.ruleForm.subcategoryId || undefined,
+      priority: Number(this.ruleForm.priority) || 0,
+      enabled: this.ruleForm.enabled,
+    };
+    const editing = this.editingRuleId();
+    if (editing) {
+      await this.bankRulesService.update(editing, draft);
+      this.toast.show('Правило обновлено');
+    } else {
+      await this.bankRulesService.create(draft);
+      this.toast.show('Правило добавлено');
+    }
+    this.ruleError.set('');
+    this.editingRuleId.set(null);
+    this.ruleForm = { ...this.ruleForm, keywords: '', categoryId: '', subcategoryId: '' };
+  }
+
+  async removeRule(rule: BankRule): Promise<void> {
+    if (confirm(`Удалить правило «${rule.keywords.join(', ')}»?`)) {
+      await this.bankRulesService.remove(rule.id);
+    }
+  }
+
+  toggleRule(rule: BankRule): void {
+    void this.bankRulesService.setEnabled(rule.id, rule.enabled === false);
+  }
+
+  categoryLabelOf(categoryId: string | undefined): string {
+    if (!categoryId) {
+      return 'Без категории';
+    }
+    return this.categoriesService.byId().get(categoryId)?.name ?? 'Без категории';
+  }
+
+  ruleSubcategoryLabel(rule: BankRule): string {
+    if (!rule.subcategoryId) {
+      return '';
+    }
+    const category = this.categoriesService.byId().get(rule.categoryId);
+    return category?.subcategories.find((sub) => sub.id === rule.subcategoryId)?.name ?? '';
+  }
+
+  /** Применить правила ко всем операциям без категории. */
+  async applyRulesNow(): Promise<void> {
+    if (this.applyingRules()) {
+      return;
+    }
+    this.applyingRules.set(true);
+    try {
+      const plan = planBulkCategorization(
+        this.transactionsService.transactions(),
+        this.bankRules(),
+      );
+      if (!plan.length) {
+        this.toast.show('Нечего размечать: подходящих операций без категории нет');
+        return;
+      }
+      const count = await this.transactionsService.setCategoriesBulk(plan);
+      this.toast.show(`Размечено операций: ${count}`);
+    } finally {
+      this.applyingRules.set(false);
+    }
+  }
+
+  async removeInboxItem(id: string): Promise<void> {
+    await this.bankInboxService.remove(id);
+  }
+
+  async clearInbox(): Promise<void> {
+    if (confirm('Очистить входящие банка?')) {
+      await this.bankInboxService.clear();
+    }
+  }
+
+  formatInboxTime(item: { postedAt?: unknown; createdAt?: unknown }): string {
+    const raw = (item.postedAt ?? item.createdAt) as { toDate?: () => Date } | null | undefined;
+    const date = raw && typeof raw.toDate === 'function' ? raw.toDate() : null;
+    if (!date) {
+      return '';
+    }
+    return date.toLocaleString('ru-RU', {
+      day: '2-digit',
+      month: '2-digit',
+      hour: '2-digit',
+      minute: '2-digit',
+    });
   }
 
   // ----- Профиль -----

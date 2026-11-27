@@ -4,6 +4,8 @@ import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 
 import { AccountsService } from '../../core/accounts.service';
+import { BankRulesService } from '../../core/bank-rules.service';
+import { keywordFromTransaction } from '../../core/bank-rules';
 import { CategoriesService } from '../../core/categories.service';
 import { CurrencyService } from '../../core/currency.service';
 import { PendingService } from '../../core/pending.service';
@@ -37,6 +39,7 @@ export class OperationsComponent {
   private readonly transactionsService = inject(TransactionsService);
   private readonly recurringService = inject(RecurringService);
   private readonly pendingService = inject(PendingService);
+  private readonly bankRulesService = inject(BankRulesService);
   private readonly toast = inject(ToastService);
   private readonly route = inject(ActivatedRoute);
   private readonly router = inject(Router);
@@ -98,6 +101,13 @@ export class OperationsComponent {
   readonly accountFilter = signal('all');
   readonly monthFilter = signal('all');
   readonly filtersOpen = signal(false);
+  /** Показывать только операции без категории (разметка после пушей банка). */
+  readonly uncategorizedOnly = signal(false);
+
+  /** Сколько операций ещё не разнесено по категориям. */
+  readonly uncategorizedCount = computed(
+    () => this.transactions().filter((tx) => tx.kind !== 'transfer' && !tx.categoryId).length,
+  );
 
   readonly months = computed(() => {
     const set = new Set<string>();
@@ -125,6 +135,9 @@ export class OperationsComponent {
 
     return this.transactions().filter((tx) => {
       if (kind !== 'all' && tx.kind !== kind) {
+        return false;
+      }
+      if (this.uncategorizedOnly() && (tx.kind === 'transfer' || tx.categoryId)) {
         return false;
       }
       if (accountId !== 'all' && tx.accountId !== accountId && tx.toAccountId !== accountId) {
@@ -171,6 +184,7 @@ export class OperationsComponent {
     this.kindFilter.set('all');
     this.accountFilter.set('all');
     this.monthFilter.set('all');
+    this.uncategorizedOnly.set(false);
   }
 
   /** Показываем журнал порциями по дням, чтобы длинная история не тормозила. */
@@ -188,6 +202,7 @@ export class OperationsComponent {
     this.kindFilter();
     this.accountFilter();
     this.monthFilter();
+    this.uncategorizedOnly();
     this.tab();
     untracked(() => this.visibleDays.set(14));
   });
@@ -591,6 +606,57 @@ export class OperationsComponent {
       return '';
     }
     return this.categoriesService.byId().get(categoryId)?.name ?? '';
+  }
+
+  // ----- Разметка операций из банка -----
+
+  /** Операция пришла из пуша банка (companion-приложение). */
+  isBankOp(tx: Transaction): boolean {
+    return tx.source === 'bank';
+  }
+
+  /** Мерчант из пуша — по нему создаётся правило. */
+  bankMerchant(tx: Transaction): string {
+    return (tx.merchant || tx.note || '').trim();
+  }
+
+  categoriesFor(tx: Transaction): Category[] {
+    return tx.kind === 'income'
+      ? this.categoriesService.incomeCategories()
+      : this.categoriesService.expenseCategories();
+  }
+
+  /** Назначить категорию прямо в журнале, не трогая балансы. */
+  async assignCategory(tx: Transaction, categoryId: string): Promise<void> {
+    if (!categoryId) {
+      return;
+    }
+    await this.transactionsService.setCategory(tx.id, categoryId);
+    navigator.vibrate?.(10);
+    this.toast.show(`Категория: ${this.categoryLabelOf(categoryId)}`, {
+      action: { label: 'Правило', run: () => this.createRuleFor(tx, categoryId) },
+    });
+  }
+
+  /** Запомнить мерчанта как правило автокатегоризации. */
+  async createRuleFor(tx: Transaction, categoryId: string): Promise<void> {
+    if (tx.kind === 'transfer') {
+      return;
+    }
+    const keyword = keywordFromTransaction(tx);
+    if (!keyword) {
+      this.toast.show('У операции нет мерчанта — правило создать не из чего');
+      return;
+    }
+    await this.bankRulesService.create({
+      keywords: [keyword],
+      kind: tx.kind,
+      categoryId,
+      priority: 20,
+      enabled: true,
+    });
+    navigator.vibrate?.(12);
+    this.toast.show(`Правило: «${keyword}» → ${this.categoryLabelOf(categoryId)}`);
   }
 
   frequencyOf(rule: RecurringRule): string {

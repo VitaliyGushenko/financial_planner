@@ -211,17 +211,31 @@
   <div class="card">
     <div class="journal-head">
       <h2 class="card-title">Журнал</h2>
-      <button
-        type="button"
-        class="btn btn-ghost btn-sm"
-        [class.active]="filtersOpen()"
-        (click)="filtersOpen.set(!filtersOpen())"
-      >
-        Фильтры
-        @if (activeFilters()) {
-          <span class="filter-count">{{ activeFilters() }}</span>
+      <div class="journal-actions">
+        @if (uncategorizedCount()) {
+          <button
+            type="button"
+            class="btn btn-ghost btn-sm"
+            [class.active]="uncategorizedOnly()"
+            (click)="uncategorizedOnly.set(!uncategorizedOnly())"
+            title="Показать операции без категории"
+          >
+            Без категории
+            <span class="filter-count">{{ uncategorizedCount() }}</span>
+          </button>
         }
-      </button>
+        <button
+          type="button"
+          class="btn btn-ghost btn-sm"
+          [class.active]="filtersOpen()"
+          (click)="filtersOpen.set(!filtersOpen())"
+        >
+          Фильтры
+          @if (activeFilters()) {
+            <span class="filter-count">{{ activeFilters() }}</span>
+          }
+        </button>
+      </div>
     </div>
 
     <label class="search-field">
@@ -294,7 +308,12 @@
                   <app-icon [name]="iconOf(tx)" />
                 </span>
                 <div class="row-main">
-                  <div class="row-title">{{ categoryName(tx) }}</div>
+                  <div class="row-title">
+                    {{ categoryName(tx) }}
+                    @if (isBankOp(tx)) {
+                      <span class="badge badge-bank">банк</span>
+                    }
+                  </div>
                   <div class="row-sub">
                     {{ accountName(tx.accountId) }}{{ tx.kind === 'transfer' ? ' → ' + accountName(tx.toAccountId) : '' }}{{ tx.note ? ' · ' + tx.note : '' }}
                   </div>
@@ -304,6 +323,22 @@
                 <button class="btn btn-danger btn-sm" (click)="remove(tx)" aria-label="Удалить операцию" title="Удалить операцию">
                   <app-icon name="close" />
                 </button>
+                @if (uncategorizedOnly() && tx.kind !== 'transfer') {
+                  <div class="uncat-assign">
+                    @if (bankMerchant(tx)) {
+                      <span class="uncat-merchant">{{ bankMerchant(tx) }}</span>
+                    }
+                    <select
+                      (change)="assignCategory(tx, $any($event.target).value)"
+                      aria-label="Назначить категорию"
+                    >
+                      <option value="">— категория —</option>
+                      @for (cat of categoriesFor(tx); track cat.id) {
+                        <option [value]="cat.id">{{ cat.name }}</option>
+                      }
+                    </select>
+                  </div>
+                }
               </div>
             }
           </div>

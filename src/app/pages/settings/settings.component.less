@@ -173,3 +173,146 @@
 .logout-block {
   margin-top: 16px;
 }
+
+/* ----- Автозаполнение из банка ----- */
+
+.bank-card {
+  margin-top: 14px;
+}
+
+.bank-status-row {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 4px 0 14px;
+}
+
+.bank-link {
+  margin-left: auto;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.mask-block {
+  margin-bottom: 14px;
+}
+
+.mask-title {
+  display: block;
+  font-size: 12px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--muted);
+}
+
+.mask-list {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 8px;
+  margin-top: 8px;
+}
+
+.mask-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 6px 10px;
+  border-radius: var(--radius-sm);
+  background: var(--surface-2);
+}
+
+.mask-name {
+  font-size: 13px;
+  font-weight: 600;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.mask-input {
+  width: 88px;
+  flex: none;
+  text-align: center;
+  font-variant-numeric: tabular-nums;
+}
+
+.tester-field {
+  margin-bottom: 8px;
+}
+
+.tester-result {
+  margin: 0 0 14px;
+  font-size: 13px;
+  font-weight: 600;
+
+  &.good {
+    color: var(--income);
+  }
+
+  &.bad {
+    color: var(--expense);
+  }
+}
+
+.rules-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin: 16px 0 8px;
+}
+
+.rule-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 4px;
+  border-bottom: 1px solid var(--border-soft);
+
+  &:last-child {
+    border-bottom: none;
+  }
+
+  &.off {
+    opacity: 0.55;
+  }
+}
+
+.rule-form {
+  margin-top: 12px;
+  padding-top: 12px;
+  border-top: 1px dashed var(--border);
+}
+
+.narrow-field {
+  max-width: 110px;
+}
+
+.bank-actions {
+  flex-wrap: wrap;
+}
+
+.inbox {
+  margin-top: 16px;
+  padding-top: 12px;
+  border-top: 1px dashed var(--border);
+}
+
+.inbox-item {
+  padding: 10px;
+  margin-bottom: 8px;
+  border-radius: var(--radius-sm);
+  background: var(--surface-2);
+}
+
+.inbox-text {
+  margin: 6px 0 8px;
+  font-family: ui-monospace, SFMono-Regular, Consolas, monospace;
+  font-size: 12px;
+  line-height: 1.4;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}

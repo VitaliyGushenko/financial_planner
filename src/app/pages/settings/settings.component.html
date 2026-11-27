@@ -18,12 +18,25 @@
             <div class="row-main account-edit">
               <input name="editName-{{ acc.id }}" [(ngModel)]="accountEdit.name" placeholder="Название" />
               <input name="editBalance-{{ acc.id }}" type="number" step="0.01" [(ngModel)]="accountEdit.balance" />
+              <input
+                name="editMask-{{ acc.id }}"
+                [(ngModel)]="accountEdit.cardMask"
+                placeholder="маска карты"
+                inputmode="numeric"
+                maxlength="4"
+                aria-label="Последние 4 цифры карты"
+              />
               <button class="btn btn-sm" (click)="saveAccountEdit()">Готово</button>
             </div>
           } @else {
             <div class="row-main">
               <div class="row-title">{{ acc.name }}</div>
-              <div class="row-sub">{{ acc.type === 'cash' ? 'Наличные' : 'Карта' }}</div>
+              <div class="row-sub">
+                {{ acc.type === 'cash' ? 'Наличные' : 'Карта' }}
+                @if (acc.cardMask) {
+                  · карта *{{ acc.cardMask }}
+                }
+              </div>
             </div>
             <span class="row-amount" [class.negative]="acc.balance < 0">{{ money(acc.balance) }}</span>
             <button class="btn btn-ghost btn-sm" (click)="startEditAccount(acc)">Изменить</button>
@@ -65,6 +78,198 @@
   </form>
   @if (accountError()) {
     <p class="form-error">{{ accountError() }}</p>
+  }
+</div>
+
+<!-- Автозаполнение из банка: маски карт, правила, проверка, входящие -->
+<div class="card bank-card">
+  <h2 class="card-title">Автозаполнение из банка</h2>
+  <p class="muted small">
+    Приложение-компаньон на Android присылает операции из пушей банка. Правила ниже
+    назначают категорию автоматически по ключевым словам в тексте уведомления.
+  </p>
+
+  <div class="bank-status-row">
+    <span class="badge">правил: {{ bankRules().length }}</span>
+    <span class="badge" [class.badge-expense]="uncategorizedCount() > 0">без категории: {{ uncategorizedCount() }}</span>
+    @if (inboxCount()) {
+      <span class="badge badge-expense">входящих: {{ inboxCount() }}</span>
+    }
+    <a class="bank-link" routerLink="/operations">Разметить операции →</a>
+  </div>
+
+  <div class="mask-block">
+    <div class="mask-title">Привязка карт к счетам</div>
+    <p class="muted small">Последние 4 цифры карты из уведомления — так операция попадёт на нужный счёт.</p>
+    @if (accounts().length) {
+      <div class="mask-list">
+        @for (acc of accounts(); track acc.id) {
+          <label class="mask-row">
+            <span class="mask-name">{{ acc.name }}</span>
+            <input
+              class="mask-input"
+              [value]="acc.cardMask ?? ''"
+              (change)="saveCardMask(acc, $any($event.target).value)"
+              placeholder="1310"
+              inputmode="numeric"
+              maxlength="4"
+              [attr.aria-label]="'Последние 4 цифры карты для ' + acc.name"
+            />
+          </label>
+        }
+      </div>
+    } @else {
+      <div class="muted small">Сначала добавьте счёт.</div>
+    }
+  </div>
+
+  <div class="field tester-field">
+    <label for="ruleTester">Проверить текст уведомления</label>
+    <textarea
+      id="ruleTester"
+      name="ruleTester"
+      rows="2"
+      [value]="ruleTester()"
+      (input)="ruleTester.set($any($event.target).value)"
+      placeholder="OPLATA 9.66 BYN  KARTA #1310 DATA 23.11.2026 19:55:00 OZON >MINSKIY R-N>BY OSTATOK 1246.65 BYN"
+    ></textarea>
+  </div>
+  @if (testerResult(); as result) {
+    <p class="tester-result" [class.good]="result.tone === 'good'" [class.bad]="result.tone === 'bad'">
+      {{ result.text }}
+    </p>
+  }
+
+  <div class="rules-head">
+    <span class="mask-title">Правила категоризации</span>
+    <button class="btn btn-ghost btn-sm" type="button" (click)="startNewRule()">+ Правило</button>
+  </div>
+
+  @if (bankRules().length) {
+    <div class="rows">
+      @for (rule of bankRules(); track rule.id) {
+        <div class="rule-row" [class.off]="rule.enabled === false">
+          <div class="row-main">
+            <div class="row-title">{{ rule.keywords.join(', ') }}</div>
+            <div class="row-sub">
+              {{ rule.kind === 'income' ? 'Доход' : 'Расход' }} → {{ categoryLabelOf(rule.categoryId) }}
+              @if (ruleSubcategoryLabel(rule)) {
+                · {{ ruleSubcategoryLabel(rule) }}
+              }
+              @if (rule.priority) {
+                · приоритет {{ rule.priority }}
+              }
+            </div>
+          </div>
+          <button class="btn btn-ghost btn-sm" type="button" (click)="toggleRule(rule)">
+            {{ rule.enabled === false ? 'Включить' : 'Выключить' }}
+          </button>
+          <button class="btn btn-ghost btn-sm" type="button" (click)="startEditRule(rule)">Изменить</button>
+          <button class="btn btn-danger btn-sm" type="button" (click)="removeRule(rule)" aria-label="Удалить правило">
+            <app-icon name="close" />
+          </button>
+        </div>
+      }
+    </div>
+  } @else {
+    <div class="muted small">Правил пока нет. Добавьте первое — например, «OZON» → «Маркетплейсы».</div>
+  }
+
+  <div class="rule-form">
+    <div class="form-row">
+      <div class="field grow">
+        <label for="ruleKeywords">Ключевые слова (через запятую)</label>
+        <input
+          id="ruleKeywords"
+          name="ruleKeywords"
+          [ngModel]="ruleForm.keywords"
+          (ngModelChange)="ruleForm.keywords = $event"
+          placeholder="OZON, WILDBERRIES"
+        />
+      </div>
+      <div class="field">
+        <label for="ruleKind">Тип</label>
+        <select
+          id="ruleKind"
+          name="ruleKind"
+          [ngModel]="ruleForm.kind"
+          (ngModelChange)="ruleForm.kind = $event; onRuleKindChange()"
+        >
+          <option value="expense">Расход</option>
+          <option value="income">Доход</option>
+        </select>
+      </div>
+      <div class="field">
+        <label for="ruleCategory">Категория</label>
+        <select
+          id="ruleCategory"
+          name="ruleCategory"
+          [ngModel]="ruleForm.categoryId"
+          (ngModelChange)="ruleForm.categoryId = $event; onRuleCategoryChange()"
+        >
+          <option value="">— выберите —</option>
+          @for (cat of ruleCategories(); track cat.id) {
+            <option [value]="cat.id">{{ cat.name }}</option>
+          }
+        </select>
+      </div>
+      @if (ruleSubcategories().length) {
+        <div class="field">
+          <label for="ruleSub">Подкатегория</label>
+          <select id="ruleSub" name="ruleSub" [ngModel]="ruleForm.subcategoryId" (ngModelChange)="ruleForm.subcategoryId = $event">
+            <option value="">— любая —</option>
+            @for (sub of ruleSubcategories(); track sub.id) {
+              <option [value]="sub.id">{{ sub.name }}</option>
+            }
+          </select>
+        </div>
+      }
+      <div class="field narrow-field">
+        <label for="rulePriority">Приоритет</label>
+        <input
+          id="rulePriority"
+          name="rulePriority"
+          type="number"
+          [ngModel]="ruleForm.priority"
+          (ngModelChange)="ruleForm.priority = $event"
+        />
+      </div>
+    </div>
+
+    @if (ruleError()) {
+      <p class="form-error">{{ ruleError() }}</p>
+    }
+
+    <div class="form-actions bank-actions">
+      <button class="btn btn-sm" type="button" (click)="saveRule()">
+        {{ editingRuleId() ? 'Сохранить правило' : 'Добавить правило' }}
+      </button>
+      @if (editingRuleId()) {
+        <button class="btn btn-ghost btn-sm" type="button" (click)="cancelRuleForm()">Отмена</button>
+      }
+      <button class="btn btn-ghost btn-sm" type="button" [disabled]="applyingRules()" (click)="applyRulesNow()">
+        Применить правила к операциям без категории
+      </button>
+    </div>
+  </div>
+
+  @if (inboxCount()) {
+    <div class="inbox">
+      <div class="rules-head">
+        <span class="mask-title">Входящие банка ({{ inboxCount() }})</span>
+        <button class="btn btn-ghost btn-sm" type="button" (click)="clearInbox()">Очистить</button>
+      </div>
+      <p class="muted small">
+        Пуши, которые не удалось превратить в операцию. Скопируйте текст и заведите операцию вручную.
+      </p>
+      @for (item of bankInbox(); track item.id) {
+        <div class="inbox-item">
+          <div class="row-sub">{{ item.packageName }} · {{ formatInboxTime(item) }} · {{ item.reason }}</div>
+          <div class="inbox-text">{{ item.text }}</div>
+          <button class="btn btn-danger btn-sm" type="button" (click)="removeInboxItem(item.id)">Удалить</button>
+        </div>
+      }
+    </div>
   }
 </div>
 

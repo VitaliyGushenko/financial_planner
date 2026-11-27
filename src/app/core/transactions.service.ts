@@ -1,5 +1,5 @@
 import { Injectable, computed, inject } from '@angular/core';
-import { Timestamp, doc, getDoc, increment, serverTimestamp, setDoc, writeBatch } from '@angular/fire/firestore';
+import { Timestamp, deleteField, doc, getDoc, increment, serverTimestamp, setDoc, updateDoc, writeBatch } from '@angular/fire/firestore';
 
 import { Transaction, TransactionDraft } from './models';
 import { ImportDraft } from './import';
@@ -93,6 +93,11 @@ export class TransactionsService extends UserCollectionService<Transaction> {
       applied,
       ruleId: tx.ruleId,
       createdAt: tx.createdAt ?? serverTimestamp(),
+      ...(tx.source ? { source: tx.source } : {}),
+      ...(tx.sourceId ? { sourceId: tx.sourceId } : {}),
+      ...(tx.rawText ? { rawText: tx.rawText } : {}),
+      ...(tx.merchant ? { merchant: tx.merchant } : {}),
+      ...(tx.cardMask ? { cardMask: tx.cardMask } : {}),
     });
     if (applied) {
       await this.applyDeltas(batch, tx, +1);
@@ -143,6 +148,42 @@ export class TransactionsService extends UserCollectionService<Transaction> {
       }
       await batch.commit();
     }
+  }
+
+  /**
+   * Назначить категорию уже записанной операции. Балансы не меняются —
+   * категория на суммы не влияет, поэтому пишем только два поля.
+   */
+  async setCategory(id: string, categoryId?: string, subcategoryId?: string): Promise<void> {
+    if (!this.isReady) {
+      return;
+    }
+    await updateDoc(this.docRef(id), {
+      categoryId: categoryId ?? deleteField(),
+      subcategoryId: subcategoryId ?? deleteField(),
+    });
+  }
+
+  /** Массовая разметка после применения правил: одна пачка на 400 операций. */
+  async setCategoriesBulk(
+    assignments: readonly { id: string; categoryId: string; subcategoryId?: string }[],
+  ): Promise<number> {
+    if (!this.isReady || assignments.length === 0) {
+      return 0;
+    }
+    let applied = 0;
+    for (let start = 0; start < assignments.length; start += 400) {
+      const batch = writeBatch(this.firestore);
+      for (const item of assignments.slice(start, start + 400)) {
+        batch.update(this.docRef(item.id), {
+          categoryId: item.categoryId,
+          subcategoryId: item.subcategoryId ?? deleteField(),
+        });
+        applied += 1;
+      }
+      await batch.commit();
+    }
+    return applied;
   }
 
   /** Создаёт операцию из вхождения повторяющегося правила (кнопка «Записать»/подтверждение). */

@@ -1,5 +1,5 @@
 import { Injectable, computed } from '@angular/core';
-import { UpdateData, addDoc, deleteDoc, doc, increment, updateDoc } from '@angular/fire/firestore';
+import { UpdateData, addDoc, deleteDoc, deleteField, doc, increment, updateDoc } from '@angular/fire/firestore';
 
 import { Account, AccountType } from './models';
 import { round2 } from './money';
@@ -56,6 +56,10 @@ export class AccountsService extends UserCollectionService<Account> {
     }
     if (changes.sortOrder !== undefined) {
       patch['sortOrder'] = changes.sortOrder;
+    }
+    if (changes.cardMask !== undefined) {
+      const mask = changes.cardMask.trim().replace(/\s+/g, '');
+      patch['cardMask'] = mask ? mask : deleteField();
     }
     await updateDoc(this.docRef(id), patch);
   }

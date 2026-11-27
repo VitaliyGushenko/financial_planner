@@ -15,6 +15,9 @@ export type Frequency = 'weekly' | 'monthly' | 'yearly' | 'custom';
 /** Единица своего интервала. */
 export type CustomUnit = 'days' | 'weeks' | 'months' | 'years';
 
+/** Откуда появилась операция: вручную, из пуша банка, из импорта или из правила. */
+export type TxSource = 'manual' | 'bank' | 'import' | 'recurring';
+
 /**
  * Счёт пользователя (наличные, карта...).
  * balance — фактический остаток «сейчас»; все прошлые операции уже учтены в нём.
@@ -25,6 +28,8 @@ export interface Account {
   type: AccountType;
   balance: number;
   sortOrder: number;
+  /** Последние 4 цифры карты — по ним пуш банка привязывается к счёту. */
+  cardMask?: string;
 }
 
 export interface Subcategory {
@@ -63,6 +68,16 @@ export interface Transaction {
   applied?: boolean;
   ruleId?: string;
   createdAt?: Timestamp | null;
+  /** Источник записи; отсутствует — значит заведена вручную. */
+  source?: TxSource;
+  /** Ключ дедупликации для пушей банка. */
+  sourceId?: string;
+  /** Исходный текст уведомления банка. */
+  rawText?: string;
+  /** Мерчант/получатель из уведомления. */
+  merchant?: string;
+  /** Последние 4 цифры карты из уведомления. */
+  cardMask?: string;
 }
 
 /** Данные формы операции без служебных полей. */
@@ -119,4 +134,34 @@ export interface UserProfile {
   displayName: string;
   settings?: { currency?: string };
   createdAt?: Timestamp | Date;
+}
+
+/**
+ * Правило автоматической категоризации операций из банка.
+ * Совпадение ищется по мерчанту/заметке/исходному тексту уведомления.
+ */
+export interface BankRule {
+  id: string;
+  /** Ключевые слова в верхнем регистре; достаточно одного совпадения. */
+  keywords: string[];
+  /** 'any' — хотя бы одно слово, 'all' — все слова. */
+  match?: 'any' | 'all';
+  kind: CategoryKind;
+  categoryId: string;
+  subcategoryId?: string;
+  /** Больше число — выше приоритет при нескольких совпадениях. */
+  priority?: number;
+  enabled: boolean;
+  createdAt?: Timestamp | null;
+}
+
+/** Пуш банка, который не удалось превратить в операцию. */
+export interface BankInboxItem {
+  id: string;
+  packageName: string;
+  title?: string;
+  text: string;
+  postedAt?: Timestamp | null;
+  reason: 'unparsed' | 'no-account' | 'no-category' | 'duplicate' | 'error';
+  createdAt?: Timestamp | null;
 }
