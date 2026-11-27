@@ -133,7 +133,9 @@ export class OperationsComponent {
     return count;
   });
 
-  readonly hasFilters = computed(() => this.query().trim() !== '' || this.activeFilters() > 0);
+  readonly hasFilters = computed(
+    () => this.query().trim() !== '' || this.activeFilters() > 0 || this.uncategorizedOnly(),
+  );
 
   readonly filtered = computed(() => {
     const query = this.query().trim().toLowerCase();

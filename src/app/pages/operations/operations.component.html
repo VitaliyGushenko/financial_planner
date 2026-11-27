@@ -212,7 +212,7 @@
     <div class="journal-head">
       <h2 class="card-title">Журнал</h2>
       <div class="journal-actions">
-        @if (uncategorizedCount()) {
+        @if (uncategorizedCount() || uncategorizedOnly()) {
           <button
             type="button"
             class="btn btn-ghost btn-sm"
