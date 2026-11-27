@@ -9,7 +9,7 @@ import org.json.JSONObject
  */
 class FirestoreApi(private val auth: AuthApi) {
 
-    data class AccountInfo(val id: String, val cardMask: String?)
+    data class AccountInfo(val id: String, val cardMask: String?, val type: String)
 
     data class RuleInfo(
         val keywords: List<String>,
@@ -46,9 +46,24 @@ class FirestoreApi(private val auth: AuthApi) {
         for (index in 0 until documents.length()) {
             val document = documents.getJSONObject(index)
             val id = document.optString("name").substringAfterLast('/')
-            list.add(AccountInfo(id = id, cardMask = stringField(document, "cardMask")))
+            list.add(
+                AccountInfo(
+                    id = id,
+                    cardMask = stringField(document, "cardMask"),
+                    type = stringField(document, "type") ?: "card",
+                )
+            )
         }
         return list
+    }
+
+    /** Основной счёт из настроек веб-приложения (users/{uid}/bankSettings/main). */
+    fun defaultAccountId(uid: String, token: String): String? {
+        val result = Api.get("$root/users/$uid/bankSettings/main", token)
+        if (result.code != 200) {
+            return null
+        }
+        return stringField(JSONObject(result.body), "defaultAccountId")
     }
 
     fun rules(uid: String, token: String): List<RuleInfo> {

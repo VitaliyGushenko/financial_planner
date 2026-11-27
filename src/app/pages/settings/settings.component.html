@@ -99,8 +99,40 @@
   </div>
 
   <div class="mask-block">
-    <div class="mask-title">Привязка карт к счетам</div>
-    <p class="muted small">Последние 4 цифры карты из уведомления — так операция попадёт на нужный счёт.</p>
+    <div class="mask-title">Счёт для операций из банка</div>
+    <p class="muted small">
+      Если карта одна — просто выберите её здесь. Маски карт ниже тогда не нужны:
+      они пригодятся, только когда карт несколько.
+    </p>
+    <div class="form-row">
+      <div class="field">
+        <label for="bankDefaultAccount">Основной счёт</label>
+        <select
+          id="bankDefaultAccount"
+          [value]="bankSettings().defaultAccountId ?? ''"
+          (change)="setDefaultAccount($any($event.target).value)"
+        >
+          <option value="">— не выбран —</option>
+          @for (acc of accounts(); track acc.id) {
+            <option [value]="acc.id">{{ acc.name }} ({{ money(acc.balance) }})</option>
+          }
+        </select>
+      </div>
+    </div>
+    @if (!bankSettings().defaultAccountId) {
+      <p class="muted small">
+        Пока счёт не выбран, операции привязываются только по маске карты; если маска не совпала —
+        пуш уйдёт во «Входящие банка».
+      </p>
+    }
+  </div>
+
+  <div class="mask-block">
+    <div class="mask-title">Привязка карт к счетам (необязательно)</div>
+    <p class="muted small">
+      Нужно только если карт несколько: последние 4 цифры из уведомления. Наличным маска не нужна —
+      снятие наличных приходит по карте.
+    </p>
     @if (accounts().length) {
       <div class="mask-list">
         @for (acc of accounts(); track acc.id) {
@@ -110,7 +142,7 @@
               class="mask-input"
               [value]="acc.cardMask ?? ''"
               (change)="saveCardMask(acc, $any($event.target).value)"
-              placeholder="1310"
+              placeholder="—"
               inputmode="numeric"
               maxlength="4"
               [attr.aria-label]="'Последние 4 цифры карты для ' + acc.name"
@@ -223,6 +255,14 @@
             }
           </select>
         </div>
+      } @else {
+        <div class="field">
+          <label for="ruleSubEmpty">Подкатегория</label>
+          <select id="ruleSubEmpty" name="ruleSubEmpty" disabled>
+            <option value="">— у категории нет подкатегорий —</option>
+          </select>
+          <span class="field-hint">Добавьте подкатегории в разделе категорий выше.</span>
+        </div>
       }
       <div class="field narrow-field">
         <label for="rulePriority">Приоритет</label>
@@ -230,11 +270,19 @@
           id="rulePriority"
           name="rulePriority"
           type="number"
+          min="0"
+          max="100"
           [ngModel]="ruleForm.priority"
           (ngModelChange)="ruleForm.priority = $event"
         />
+        <span class="field-hint">Больше — важнее</span>
       </div>
     </div>
+
+    <p class="muted small priority-help">
+      Приоритет решает, какое правило сработает, если подходят несколько. Например,
+      «OPLATA USLUG» с приоритетом 20 важнее общего «OPLATA» с приоритетом 10.
+    </p>
 
     @if (ruleError()) {
       <p class="form-error">{{ ruleError() }}</p>

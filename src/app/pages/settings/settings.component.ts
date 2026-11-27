@@ -6,6 +6,7 @@ import { AuthService } from '../../core/auth.service';
 import { AccountsService } from '../../core/accounts.service';
 import { BankInboxService } from '../../core/bank-inbox.service';
 import { BankRulesService } from '../../core/bank-rules.service';
+import { BankSettingsService } from '../../core/bank-settings.service';
 import { CategoriesService } from '../../core/categories.service';
 import { CurrencyService } from '../../core/currency.service';
 import { Account, AccountType, BankRule, Category, CategoryKind, Subcategory } from '../../core/models';
@@ -42,6 +43,7 @@ export class SettingsComponent {
   private readonly backupService = inject(BackupService);
   private readonly bankRulesService = inject(BankRulesService);
   private readonly bankInboxService = inject(BankInboxService);
+  private readonly bankSettingsService = inject(BankSettingsService);
   private readonly toast = inject(ToastService);
   readonly curr = inject(CurrencyService);
   readonly theme = inject(ThemeService);
@@ -360,6 +362,16 @@ export class SettingsComponent {
   readonly bankRules = this.bankRulesService.rules;
   readonly bankInbox = this.bankInboxService.inbox;
   readonly inboxCount = this.bankInboxService.count;
+  readonly bankSettings = this.bankSettingsService.settings;
+
+  /** Основной счёт для операций из банка: если карта одна, маски не нужны. */
+  setDefaultAccount(accountId: string): void {
+    void this.bankSettingsService.save({ defaultAccountId: accountId || undefined });
+    const account = this.accounts().find((item) => item.id === accountId);
+    this.toast.show(
+      account ? `Операции из банка будут на «${account.name}»` : 'Основной счёт сброшен',
+    );
+  }
 
   /** Операции без категории — то, что осталось разметить вручную. */
   readonly uncategorizedCount = computed(

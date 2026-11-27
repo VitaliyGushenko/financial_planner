@@ -70,10 +70,14 @@ class BankNotificationListener : NotificationListenerService() {
         }
 
         val accounts = api.accounts(uid, token)
-        val account = accounts.firstOrNull { it.cardMask != null && it.cardMask == parsed.cardMask }
+        val byMask = accounts.firstOrNull { it.cardMask != null && it.cardMask == parsed.cardMask }
+        val defaultId = api.defaultAccountId(uid, token)
+        val account = byMask
+            ?: accounts.firstOrNull { it.id == defaultId }
+            ?: accounts.singleOrNull { it.type == "card" }
         if (account == null) {
             api.addInbox(uid, pkg, full, "no-account")
-            prefs.log("Нет счёта для карты *${parsed.cardMask ?: "?"}")
+            prefs.log("Нет счёта: маска *${parsed.cardMask ?: "?"} не найдена, основной счёт не выбран")
             return
         }
 
