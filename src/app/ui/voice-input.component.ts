@@ -23,11 +23,19 @@ import { ModalComponent } from './modal.component';
       @if (supported()) {
         <button type="button" class="btn btn-block voice-mic" [class.listening]="listening()" (click)="toggle()">
           @if (listening()) {
-            <app-icon name="stop" /> Остановить
+            <app-icon name="stop" />
+            {{ phase() === 'finalizing' ? 'Распознаю…' : 'Остановить' }}
           } @else {
             <app-icon name="mic" /> Говорить
           }
         </button>
+
+        @if (listening()) {
+          <p class="voice-status">
+            <span class="voice-wave" aria-hidden="true"><i></i><i></i><i></i><i></i></span>
+            {{ phase() === 'starting' ? 'Запускаю микрофон…' : phase() === 'finalizing' ? 'Обрабатываю речь…' : 'Слушаю — говорите' }}
+          </p>
+        }
       } @else {
         <p class="form-notice">
           Этот браузер не умеет распознавать речь. Введите текст в поле ниже — разбор фразы работает так же.
@@ -51,6 +59,8 @@ import { ModalComponent } from './modal.component';
 
       <p class="muted small voice-note">
         Распознавание делает браузер (в Chrome — через серверы Google), поэтому нужен интернет.
+        Если микрофон браузера не срабатывает — нажмите <strong>микрофон на клавиатуре</strong>
+        прямо в поле выше: текст попадёт сюда, а разбор фразы будет тем же.
         Запись в журнал произойдёт только после кнопки «Добавить» в форме.
       </p>
 
@@ -59,6 +69,57 @@ import { ModalComponent } from './modal.component';
         <button type="button" class="btn btn-ghost" (click)="close()">Отмена</button>
       </div>
     </app-modal>
+  `,
+  styles: `
+    .voice-status {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin: 10px 0 0;
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--primary-dark);
+    }
+
+    .voice-wave {
+      display: inline-flex;
+      align-items: center;
+      gap: 2px;
+      height: 14px;
+    }
+
+    .voice-wave i {
+      display: block;
+      width: 2px;
+      height: 100%;
+      border-radius: 2px;
+      background: currentColor;
+      animation: voice-bar 900ms ease-in-out infinite;
+    }
+
+    .voice-wave i:nth-child(2) {
+      animation-delay: 120ms;
+    }
+
+    .voice-wave i:nth-child(3) {
+      animation-delay: 240ms;
+    }
+
+    .voice-wave i:nth-child(4) {
+      animation-delay: 360ms;
+    }
+
+    @keyframes voice-bar {
+      0%,
+      100% {
+        transform: scaleY(0.35);
+        opacity: 0.6;
+      }
+      50% {
+        transform: scaleY(1);
+        opacity: 1;
+      }
+    }
   `,
 })
 export class VoiceInputComponent {
@@ -71,6 +132,7 @@ export class VoiceInputComponent {
   readonly supported = this.speech.supported;
   readonly listening = this.speech.listening;
   readonly error = this.speech.error;
+  readonly phase = this.speech.phase;
 
   text = '';
 
@@ -86,7 +148,7 @@ export class VoiceInputComponent {
 
     effect(() => {
       if (!this.open()) {
-        this.speech.stop();
+        this.speech.cancel();
         this.text = '';
         this.speech.error.set(null);
       }
@@ -110,12 +172,12 @@ export class VoiceInputComponent {
     if (!value) {
       return;
     }
-    this.speech.stop();
+    this.speech.cancel();
     this.submitted.emit(value);
   }
 
   close(): void {
-    this.speech.stop();
+    this.speech.cancel();
     this.closed.emit();
   }
 }
