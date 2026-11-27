@@ -373,6 +373,17 @@ export class SettingsComponent {
     );
   }
 
+  /** Маски, которые указаны у нескольких счетов: операция попадёт на случайный. */
+  readonly duplicateMasks = computed(() => {
+    const counts = new Map<string, number>();
+    for (const acc of this.accounts()) {
+      if (acc.cardMask) {
+        counts.set(acc.cardMask, (counts.get(acc.cardMask) ?? 0) + 1);
+      }
+    }
+    return [...counts.entries()].filter(([, count]) => count > 1).map(([mask]) => mask);
+  });
+
   /** Операции без категории — то, что осталось разметить вручную. */
   readonly uncategorizedCount = computed(
     () =>

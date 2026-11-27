@@ -153,6 +153,12 @@
     } @else {
       <div class="muted small">Сначала добавьте счёт.</div>
     }
+    @if (duplicateMasks().length) {
+      <p class="form-error">
+        Маска *{{ duplicateMasks().join(', *') }} указана у нескольких счетов — операция попадёт
+        на случайный. Оставьте маску только у карты, а «Наличные» оставьте без номера.
+      </p>
+    }
   </div>
 
   <div class="field tester-field">
