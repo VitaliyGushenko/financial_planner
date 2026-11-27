@@ -238,6 +238,22 @@
       </div>
     </div>
 
+    @if (uncategorizedOnly()) {
+      <div class="uncat-toolbar">
+        <span class="muted small">
+          Правила применятся к операциям ниже. Совпавшие сразу получат категорию и исчезнут из списка.
+        </span>
+        <button
+          type="button"
+          class="btn btn-sm"
+          [disabled]="applyingRules()"
+          (click)="applyRulesToUncategorized()"
+        >
+          {{ applyingRules() ? 'Применяю…' : 'Обновить автоматически' }}
+        </button>
+      </div>
+    }
+
     <label class="search-field">
       <app-icon name="search" />
       <input
@@ -329,14 +345,35 @@
                       <span class="uncat-merchant">{{ bankMerchant(tx) }}</span>
                     }
                     <select
-                      (change)="assignCategory(tx, $any($event.target).value)"
-                      aria-label="Назначить категорию"
+                      [value]="pendingOf(tx.id).categoryId"
+                      (change)="setPendingCategory(tx, $any($event.target).value)"
+                      aria-label="Категория"
                     >
                       <option value="">— категория —</option>
                       @for (cat of categoriesFor(tx); track cat.id) {
                         <option [value]="cat.id">{{ cat.name }}</option>
                       }
                     </select>
+                    @if (pendingSubcategories(tx).length) {
+                      <select
+                        [value]="pendingOf(tx.id).subcategoryId"
+                        (change)="setPendingSubcategory(tx, $any($event.target).value)"
+                        aria-label="Подкатегория"
+                      >
+                        <option value="">— подкатегория —</option>
+                        @for (sub of pendingSubcategories(tx); track sub.id) {
+                          <option [value]="sub.id">{{ sub.name }}</option>
+                        }
+                      </select>
+                    }
+                    <button
+                      type="button"
+                      class="btn btn-sm"
+                      [disabled]="!pendingOf(tx.id).categoryId"
+                      (click)="saveInlineCategory(tx)"
+                    >
+                      Сохранить
+                    </button>
                   </div>
                 }
               </div>

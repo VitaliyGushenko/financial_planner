@@ -95,7 +95,7 @@
     @if (inboxCount()) {
       <span class="badge badge-expense">входящих: {{ inboxCount() }}</span>
     }
-    <a class="bank-link" routerLink="/operations">Разметить операции →</a>
+    <a class="bank-link" [routerLink]="['/operations']" [queryParams]="{ uncategorized: 1 }">Разметить операции →</a>
   </div>
 
   <div class="mask-block">

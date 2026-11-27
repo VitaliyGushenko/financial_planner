@@ -5,7 +5,7 @@ import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 
 import { AccountsService } from '../../core/accounts.service';
 import { BankRulesService } from '../../core/bank-rules.service';
-import { keywordFromTransaction } from '../../core/bank-rules';
+import { keywordFromTransaction, planBulkCategorization } from '../../core/bank-rules';
 import { CategoriesService } from '../../core/categories.service';
 import { CurrencyService } from '../../core/currency.service';
 import { PendingService } from '../../core/pending.service';
@@ -50,11 +50,15 @@ export class OperationsComponent {
     this.route.queryParamMap.pipe(takeUntilDestroyed()).subscribe((params) => {
       const openNew = params.get('new') === '1';
       const focusSearch = params.get('focus') === 'search';
-      if (!openNew && !focusSearch) {
+      const showUncategorized = params.get('uncategorized') === '1';
+      if (!openNew && !focusSearch && !showUncategorized) {
         return;
       }
       if (openNew) {
         this.openForm();
+      }
+      if (showUncategorized) {
+        this.uncategorizedOnly.set(true);
       }
       if (focusSearch) {
         setTimeout(() => document.querySelector<HTMLInputElement>('.search-field input')?.focus(), 80);
@@ -103,6 +107,10 @@ export class OperationsComponent {
   readonly filtersOpen = signal(false);
   /** Показывать только операции без категории (разметка после пушей банка). */
   readonly uncategorizedOnly = signal(false);
+  /** Идёт применение правил к неразмеченным операциям. */
+  readonly applyingRules = signal(false);
+  /** Выбранные в журнале, но ещё не сохранённые категории. */
+  readonly pendingCategory = signal<Record<string, { categoryId: string; subcategoryId: string }>>({});
 
   /** Сколько операций ещё не разнесено по категориям. */
   readonly uncategorizedCount = computed(
@@ -626,20 +634,84 @@ export class OperationsComponent {
       : this.categoriesService.expenseCategories();
   }
 
-  /** Назначить категорию прямо в журнале, не трогая балансы. */
-  async assignCategory(tx: Transaction, categoryId: string): Promise<void> {
-    if (!categoryId) {
+  /** Текущий несохранённый выбор для строки журнала. */
+  pendingOf(txId: string): { categoryId: string; subcategoryId: string } {
+    return this.pendingCategory()[txId] ?? { categoryId: '', subcategoryId: '' };
+  }
+
+  /** Подкатегории выбранной категории (пусто — подкатегорий нет). */
+  pendingSubcategories(tx: Transaction): Subcategory[] {
+    const categoryId = this.pendingOf(tx.id).categoryId;
+    return this.categoriesFor(tx).find((cat) => cat.id === categoryId)?.subcategories ?? [];
+  }
+
+  setPendingCategory(tx: Transaction, categoryId: string): void {
+    this.pendingCategory.update((map) => ({
+      ...map,
+      [tx.id]: { categoryId, subcategoryId: '' },
+    }));
+  }
+
+  setPendingSubcategory(tx: Transaction, subcategoryId: string): void {
+    this.pendingCategory.update((map) => ({
+      ...map,
+      [tx.id]: { categoryId: map[tx.id]?.categoryId ?? '', subcategoryId },
+    }));
+  }
+
+  /**
+   * Сохранить категорию и подкатегорию прямо в журнале, не трогая балансы.
+   * После сохранения строка уходит из фильтра «Без категории».
+   */
+  async saveInlineCategory(tx: Transaction): Promise<void> {
+    const pending = this.pendingCategory()[tx.id];
+    if (!pending?.categoryId) {
       return;
     }
-    await this.transactionsService.setCategory(tx.id, categoryId);
+    await this.transactionsService.setCategory(
+      tx.id,
+      pending.categoryId,
+      pending.subcategoryId || undefined,
+    );
+    this.pendingCategory.update((map) => {
+      const next = { ...map };
+      delete next[tx.id];
+      return next;
+    });
     navigator.vibrate?.(10);
-    this.toast.show(`Категория: ${this.categoryLabelOf(categoryId)}`, {
-      action: { label: 'Правило', run: () => this.createRuleFor(tx, categoryId) },
+    this.toast.show(`Категория: ${this.categoryLabelOf(pending.categoryId)}`, {
+      action: {
+        label: 'Правило',
+        run: () => this.createRuleFor(tx, pending.categoryId, pending.subcategoryId || undefined),
+      },
     });
   }
 
+  /** Применить правила ко всем операциям без категории прямо из журнала. */
+  async applyRulesToUncategorized(): Promise<void> {
+    if (this.applyingRules()) {
+      return;
+    }
+    this.applyingRules.set(true);
+    try {
+      const plan = planBulkCategorization(this.transactions(), this.bankRulesService.rules());
+      if (!plan.length) {
+        this.toast.show('Нет операций, подходящих под правила');
+        return;
+      }
+      const count = await this.transactionsService.setCategoriesBulk(plan);
+      this.toast.show(`Размечено операций: ${count}`);
+    } finally {
+      this.applyingRules.set(false);
+    }
+  }
+
   /** Запомнить мерчанта как правило автокатегоризации. */
-  async createRuleFor(tx: Transaction, categoryId: string): Promise<void> {
+  async createRuleFor(
+    tx: Transaction,
+    categoryId: string,
+    subcategoryId?: string,
+  ): Promise<void> {
     if (tx.kind === 'transfer') {
       return;
     }
@@ -652,6 +724,7 @@ export class OperationsComponent {
       keywords: [keyword],
       kind: tx.kind,
       categoryId,
+      subcategoryId,
       priority: 20,
       enabled: true,
     });

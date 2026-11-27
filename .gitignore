@@ -56,3 +56,6 @@ firebase-debug.log
 /android-companion/local.properties
 *.apk
 *.iml
+
+# Личные выгрузки (уведомления банка) — не публикуем в репозиторий
+/docs/*.xlsx

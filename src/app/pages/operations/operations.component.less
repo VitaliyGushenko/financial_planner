@@ -321,9 +321,32 @@
   select {
     flex: 1 1 auto;
     min-width: 0;
-    max-width: 260px;
+    max-width: 220px;
     padding: 6px 10px;
     font-size: 13px;
+  }
+
+  button {
+    flex: 0 0 auto;
+  }
+}
+
+.uncat-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin-bottom: 10px;
+  padding: 10px 12px;
+  border-radius: var(--radius-sm);
+  background: var(--primary-soft);
+  border: 1px solid var(--border-soft);
+
+  .small {
+    margin: 0;
+    max-width: 520px;
+    color: var(--primary-dark);
   }
 }
 
