@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <color name="bg">#EEF2F5</color>
+    <color name="surface">#FFFFFF</color>
+    <color name="surface_muted">#F5F7F9</color>
+    <color name="text">#1D2530</color>
+    <color name="text_muted">#66727F</color>
+    <color name="primary">#1A7F4B</color>
+    <color name="primary_dark">#146A3E</color>
+    <color name="on_primary">#FFFFFF</color>
+    <color name="border">#E1E7EC</color>
+    <color name="ok_bg">#E2F3EA</color>
+    <color name="ok_text">#16724A</color>
+    <color name="warn_bg">#FFF4E0</color>
+    <color name="warn_text">#9A6400</color>
+    <color name="log_bg">#F4F7F9</color>
+    <color name="ripple">#261A7F4B</color>
+    <color name="ripple_on_primary">#33FFFFFF</color>
+    <color name="header_start">#1A7F4B</color>
+    <color name="header_end">#0F5C36</color>
+    <color name="header_badge">#33FFFFFF</color>
+    <color name="status_bar">#146A3E</color>
+</resources>

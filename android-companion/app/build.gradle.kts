@@ -11,8 +11,8 @@ android {
         applicationId = "by.finplanner.companion"
         minSdk = 26
         targetSdk = 34
-        versionCode = 4
-        versionName = "1.3"
+        versionCode = 5
+        versionName = "1.4"
     }
 
     // Постоянный ключ подписи: обновления ставятся поверх без удаления приложения.
