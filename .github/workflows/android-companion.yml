@@ -33,12 +33,14 @@ jobs:
         if: failure()
         working-directory: android-companion
         run: |
-          tail -n 12 build.log | while IFS= read -r line; do
-            line="${line//'%'/'%25'}"
-            line="${line//$'\r'/'%0D'}"
-            line="${line//$'\n'/'%0A'}"
-            echo "::error::$line"
-          done
+          block=$(awk '/FAILURE: Build failed with an exception/{flag=1} flag' build.log | head -n 40)
+          if [ -z "$block" ]; then
+            block=$(tail -n 40 build.log)
+          fi
+          block="${block//'%'/'%25'}"
+          block="${block//$'\r'/''}"
+          block="${block//$'\n'/'%0A'}"
+          echo "::error::$block"
 
       - uses: actions/upload-artifact@v4
         if: always()
