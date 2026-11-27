@@ -8,6 +8,9 @@ on:
       - '.github/workflows/android-companion.yml'
   workflow_dispatch:
 
+permissions:
+  contents: write
+
 jobs:
   build:
     runs-on: ubuntu-latest
@@ -55,3 +58,30 @@ jobs:
           name: financial-planner-companion-debug
           path: android-companion/app/build/outputs/apk/debug/*.apk
           if-no-files-found: error
+
+      - name: Read version
+        id: version
+        working-directory: android-companion
+        run: |
+          version=$(sed -n 's/.*versionName = "\(.*\)"/\1/p' app/build.gradle.kts | head -n1)
+          echo "value=$version" >> "$GITHUB_OUTPUT"
+          echo "tag=companion-v$version" >> "$GITHUB_OUTPUT"
+
+      # Релиз нужен, чтобы приложение могло само найти и скачать обновление.
+      # Новая версия публикуется только при смене versionName — поднимите её в build.gradle.kts.
+      - name: Publish release
+        if: github.ref == 'refs/heads/main'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TAG: ${{ steps.version.outputs.tag }}
+          VERSION: ${{ steps.version.outputs.value }}
+        working-directory: android-companion
+        run: |
+          if gh release view "$TAG" > /dev/null 2>&1; then
+            echo "Релиз $TAG уже существует — публикация не нужна."
+            exit 0
+          fi
+          cp app/build/outputs/apk/debug/app-debug.apk "financial-planner-companion-$VERSION.apk"
+          gh release create "$TAG" "financial-planner-companion-$VERSION.apk" \
+            --title "Android companion v$VERSION" \
+            --notes "Сборка из коммита $GITHUB_SHA. Ставится поверх предыдущей версии, данные и вход сохраняются."

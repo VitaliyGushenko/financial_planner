@@ -14,6 +14,7 @@ import android.widget.LinearLayout
 import android.widget.ScrollView
 import android.widget.TextView
 import android.widget.Toast
+import java.io.File
 
 /**
  * Единственный экран настроек: вход, доступ к уведомлениям, выбор банков, журнал.
@@ -24,11 +25,22 @@ class MainActivity : Activity() {
     private lateinit var prefs: Prefs
     private lateinit var auth: AuthApi
     private lateinit var content: LinearLayout
+    private lateinit var updater: Updater
+
+    /** Найденное обновление и состояние загрузки. */
+    private var update: Updater.Release? = null
+    private var updateStatus: String? = null
+    private var checkingUpdates = false
+    private var downloadingUpdate = false
+    private var autoCheckStarted = false
+    private var downloadedFile: File? = null
+    private var progressLabel: TextView? = null
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         prefs = Prefs(this)
         auth = AuthApi(prefs)
+        updater = Updater(this, prefs)
 
         val scroll = ScrollView(this)
         content = LinearLayout(this).apply {
@@ -44,6 +56,7 @@ class MainActivity : Activity() {
         super.onResume()
         if (::content.isInitialized) {
             render()
+            autoCheckForUpdates()
         }
     }
 
@@ -66,6 +79,7 @@ class MainActivity : Activity() {
             renderPackages()
             renderCheck()
         }
+        renderUpdate()
         renderLog()
 
         content.addView(
@@ -180,6 +194,144 @@ class MainActivity : Activity() {
             }.start()
         }
         content.addView(check)
+    }
+
+    private fun renderUpdate() {
+        content.addView(section("Версия и обновление"))
+        content.addView(hint("Установлено: ${updater.currentVersion()}"))
+
+        val available = update
+        if (downloadingUpdate) {
+            val label = hint(updateStatus ?: "Скачивание…")
+            progressLabel = label
+            content.addView(label)
+            return
+        }
+        progressLabel = null
+
+        if (available != null) {
+            content.addView(
+                hint(
+                    "Доступна версия ${available.version}. Установка поверх: " +
+                        "настройки, вход и выбранные банки сохранятся."
+                )
+            )
+            val install = button(
+                if (downloadedFile != null) "Установить ${available.version}"
+                else "Скачать и установить ${available.version}"
+            )
+            install.setOnClickListener { installUpdate(available) }
+            content.addView(install)
+
+            val later = button("Напомнить позже")
+            later.setOnClickListener {
+                update = null
+                updateStatus = null
+                render()
+            }
+            content.addView(later)
+        } else {
+            val check = button(if (checkingUpdates) "Проверяю…" else "Проверить обновления")
+            check.isEnabled = !checkingUpdates
+            check.setOnClickListener { checkUpdates(manual = true) }
+            content.addView(check)
+        }
+
+        if (!downloadingUpdate && !updateStatus.isNullOrBlank()) {
+            content.addView(hint(updateStatus!!))
+        }
+    }
+
+    /** Автопроверка при открытии: не чаще раза в 6 часов и молча, без тостов об ошибках. */
+    private fun autoCheckForUpdates() {
+        if (autoCheckStarted || !updater.shouldAutoCheck()) {
+            return
+        }
+        autoCheckStarted = true
+        checkUpdates(manual = false)
+    }
+
+    private fun checkUpdates(manual: Boolean) {
+        if (checkingUpdates || downloadingUpdate) {
+            return
+        }
+        checkingUpdates = true
+        if (manual) {
+            updateStatus = null
+        }
+        render()
+        Thread {
+            val release = updater.latest()
+            // Отмечаем проверку только при успешном ответе: без сети попробуем в следующий раз.
+            if (release != null) {
+                updater.markChecked()
+            }
+            val found = updater.newer(release)
+            runOnUiThread {
+                checkingUpdates = false
+                if (found != null) {
+                    update = found
+                    downloadedFile = null
+                    updateStatus = null
+                } else if (manual) {
+                    updateStatus = "Обновлений нет — установлена последняя версия"
+                }
+                render()
+            }
+        }.start()
+    }
+
+    private fun installUpdate(release: Updater.Release) {
+        // Уже скачали ранее (например, открывали разрешение на установку) — ставим сразу.
+        val ready = downloadedFile
+        if (ready != null && ready.isFile && ready.length() > 10_000) {
+            if (!updater.canInstall()) {
+                toast("Разрешите установку из этого источника и нажмите ещё раз")
+                updater.openInstallPermission()
+                return
+            }
+            updater.install(ready)
+            return
+        }
+
+        if (downloadingUpdate) {
+            return
+        }
+        downloadingUpdate = true
+        updateStatus = "Скачивание…"
+        render()
+        Thread {
+            try {
+                val file = updater.download(release) { percent ->
+                    runOnUiThread {
+                        updateStatus = "Скачивание… $percent%"
+                        progressLabel?.text = updateStatus
+                    }
+                }
+                runOnUiThread {
+                    downloadingUpdate = false
+                    downloadedFile = file
+                    if (updater.canInstall()) {
+                        updateStatus = "Скачано. Открываю установщик…"
+                        render()
+                        updater.install(file)
+                    } else {
+                        updateStatus = "Осталось разрешить установку из этого источника"
+                        render()
+                        toast("Разрешите установку из этого источника")
+                        updater.openInstallPermission()
+                    }
+                }
+            } catch (error: Exception) {
+                runOnUiThread {
+                    downloadingUpdate = false
+                    downloadedFile = null
+                    updateStatus = "Не удалось скачать: ${error.message}"
+                    prefs.log("Обновление: ${error.message}")
+                    render()
+                }
+            }
+        }.start()
     }
 
     private fun renderLog() {

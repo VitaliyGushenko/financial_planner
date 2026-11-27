@@ -40,6 +40,13 @@ class Prefs(context: Context) {
             prefs.edit().putLong("tokenExp", value).apply()
         }
 
+    /** Когда последний раз проверяли обновления (мс), чтобы не дёргать GitHub постоянно. */
+    var lastUpdateCheck: Long
+        get() = prefs.getLong("lastUpdateCheck", 0L)
+        set(value) {
+            prefs.edit().putLong("lastUpdateCheck", value).apply()
+        }
+
     /** Пакеты приложений, уведомления которых слушаем. */
     var selectedPackages: Set<String>
         get() = prefs.getStringSet("packages", emptySet()) ?: emptySet()
