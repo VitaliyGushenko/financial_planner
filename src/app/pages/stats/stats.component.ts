@@ -360,8 +360,10 @@ export class StatsComponent {
       return;
     }
     const series = balanceSeries(this.projectionService.projection());
-    // На телефоне «20.08.2026» не помещается — оставляем день и месяц.
-    const labels = series.labels.map((k) => `${k.slice(8, 10)}.${k.slice(5, 7)}`);
+    // Год в подписи обязателен: график переходит через декабрь/январь.
+    const labels = series.labels.map(
+      (k) => `${k.slice(8, 10)}.${k.slice(5, 7)}.${k.slice(2, 4)}`,
+    );
     this.balanceChart?.destroy();
     this.balanceChart = new Chart(canvas, {
       type: 'line',
