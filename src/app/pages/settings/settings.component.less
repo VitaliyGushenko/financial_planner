@@ -76,6 +76,89 @@
   }
 }
 
+.theme-block {
+  margin-top: 14px;
+}
+
+.theme-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(132px, 1fr));
+  gap: 8px;
+  margin-top: 8px;
+}
+
+.theme-card {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  padding: 8px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: var(--surface);
+  text-align: left;
+  cursor: pointer;
+  transition:
+    border-color var(--dur-fast),
+    box-shadow var(--dur-fast),
+    transform var(--dur-fast);
+
+  &:hover {
+    border-color: var(--primary);
+    transform: translateY(-1px);
+  }
+
+  &.active {
+    border-color: var(--primary);
+    box-shadow: 0 0 0 2px var(--primary-soft);
+  }
+}
+
+.theme-preview {
+  position: relative;
+  display: block;
+  height: 54px;
+  border-radius: 9px;
+  border: 1px solid var(--border-soft);
+  overflow: hidden;
+}
+
+.theme-preview-bar {
+  position: absolute;
+  left: 10px;
+  right: 10px;
+  top: 10px;
+  height: 12px;
+  border-radius: 4px;
+  opacity: 0.92;
+}
+
+.theme-preview-dot {
+  position: absolute;
+  left: 10px;
+  bottom: 10px;
+  width: 22px;
+  height: 8px;
+  border-radius: 999px;
+}
+
+.theme-label {
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--text);
+}
+
+.theme-desc {
+  font-size: 11px;
+  line-height: 1.25;
+  color: var(--muted);
+}
+
+.theme-note {
+  margin: 12px 0 0;
+  font-size: 12px;
+  color: var(--muted);
+}
+
 /* ----- Импорт ----- */
 
 .import-preview {

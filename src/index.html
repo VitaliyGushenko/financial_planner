@@ -6,6 +6,35 @@
   <base href="/">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <meta name="theme-color" content="#1a7f4b">
+  <script>
+    (function () {
+      try {
+        var v2 = JSON.parse(localStorage.getItem('financial-planner.theme.v2') || 'null');
+        var legacy = localStorage.getItem('financial-planner.theme');
+        var mode = (v2 && v2.mode) || (legacy === 'light' || legacy === 'dark' ? legacy : 'system');
+        var palette = (v2 && v2.palette) || 'forest';
+        var skin = (v2 && v2.skin) || 'default';
+        var systemDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+        var dark = skin === 'oled' ? true : skin === 'paper' ? false : mode === 'dark' || (mode === 'system' && systemDark);
+        var root = document.documentElement;
+        root.setAttribute('data-theme', dark ? 'dark' : 'light');
+        root.setAttribute('data-palette', palette);
+        root.setAttribute('data-skin', skin);
+        var colors = {
+          forest: ['#1a7f4b', '#0c1117'],
+          ocean: ['#0e7490', '#071419'],
+          violet: ['#6d4ac7', '#100d1b'],
+          sunset: ['#c24e24', '#17100c'],
+          graphite: ['#3e6b9e', '#0d1116'],
+          sand: ['#8a5f1c', '#15110b']
+        };
+        var pair = colors[palette] || colors.forest;
+        var color = skin === 'oled' ? '#000000' : skin === 'paper' ? '#8a5f1c' : dark ? pair[1] : pair[0];
+        var meta = document.querySelector('meta[name="theme-color"]');
+        if (meta) meta.setAttribute('content', color);
+      } catch (e) {}
+    })();
+  </script>
   <meta name="description" content="Учёт денег и планирование покупок: счета, доходы, расходы, календарь остатков">
   <link rel="manifest" href="manifest.webmanifest">
   <link rel="icon" type="image/svg+xml" href="favicon.svg">

@@ -715,12 +715,63 @@
 
 <div class="card" [class.settings-hidden]="settingsSection() !== 'look'">
   <h2 class="card-title">Оформление</h2>
-  <p class="muted small">Тема интерфейса. «Как в системе» — подстраивается под настройку телефона или компьютера.</p>
+  <p class="muted small">
+    Режим, палитра и особое оформление. Выбор запоминается на этом устройстве.
+  </p>
   <div class="seg theme-seg">
-    <button type="button" [class.active]="theme.mode() === 'system'" (click)="theme.set('system')">Как в системе</button>
-    <button type="button" [class.active]="theme.mode() === 'light'" (click)="theme.set('light')">Светлая</button>
-    <button type="button" [class.active]="theme.mode() === 'dark'" (click)="theme.set('dark')">Тёмная</button>
+    <button type="button" [class.active]="theme.activeMode() === 'system'" (click)="theme.set('system')">Как в системе</button>
+    <button type="button" [class.active]="theme.activeMode() === 'light'" (click)="theme.set('light')">Светлая</button>
+    <button type="button" [class.active]="theme.activeMode() === 'dark'" (click)="theme.set('dark')">Тёмная</button>
   </div>
+
+  <div class="theme-block">
+    <div class="mask-title">Палитра</div>
+    <div class="theme-grid">
+      @for (palette of theme.palettes; track palette.id) {
+        <button
+          class="theme-card"
+          type="button"
+          [class.active]="theme.palette() === palette.id"
+          [attr.aria-pressed]="theme.palette() === palette.id"
+          (click)="theme.setPalette(palette.id)"
+        >
+          <span class="theme-preview" [style.background]="palette.preview">
+            <span class="theme-preview-bar" [style.background]="palette.surface"></span>
+            <span class="theme-preview-dot" [style.background]="palette.primary"></span>
+          </span>
+          <span class="theme-label">{{ palette.label }}</span>
+        </button>
+      }
+    </div>
+  </div>
+
+  <div class="theme-block">
+    <div class="mask-title">Скин</div>
+    <div class="theme-grid">
+      @for (skin of theme.skins; track skin.id) {
+        <button
+          class="theme-card"
+          type="button"
+          [class.active]="theme.skin() === skin.id"
+          [attr.aria-pressed]="theme.skin() === skin.id"
+          (click)="theme.setSkin(skin.id)"
+        >
+          <span class="theme-preview" [style.background]="skin.preview">
+            <span class="theme-preview-dot" [style.background]="skin.accent"></span>
+          </span>
+          <span class="theme-label">{{ skin.label }}</span>
+          <span class="theme-desc">{{ skin.description }}</span>
+        </button>
+      }
+    </div>
+  </div>
+
+  @if (theme.skin() === 'oled' || theme.skin() === 'paper') {
+    <p class="theme-note">
+      {{ theme.skin() === 'oled' ? 'OLED всегда тёмный' : 'Бумага всегда светлая' }}.
+      Выбор режима или палитры вернёт обычное оформление.
+    </p>
+  }
 </div>
 
 <div class="card" [class.settings-hidden]="settingsSection() !== 'look'">

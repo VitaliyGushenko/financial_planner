@@ -6,6 +6,7 @@ import { CategoriesService } from '../../core/categories.service';
 import { CurrencyService } from '../../core/currency.service';
 import { ProjectionService } from '../../core/projection.service';
 import { TransactionsService } from '../../core/transactions.service';
+import { ThemeService } from '../../core/theme.service';
 import { StatsPeriod, balanceSeries, buildStats, fillMonths, lastMonths, periodRange } from '../../core/stats';
 import { DayKey, addMonthsToKey, todayKey } from '../../core/day-key';
 import { buildBudgets } from '../../core/budgets';
@@ -40,6 +41,7 @@ export class StatsComponent {
   private readonly transactionsService = inject(TransactionsService);
   private readonly categoriesService = inject(CategoriesService);
   private readonly projectionService = inject(ProjectionService);
+  private readonly theme = inject(ThemeService);
   readonly currency = inject(CurrencyService);
   private readonly destroyRef = inject(DestroyRef);
 
@@ -193,6 +195,12 @@ export class StatsComponent {
   private monthsChart?: Chart;
   private balanceChart?: Chart;
 
+  /** Перечитать цвета темы: Chart.js не подхватывает CSS-переменные сам. */
+  private syncChartTheme(): void {
+    this.theme.revision();
+    Chart.defaults.color = cssVar('--muted', '#66717f');
+  }
+
   constructor() {
     Chart.defaults.color = cssVar('--muted', '#66717f');
     Chart.defaults.font.family =
@@ -230,6 +238,7 @@ export class StatsComponent {
   }
 
   private renderDonut(): void {
+    this.syncChartTheme();
     const canvas = this.donutCanvas()?.nativeElement;
     if (!canvas) {
       return;
@@ -306,6 +315,7 @@ export class StatsComponent {
   }
 
   private renderMonths(): void {
+    this.syncChartTheme();
     const canvas = this.monthsCanvas()?.nativeElement;
     if (!canvas) {
       return;
@@ -344,6 +354,7 @@ export class StatsComponent {
   }
 
   private renderBalance(): void {
+    this.syncChartTheme();
     const canvas = this.balanceCanvas()?.nativeElement;
     if (!canvas) {
       return;
