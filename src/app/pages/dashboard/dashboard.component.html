@@ -1,8 +1,12 @@
 <div class="page-head">
   <h1>Дашборд</h1>
   <div class="head-actions">
-    <a class="btn btn-sm" routerLink="/operations">+ Операция</a>
-    <a class="btn btn-ghost btn-sm" routerLink="/calendar">Календарь</a>
+    <a class="btn btn-sm" routerLink="/operations" [queryParams]="{ new: 1, kind: 'expense' }">
+      + Трата
+    </a>
+    <a class="btn btn-ghost btn-sm" routerLink="/operations" [queryParams]="{ new: 1, kind: 'income' }">
+      + Доход
+    </a>
   </div>
 </div>
 

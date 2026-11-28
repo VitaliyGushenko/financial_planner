@@ -37,6 +37,8 @@ export interface Subcategory {
   name: string;
   /** Вложенные подкатегории: глубина не ограничена. */
   children?: Subcategory[];
+  /** Месячный лимит расходов на этом узле; не задан — бюджет не ведётся. */
+  budget?: number;
 }
 
 export interface Category {

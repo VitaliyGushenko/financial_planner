@@ -9,7 +9,7 @@ import { IconComponent } from './icon.component';
 @Component({
   selector: 'app-modal',
   imports: [IconComponent],
-  host: { '(document:keydown.escape)': 'onEscape()' },
+  host: { '(document:keydown.escape)': 'onEscape()', '(document:keydown)': 'onKeydown($event)' },
   template: `
     @if (open()) {
       <div class="modal-backdrop" (click)="close()">
@@ -20,6 +20,7 @@ import { IconComponent } from './icon.component';
           role="dialog"
           aria-modal="true"
           [attr.aria-label]="title()"
+          tabindex="-1"
           (click)="$event.stopPropagation()"
         >
           <div
@@ -53,12 +54,54 @@ export class ModalComponent {
   readonly dragY = signal(0);
   readonly dragging = signal(false);
   private dragStartY: number | null = null;
+  private previousFocus: HTMLElement | null = null;
 
   constructor() {
     // Блокируем прокрутку страницы, пока модалка открыта.
     effect(() => {
-      document.body.classList.toggle('modal-open', this.open());
+      const isOpen = this.open();
+      document.body.classList.toggle('modal-open', isOpen);
+      if (isOpen) {
+        this.previousFocus = document.activeElement as HTMLElement | null;
+        setTimeout(() => this.dialog()?.focus());
+      } else {
+        this.previousFocus?.focus?.();
+        this.previousFocus = null;
+      }
     });
+  }
+
+  private dialog(): HTMLElement | null {
+    return document.querySelector<HTMLElement>('.modal-dialog');
+  }
+
+  /** Не выпускаем фокус за пределы модалки по Tab. */
+  onKeydown(event: KeyboardEvent): void {
+    if (event.key !== 'Tab' || !this.open()) {
+      return;
+    }
+    const dialog = this.dialog();
+    if (!dialog) {
+      return;
+    }
+    const focusable = dialog.querySelectorAll<HTMLElement>(
+      'a[href], button:not([disabled]), textarea:not([disabled]), input:not([disabled]), select:not([disabled]), [tabindex]:not([tabindex="-1"])',
+    );
+    if (!focusable.length) {
+      event.preventDefault();
+      dialog.focus();
+      return;
+    }
+    const first = focusable[0];
+    const last = focusable[focusable.length - 1];
+    const active = document.activeElement;
+    if (event.shiftKey && (active === first || active === dialog)) {
+      event.preventDefault();
+      last.focus();
+    } else if (!event.shiftKey && active === last) {
+      event.preventDefault();
+      first.focus();
+    }
   }
 
   close(): void {

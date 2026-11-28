@@ -11,6 +11,23 @@ function expense(amount: number, categoryId: string, date = '2026-11-10', applie
   return { id: `t${Math.random()}`, kind: 'expense', amount, accountId: 'a1', categoryId, date, applied };
 }
 
+function expenseSub(
+  amount: number,
+  categoryId: string,
+  subcategoryId: string,
+  date = '2026-11-10',
+): Transaction {
+  return {
+    id: `t${Math.random()}`,
+    kind: 'expense',
+    amount,
+    accountId: 'a1',
+    categoryId,
+    subcategoryId,
+    date,
+  };
+}
+
 describe('buildBudgets', () => {
   it('без лимитов — пустой результат', () => {
     const result = buildBudgets({
@@ -70,6 +87,36 @@ describe('buildBudgets', () => {
     });
 
     expect(result.lines[0].spent).toBe(2_000);
+  });
+
+  it('считает бюджет подкатегории с вложенными', () => {
+    const house: Category = {
+      id: 'house',
+      name: 'Дом',
+      kind: 'expense',
+      sortOrder: 0,
+      subcategories: [
+        {
+          id: 'repair',
+          name: 'Ремонт',
+          budget: 10_000,
+          children: [{ id: 'paint', name: 'Краска' }],
+        },
+      ],
+    };
+    const result = buildBudgets({
+      categories: [house],
+      transactions: [
+        expenseSub(2_000, 'house', 'repair'),
+        expenseSub(3_000, 'house', 'paint'),
+        expenseSub(9_000, 'house', 'other'),
+      ],
+      month: MONTH,
+    });
+
+    expect(result.lines.length).toBe(1);
+    expect(result.lines[0].title).toBe('Дом / Ремонт');
+    expect(result.lines[0].spent).toBe(5_000);
   });
 
   it('сортирует по заполненности и считает общий прогресс', () => {

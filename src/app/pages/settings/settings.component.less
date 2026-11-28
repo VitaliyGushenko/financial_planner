@@ -243,6 +243,14 @@
   }
 }
 
+.sub-budget {
+  display: inline-block;
+  margin-left: 6px;
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--muted);
+}
+
 .sub-actions {
   display: flex;
   align-items: center;
@@ -259,6 +267,11 @@
   padding: 4px 6px;
   border-radius: 8px;
   cursor: pointer;
+  min-width: 36px;
+  min-height: 36px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
 
   &:hover {
     background: var(--border-soft);
@@ -283,6 +296,29 @@
     min-width: 0;
     padding: 6px 10px;
     font-size: 13px;
+  }
+
+  select {
+    flex: 1 1 160px;
+    min-width: 0;
+    padding: 6px 10px;
+    font-size: 13px;
+  }
+}
+
+.sub-editor-label {
+  font-size: 12px;
+  color: var(--muted);
+}
+
+@media (max-width: 520px) {
+  .sub-row {
+    flex-wrap: wrap;
+  }
+
+  .sub-actions {
+    width: 100%;
+    justify-content: flex-end;
   }
 }
 

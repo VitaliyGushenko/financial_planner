@@ -24,6 +24,7 @@ object BankParser {
     private val cardRegex = Regex("""KARTA\s+#(\d{4})""")
     private val balanceRegex = Regex("""OSTATOK\s+([0-9]+[.,][0-9]{2})""")
     private val expenseRegex = Regex("""(OPLATA|NALICHNYE|SPISANIE)\s+([0-9]+[.,][0-9]{1,2})\s+BYN""")
+    private val reversalRegex = Regex("""OTMENA\s+OPLATA\s+([0-9]+[.,][0-9]{1,2})\s+BYN""")
     private val incomeRegex = Regex("""ZACHISLENIE.*?SUMMA\s+([0-9]+[.,][0-9]{1,2})\s+BYN""")
     private val incomeCardRegex = Regex("""ZACHISLENIE.*?KARTA\s+#(\d{4})""")
 
@@ -59,6 +60,21 @@ object BankParser {
             "${year}-${month}-${day}T${hour}:${minute}:${second}Z"
         }
 
+        // Отмена оплаты — это возврат денег, а не расход.
+        val reversal = reversalRegex.find(text)
+        if (reversal != null) {
+            val amount = reversal.groupValues[1].replace(',', '.').toDoubleOrNull() ?: return null
+            return Parsed(
+                kind = "income",
+                amount = amount,
+                cardMask = card,
+                merchant = merchantAfterDate(text, dateMatch),
+                dateKey = dateKey,
+                timeIso = timeIso,
+                balance = balance,
+            )
+        }
+
         val income = incomeRegex.find(text)
         if (income != null) {
             val amount = income.groupValues[1].replace(',', '.').toDoubleOrNull() ?: return null
@@ -76,23 +92,26 @@ object BankParser {
 
         val expense = expenseRegex.find(text) ?: return null
         val amount = expense.groupValues[2].replace(',', '.').toDoubleOrNull() ?: return null
-        val merchant = if (dateMatch != null) {
-            text.substring(dateMatch.range.last + 1)
-                .substringBefore(" OSTATOK")
-                .substringBefore('>')
-                .trim()
-                .ifBlank { null }
-        } else {
-            null
-        }
         return Parsed(
             kind = "expense",
             amount = amount,
             cardMask = card,
-            merchant = merchant,
+            merchant = merchantAfterDate(text, dateMatch),
             dateKey = dateKey,
             timeIso = timeIso,
             balance = balance,
         )
+    }
+
+    /** Текст после даты до остатка — обычно мерчант. */
+    private fun merchantAfterDate(text: String, dateMatch: MatchResult?): String? {
+        if (dateMatch == null) {
+            return null
+        }
+        return text.substring(dateMatch.range.last + 1)
+            .substringBefore(" OSTATOK")
+            .substringBefore('>')
+            .trim()
+            .ifBlank { null }
     }
 }

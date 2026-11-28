@@ -10,6 +10,7 @@ import { CategoriesService } from '../../core/categories.service';
 import { CurrencyService } from '../../core/currency.service';
 import { PendingService } from '../../core/pending.service';
 import { PendingItem } from '../../core/pending';
+import { detectRecurring, RecurringSuggestion } from '../../core/recurring-detect';
 import { RecurringService, RecurringDraft, describeFrequency } from '../../core/recurring.service';
 import { TransactionsService } from '../../core/transactions.service';
 import { ModalComponent } from '../../ui/modal.component';
@@ -22,6 +23,18 @@ import { Category, CustomUnit, Frequency, OperationKind, RecurringRule, Transact
 import { flattenSubcategories, subcategoryLabel, FlatSubcategory } from '../../core/category-tree';
 import { DayKey, formatDayKeyRelative, formatDayKeyShort, todayKey } from '../../core/day-key';
 import { IconName } from '../../ui/icon.component';
+
+interface FilterPreset {
+  id: string;
+  name: string;
+  query: string;
+  kind: 'all' | OperationKind;
+  accountId: string;
+  month: string;
+  uncategorized: boolean;
+}
+
+const PRESETS_KEY = 'financial-planner.filter-presets.v1';
 
 /**
  * Объединённая страница операций: разовые операции и правила повторения.
@@ -52,11 +65,17 @@ export class OperationsComponent {
       const openNew = params.get('new') === '1';
       const focusSearch = params.get('focus') === 'search';
       const showUncategorized = params.get('uncategorized') === '1';
+      const presetKind = params.get('kind');
       if (!openNew && !focusSearch && !showUncategorized) {
         return;
       }
       if (openNew) {
         this.openForm();
+        if (presetKind === 'expense' || presetKind === 'income') {
+          this.form.kind = presetKind;
+          this.form.categoryId = '';
+          this.form.subcategoryId = '';
+        }
       }
       if (showUncategorized) {
         this.uncategorizedOnly.set(true);
@@ -96,6 +115,16 @@ export class OperationsComponent {
   readonly transactions = this.transactionsService.real;
   readonly rules = this.recurringService.rules;
 
+  /** Кандидаты в регулярные платежи по истории. */
+  readonly recurringSuggestions = computed(() => {
+    const existing = new Set(this.rules().map((rule) => rule.title.trim().toLowerCase()));
+    return detectRecurring(
+      this.transactions(),
+      this.categoriesService.categories(),
+      this.todayMarker,
+    ).filter((item) => !existing.has(item.title.trim().toLowerCase()));
+  });
+
   /** Активный таб страницы: журнал операций или правила повторения. */
   readonly tab = signal<'journal' | 'recurring'>('journal');
 
@@ -108,6 +137,8 @@ export class OperationsComponent {
   readonly filtersOpen = signal(false);
   /** Показывать только операции без категории (разметка после пушей банка). */
   readonly uncategorizedOnly = signal(false);
+  /** Сохранённые наборы фильтров (в этом браузере). */
+  readonly filterPresets = signal<FilterPreset[]>(this.loadPresets());
   /** Идёт применение правил к неразмеченным операциям. */
   readonly applyingRules = signal(false);
   /** Выбранные в журнале, но ещё не сохранённые категории. */
@@ -196,6 +227,100 @@ export class OperationsComponent {
     this.accountFilter.set('all');
     this.monthFilter.set('all');
     this.uncategorizedOnly.set(false);
+  }
+
+  // ----- Сохранённые фильтры -----
+
+  private loadPresets(): FilterPreset[] {
+    if (typeof localStorage === 'undefined') {
+      return [];
+    }
+    try {
+      const raw = localStorage.getItem(PRESETS_KEY);
+      if (!raw) {
+        return [];
+      }
+      const list = JSON.parse(raw) as FilterPreset[];
+      return Array.isArray(list) ? list : [];
+    } catch {
+      return [];
+    }
+  }
+
+  private persistPresets(list: FilterPreset[]): void {
+    try {
+      localStorage.setItem(PRESETS_KEY, JSON.stringify(list));
+    } catch {
+      // Не поместилось — не критично.
+    }
+  }
+
+  savePreset(): void {
+    if (!this.hasFilters()) {
+      this.toast.show('Сначала выберите фильтры');
+      return;
+    }
+    const name = prompt('Название фильтра', this.defaultPresetName());
+    if (!name?.trim()) {
+      return;
+    }
+    const preset: FilterPreset = {
+      id: `${Date.now()}`,
+      name: name.trim(),
+      query: this.query(),
+      kind: this.kindFilter(),
+      accountId: this.accountFilter(),
+      month: this.monthFilter(),
+      uncategorized: this.uncategorizedOnly(),
+    };
+    const next = [...this.filterPresets(), preset].slice(-8);
+    this.filterPresets.set(next);
+    this.persistPresets(next);
+    this.toast.show('Фильтр сохранён');
+  }
+
+  defaultPresetName(): string {
+    const parts: string[] = [];
+    if (this.kindFilter() !== 'all') {
+      parts.push(this.kindLabels[this.kindFilter() as OperationKind]);
+    }
+    if (this.uncategorizedOnly()) {
+      parts.push('без категории');
+    }
+    if (this.monthFilter() !== 'all') {
+      parts.push(this.monthLabel(this.monthFilter()));
+    }
+    if (this.accountFilter() !== 'all') {
+      parts.push(this.accountName(this.accountFilter()));
+    }
+    if (this.query().trim()) {
+      parts.push(this.query().trim());
+    }
+    return parts.slice(0, 3).join(' · ') || 'Мой фильтр';
+  }
+
+  applyPreset(preset: FilterPreset): void {
+    this.query.set(preset.query);
+    this.kindFilter.set(preset.kind);
+    this.accountFilter.set(preset.accountId);
+    this.monthFilter.set(preset.month);
+    this.uncategorizedOnly.set(preset.uncategorized);
+  }
+
+  removePreset(id: string): void {
+    const next = this.filterPresets().filter((preset) => preset.id !== id);
+    this.filterPresets.set(next);
+    this.persistPresets(next);
+  }
+
+  presetActive(preset: FilterPreset): boolean {
+    return (
+      preset.query === this.query() &&
+      preset.kind === this.kindFilter() &&
+      preset.accountId === this.accountFilter() &&
+      preset.month === this.monthFilter() &&
+      preset.uncategorized === this.uncategorizedOnly()
+    );
   }
 
   /** Показываем журнал порциями по дням, чтобы длинная история не тормозила. */
@@ -776,6 +901,22 @@ export class OperationsComponent {
     navigator.vibrate?.(12);
     const suffix = similar.length ? ` · размечено похожих: ${similar.length}` : '';
     this.toast.show(`Правило: «${keyword}» → ${this.categoryLabelOf(categoryId)}${suffix}`);
+  }
+
+  async addRecurringSuggestion(item: RecurringSuggestion): Promise<void> {
+    await this.recurringService.create({
+      title: item.title,
+      kind: item.kind,
+      amount: item.amount,
+      accountId: item.accountId,
+      categoryId: item.categoryId,
+      subcategoryId: item.subcategoryId,
+      frequency: 'monthly',
+      every: 1,
+      startDate: item.nextDate,
+      endDate: null,
+    });
+    this.toast.show(`Регулярный платёж: ${item.title}`);
   }
 
   frequencyOf(rule: RecurringRule): string {

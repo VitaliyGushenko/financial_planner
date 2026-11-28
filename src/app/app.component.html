@@ -21,25 +21,25 @@
         Планировщик
       </span>
       <nav class="app-nav">
-        <a routerLink="/" routerLinkActive="active" [routerLinkActiveOptions]="{ exact: true }">Дашборд</a>
-        <a routerLink="/operations" routerLinkActive="active">Операции</a>
-        <a routerLink="/calendar" routerLinkActive="active">Календарь</a>
-        <a routerLink="/stats" routerLinkActive="active">Статистика</a>
-        <a routerLink="/planner" routerLinkActive="active">Покупки</a>
+        <a routerLink="/" routerLinkActive="active" ariaCurrentWhenActive="page" [routerLinkActiveOptions]="{ exact: true }">Дашборд</a>
+        <a routerLink="/operations" routerLinkActive="active" ariaCurrentWhenActive="page">Операции</a>
+        <a routerLink="/calendar" routerLinkActive="active" ariaCurrentWhenActive="page">Календарь</a>
+        <a routerLink="/stats" routerLinkActive="active" ariaCurrentWhenActive="page">Статистика</a>
+        <a routerLink="/planner" routerLinkActive="active" ariaCurrentWhenActive="page">Покупки</a>
       </nav>
       <div class="app-user">
         <span class="app-username total-chip" [title]="'Всего на счетах: ' + total()">{{ total() }}</span>
         <div class="user-menu">
-          <button type="button" class="user-btn" (click)="toggleMenu(); $event.stopPropagation()" [attr.aria-expanded]="menuOpen()">
+          <button type="button" class="user-btn" (click)="toggleMenu(); $event.stopPropagation()" [attr.aria-expanded]="menuOpen()" aria-haspopup="menu">
             <span class="avatar" aria-hidden="true">{{ initials() }}</span>
             <span class="name">{{ displayName() }}</span>
             <span class="caret">▾</span>
           </button>
           @if (menuOpen()) {
-            <div class="user-dropdown" (click)="$event.stopPropagation()">
-              <a routerLink="/settings" (click)="closeMenu()">Настройки</a>
+            <div class="user-dropdown" role="menu" (click)="$event.stopPropagation()">
+              <a routerLink="/settings" role="menuitem" (click)="closeMenu()">Настройки</a>
               <div class="sep"></div>
-              <button type="button" class="logout" (click)="logout()">Выйти</button>
+              <button type="button" class="logout" role="menuitem" (click)="logout()">Выйти</button>
             </div>
           }
         </div>
@@ -62,23 +62,23 @@
       [style.transform]="'translateX(' + tabIndex() * 100 + '%)'"
       [style.opacity]="tabIndex() < 0 ? 0 : 1"
     ></span>
-    <a routerLink="/" routerLinkActive="active" [routerLinkActiveOptions]="{ exact: true }">
+    <a routerLink="/" routerLinkActive="active" ariaCurrentWhenActive="page" [routerLinkActiveOptions]="{ exact: true }">
       <app-icon class="tab-icon" name="home" />
       <span class="tab-label">Дашборд</span>
     </a>
-    <a routerLink="/operations" routerLinkActive="active">
+    <a routerLink="/operations" routerLinkActive="active" ariaCurrentWhenActive="page">
       <app-icon class="tab-icon" name="receipt" />
       <span class="tab-label">Операции</span>
     </a>
-    <a routerLink="/calendar" routerLinkActive="active">
+    <a routerLink="/calendar" routerLinkActive="active" ariaCurrentWhenActive="page">
       <app-icon class="tab-icon" name="calendar" />
       <span class="tab-label">Календарь</span>
     </a>
-    <a routerLink="/stats" routerLinkActive="active">
+    <a routerLink="/stats" routerLinkActive="active" ariaCurrentWhenActive="page">
       <app-icon class="tab-icon" name="chart" />
       <span class="tab-label">Статистика</span>
     </a>
-    <a routerLink="/planner" routerLinkActive="active">
+    <a routerLink="/planner" routerLinkActive="active" ariaCurrentWhenActive="page">
       <app-icon class="tab-icon" name="bag" />
       <span class="tab-label">Покупки</span>
     </a>

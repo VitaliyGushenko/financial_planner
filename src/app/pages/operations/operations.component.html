@@ -238,6 +238,32 @@
       </div>
     </div>
 
+    @if (filterPresets().length || hasFilters()) {
+      <div class="preset-row">
+        @if (filterPresets().length) {
+          <span class="preset-label">Мои фильтры</span>
+        }
+        @for (preset of filterPresets(); track preset.id) {
+          <span class="preset-chip" [class.active]="presetActive(preset)">
+            <button type="button" class="preset-apply" (click)="applyPreset(preset)">
+              {{ preset.name }}
+            </button>
+            <button
+              type="button"
+              class="preset-x"
+              (click)="removePreset(preset.id)"
+              aria-label="Удалить фильтр"
+            >
+              ×
+            </button>
+          </span>
+        }
+        @if (hasFilters()) {
+          <button type="button" class="preset-save" (click)="savePreset()">+ Сохранить</button>
+        }
+      </div>
+    }
+
     @if (uncategorizedOnly()) {
       <div class="uncat-toolbar">
         <span class="muted small">
@@ -403,6 +429,29 @@
 } @else {
   <div class="card">
     <h2 class="card-title">Повторяющиеся</h2>
+
+    @if (recurringSuggestions().length) {
+      <div class="suggestions">
+        <div class="mask-title">Похоже на регулярные</div>
+        <div class="rows">
+          @for (item of recurringSuggestions(); track item.id) {
+            <div class="row">
+              <div class="row-main">
+                <div class="row-title">{{ item.title }}</div>
+                <div class="row-sub">
+                  {{ curr.format(item.amount) }} · повторений: {{ item.occurrences }} · примерно
+                  {{ item.day }} числа · далее {{ formatDay(item.nextDate) }}
+                </div>
+              </div>
+              <button class="btn btn-sm" type="button" (click)="addRecurringSuggestion(item)">
+                Создать
+              </button>
+            </div>
+          }
+        </div>
+      </div>
+    }
+
     @if (rules().length) {
       <div class="rows">
         @for (rule of rules(); track rule.id) {

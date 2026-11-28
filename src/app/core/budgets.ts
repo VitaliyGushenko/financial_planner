@@ -1,4 +1,5 @@
 import { DayKey } from './day-key';
+import { flattenSubcategories } from './category-tree';
 import { round2 } from './money';
 import { Category, Transaction } from './models';
 
@@ -39,9 +40,19 @@ export interface BudgetsInput {
   month: DayKey;
 }
 
+interface BudgetTarget {
+  key: string;
+  categoryId: string;
+  title: string;
+  budget: number;
+  /** Для подкатегории — она сама и все потомки. */
+  subIds?: Set<string>;
+}
+
 export function buildBudgets(input: BudgetsInput): BudgetsResult {
   const prefix = input.month.slice(0, 7);
   const spentByCategory = new Map<string, number>();
+  const spentBySub = new Map<string, number>();
 
   for (const tx of input.transactions) {
     if (tx.kind !== 'expense' || tx.applied === false || !tx.categoryId) {
@@ -51,23 +62,53 @@ export function buildBudgets(input: BudgetsInput): BudgetsResult {
       continue;
     }
     spentByCategory.set(tx.categoryId, (spentByCategory.get(tx.categoryId) ?? 0) + tx.amount);
+    if (tx.subcategoryId) {
+      spentBySub.set(tx.subcategoryId, (spentBySub.get(tx.subcategoryId) ?? 0) + tx.amount);
+    }
+  }
+
+  const targets: BudgetTarget[] = [];
+  for (const category of input.categories) {
+    if ((category.budget ?? 0) > 0) {
+      targets.push({
+        key: category.id,
+        categoryId: category.id,
+        title: category.name,
+        budget: category.budget ?? 0,
+      });
+    }
+    for (const flat of flattenSubcategories(category.subcategories)) {
+      const budget = flat.node.budget ?? 0;
+      if (budget <= 0) {
+        continue;
+      }
+      const subIds = new Set<string>([flat.node.id]);
+      for (const child of flattenSubcategories(flat.node.children)) {
+        subIds.add(child.node.id);
+      }
+      targets.push({
+        key: `${category.id}/${flat.node.id}`,
+        categoryId: category.id,
+        title: `${category.name} / ${flat.fullPath}`,
+        budget,
+        subIds,
+      });
+    }
   }
 
   const lines: BudgetLine[] = [];
-  for (const category of input.categories) {
-    const budget = category.budget ?? 0;
-    if (budget <= 0) {
-      continue;
-    }
-    const spent = round2(spentByCategory.get(category.id) ?? 0);
+  for (const target of targets) {
+    const spent = target.subIds
+      ? round2([...target.subIds].reduce((sum, id) => sum + (spentBySub.get(id) ?? 0), 0))
+      : round2(spentByCategory.get(target.categoryId) ?? 0);
     lines.push({
-      categoryId: category.id,
-      title: category.name,
-      budget: round2(budget),
+      categoryId: target.categoryId,
+      title: target.title,
+      budget: round2(target.budget),
       spent,
-      remaining: round2(budget - spent),
-      progress: spent / budget,
-      over: spent > budget,
+      remaining: round2(target.budget - spent),
+      progress: spent / target.budget,
+      over: spent > target.budget,
     });
   }
 

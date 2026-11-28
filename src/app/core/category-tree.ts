@@ -183,6 +183,34 @@ export function moveSubcategoryNode(
   return addSubcategoryNode(without, newParentId, node.node);
 }
 
+/** Изменить один узел дерева (иммутабельно). */
+export function updateSubcategoryNode(
+  subs: readonly Subcategory[] | undefined,
+  id: string,
+  update: (node: Subcategory) => Subcategory,
+): Subcategory[] {
+  const walk = (items: readonly Subcategory[]): { items: Subcategory[]; changed: boolean } => {
+    let changed = false;
+    const out = items.map((item) => {
+      let next = item;
+      if (item.id === id) {
+        next = update(item);
+        changed = true;
+      }
+      if (item.children?.length) {
+        const nested = walk(item.children);
+        if (nested.changed) {
+          next = { ...next, children: nested.items };
+          changed = true;
+        }
+      }
+      return next;
+    });
+    return { items: changed ? out : (items as Subcategory[]), changed };
+  };
+  return walk(subs ?? []).items;
+}
+
 /** Найти узел по пути «Одежда / Обувь» (регистр не важен). */
 export function findSubcategoryByPath(
   subs: readonly Subcategory[] | undefined,

@@ -10,7 +10,7 @@ import { ToastService } from './toast.service';
   template: `
     <div class="toast-stack" aria-live="polite" aria-atomic="false">
       @for (toast of toasts(); track toast.id) {
-        <div class="toast">
+        <div class="toast" role="status">
           <span class="toast-text">{{ toast.message }}</span>
           @if (toast.action) {
             <button type="button" class="toast-action" (click)="service.runAction(toast.id)">

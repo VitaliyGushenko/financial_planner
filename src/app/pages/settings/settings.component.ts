@@ -448,6 +448,10 @@ export class SettingsComponent {
   readonly subDraft = signal('');
   readonly subAdding = signal<{ categoryId: string; parentId: string | null } | null>(null);
   readonly subEditing = signal<{ categoryId: string; subId: string } | null>(null);
+  readonly subBudgetEditing = signal<{ categoryId: string; subId: string } | null>(null);
+  readonly subBudgetDraft = signal('');
+  readonly subMoving = signal<{ categoryId: string; subId: string } | null>(null);
+  readonly subMoveTarget = signal('');
   readonly editingCategoryId = signal<string | null>(null);
   readonly categoryDraft = signal('');
 
@@ -493,6 +497,8 @@ export class SettingsComponent {
 
   startAddSub(category: Category, parentId: string | null): void {
     this.subEditing.set(null);
+    this.cancelSubBudget();
+    this.cancelMoveSub();
     this.subAdding.set({ categoryId: category.id, parentId });
     this.subDraft.set('');
   }
@@ -503,6 +509,8 @@ export class SettingsComponent {
       return;
     }
     this.subAdding.set(null);
+    this.cancelSubBudget();
+    this.cancelMoveSub();
     this.subEditing.set({ categoryId: category.id, subId });
     this.subDraft.set(node.node.name);
   }
@@ -555,6 +563,96 @@ export class SettingsComponent {
     if (confirm(question)) {
       await this.categoriesService.removeSubcategory(category.id, subId);
     }
+  }
+
+  startEditSubBudget(category: Category, subId: string): void {
+    const node = findSubcategory(category.subcategories, subId);
+    if (!node) {
+      return;
+    }
+    this.cancelSubEdit();
+    this.cancelMoveSub();
+    this.subBudgetEditing.set({ categoryId: category.id, subId });
+    this.subBudgetDraft.set(node.node.budget ? String(node.node.budget) : '');
+  }
+
+  cancelSubBudget(): void {
+    this.subBudgetEditing.set(null);
+    this.subBudgetDraft.set('');
+  }
+
+  async saveSubBudget(category: Category): Promise<void> {
+    const editing = this.subBudgetEditing();
+    if (!editing || editing.categoryId !== category.id) {
+      return;
+    }
+    const value = Number(this.subBudgetDraft().replace(',', '.'));
+    const budget = Number.isFinite(value) && value > 0 ? value : null;
+    await this.categoriesService.setSubcategoryBudget(category.id, editing.subId, budget);
+    this.cancelSubBudget();
+    this.toast.show(budget ? 'Лимит сохранён' : 'Лимит убран');
+  }
+
+  startMoveSub(category: Category, subId: string): void {
+    const node = findSubcategory(category.subcategories, subId);
+    if (!node) {
+      return;
+    }
+    this.cancelSubEdit();
+    this.cancelSubBudget();
+    this.subMoving.set({ categoryId: category.id, subId });
+    this.subMoveTarget.set(node.pathIds[node.pathIds.length - 2] ?? '');
+  }
+
+  cancelMoveSub(): void {
+    this.subMoving.set(null);
+    this.subMoveTarget.set('');
+  }
+
+  /** Куда можно переместить узел: всё, кроме него самого и его потомков. */
+  moveOptions(category: Category, subId: string): Array<{ id: string; label: string }> {
+    const options = [{ id: '', label: '— верхний уровень —' }];
+    for (const flat of flattenSubcategories(category.subcategories)) {
+      if (flat.pathIds.includes(subId)) {
+        continue;
+      }
+      options.push({ id: flat.node.id, label: flat.fullPath });
+    }
+    return options;
+  }
+
+  async saveMoveSub(category: Category): Promise<void> {
+    const moving = this.subMoving();
+    if (!moving || moving.categoryId !== category.id) {
+      return;
+    }
+    await this.categoriesService.moveSubcategory(
+      category.id,
+      moving.subId,
+      this.subMoveTarget() || null,
+    );
+    this.cancelMoveSub();
+    this.toast.show('Подкатегория перемещена');
+  }
+
+  subNodeIndent(category: Category, subId: string): number {
+    const node = findSubcategory(category.subcategories, subId);
+    return 12 + (node?.depth ?? 0) * 18;
+  }
+
+  subBudgetIndent(category: Category): number {
+    const editing = this.subBudgetEditing();
+    return editing ? this.subNodeIndent(category, editing.subId) : 12;
+  }
+
+  subMoveIndent(category: Category): number {
+    const moving = this.subMoving();
+    return moving ? this.subNodeIndent(category, moving.subId) : 12;
+  }
+
+  subMoveOptions(category: Category): Array<{ id: string; label: string }> {
+    const moving = this.subMoving();
+    return moving ? this.moveOptions(category, moving.subId) : [];
   }
 
   // ----- Автозаполнение из банка -----

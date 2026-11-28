@@ -2,7 +2,7 @@ import { Injectable, computed } from '@angular/core';
 import { addDoc, deleteDoc, deleteField, updateDoc } from '@angular/fire/firestore';
 
 import { Category, CategoryKind, Subcategory } from './models';
-import { addSubcategoryNode, moveSubcategoryNode, removeSubcategoryNode, renameSubcategoryNode } from './category-tree';
+import { addSubcategoryNode, moveSubcategoryNode, removeSubcategoryNode, renameSubcategoryNode, updateSubcategoryNode } from './category-tree';
 import { round2 } from './money';
 import { UserCollectionService } from './user-collection.service';
 
@@ -127,6 +127,31 @@ export class CategoriesService extends UserCollectionService<Category> {
       return;
     }
     const subcategories = moveSubcategoryNode(category.subcategories, subId, newParentId);
+    await updateDoc(this.docRef(categoryId), { subcategories });
+  }
+
+  /** Месячный лимит на подкатегории; null — убрать бюджет. */
+  async setSubcategoryBudget(
+    categoryId: string,
+    subId: string,
+    budget: number | null,
+  ): Promise<void> {
+    if (!this.isReady) {
+      return;
+    }
+    const category = this.byId().get(categoryId);
+    if (!category) {
+      return;
+    }
+    const subcategories = updateSubcategoryNode(category.subcategories, subId, (node) => {
+      const next = { ...node };
+      if (budget && budget > 0) {
+        next.budget = round2(budget);
+      } else {
+        delete next.budget;
+      }
+      return next;
+    });
     await updateDoc(this.docRef(categoryId), { subcategories });
   }
 }

@@ -298,6 +298,74 @@
   flex-wrap: wrap;
 }
 
+.preset-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+  margin-bottom: 10px;
+}
+
+.preset-label {
+  font-size: 12px;
+  color: var(--muted);
+}
+
+.preset-chip {
+  display: inline-flex;
+  align-items: center;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: var(--surface);
+  overflow: hidden;
+
+  &.active {
+    border-color: var(--primary);
+    background: var(--primary-soft);
+  }
+}
+
+.preset-apply {
+  border: none;
+  background: transparent;
+  padding: 5px 4px 5px 10px;
+  font-size: 12px;
+  color: var(--text);
+  cursor: pointer;
+}
+
+.preset-x {
+  border: none;
+  background: transparent;
+  padding: 5px 8px 5px 6px;
+  color: var(--muted);
+  cursor: pointer;
+
+  &:hover {
+    color: var(--expense);
+  }
+}
+
+.preset-save {
+  border: 1px dashed var(--border);
+  background: transparent;
+  color: var(--primary);
+  border-radius: 999px;
+  padding: 5px 10px;
+  font-size: 12px;
+  cursor: pointer;
+}
+
+.suggestions {
+  margin-bottom: 14px;
+  padding-bottom: 10px;
+  border-bottom: 1px dashed var(--border);
+}
+
+.suggestions .mask-title {
+  margin-bottom: 6px;
+}
+
 .badge-bank {
   display: inline-block;
   margin-left: 6px;

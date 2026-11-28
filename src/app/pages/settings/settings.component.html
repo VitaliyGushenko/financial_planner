@@ -408,7 +408,7 @@
                 } @else {
                   <div class="cat-title-row">
                     <div class="row-title">{{ cat.name }}</div>
-                    <button class="icon-btn" type="button" (click)="startEditCategory(cat)" title="Переименовать категорию">✎</button>
+                    <button class="icon-btn" type="button" (click)="startEditCategory(cat)" title="Переименовать категорию" aria-label="Переименовать категорию">✎</button>
                   </div>
                 }
                 @if (section.kind === 'expense') {
@@ -465,11 +465,20 @@
               <div class="sub-tree">
                 @for (node of flatSubs(cat); track node.node.id) {
                   <div class="sub-row" [style.paddingLeft.px]="12 + node.depth * 18">
-                    <span class="sub-name" [class.sub-root]="node.depth === 0">{{ node.node.name }}</span>
+                    <span class="sub-name" [class.sub-root]="node.depth === 0">
+                      {{ node.node.name }}
+                      @if (node.node.budget) {
+                        <span class="sub-budget">лимит {{ curr.format(node.node.budget) }}</span>
+                      }
+                    </span>
                     <div class="sub-actions">
-                      <button class="icon-btn" type="button" (click)="startAddSub(cat, node.node.id)" title="Добавить вложенную">+</button>
-                      <button class="icon-btn" type="button" (click)="startEditSub(cat, node.node.id)" title="Переименовать">✎</button>
-                      <button class="icon-btn danger" type="button" (click)="removeSubcategory(cat, node.node.id)" title="Удалить">×</button>
+                      @if (section.kind === 'expense') {
+                        <button class="icon-btn" type="button" (click)="startEditSubBudget(cat, node.node.id)" title="Лимит" aria-label="Задать лимит подкатегории">₽</button>
+                      }
+                      <button class="icon-btn" type="button" (click)="startMoveSub(cat, node.node.id)" title="Переместить" aria-label="Переместить подкатегорию">↕</button>
+                      <button class="icon-btn" type="button" (click)="startAddSub(cat, node.node.id)" title="Добавить вложенную" aria-label="Добавить вложенную подкатегорию">+</button>
+                      <button class="icon-btn" type="button" (click)="startEditSub(cat, node.node.id)" title="Переименовать" aria-label="Переименовать подкатегорию">✎</button>
+                      <button class="icon-btn danger" type="button" (click)="removeSubcategory(cat, node.node.id)" title="Удалить" aria-label="Удалить подкатегорию">×</button>
                     </div>
                   </div>
                 }
@@ -487,6 +496,39 @@
                 />
                 <button class="btn btn-sm" type="button" (click)="saveSub(cat)">Сохранить</button>
                 <button class="btn btn-ghost btn-sm" type="button" (click)="cancelSubEdit()">Отмена</button>
+              </div>
+            }
+
+            @if (subBudgetEditing()?.categoryId === cat.id) {
+              <div class="sub-editor" [style.paddingLeft.px]="subBudgetIndent(cat)">
+                <span class="sub-editor-label">Лимит, {{ curr.symbol() }}</span>
+                <input
+                  type="number"
+                  min="0"
+                  step="10"
+                  [value]="subBudgetDraft()"
+                  (input)="subBudgetDraft.set($any($event.target).value)"
+                  (keydown.enter)="saveSubBudget(cat)"
+                  placeholder="без лимита"
+                />
+                <button class="btn btn-sm" type="button" (click)="saveSubBudget(cat)">Сохранить</button>
+                <button class="btn btn-ghost btn-sm" type="button" (click)="cancelSubBudget()">Отмена</button>
+              </div>
+            }
+
+            @if (subMoving()?.categoryId === cat.id) {
+              <div class="sub-editor" [style.paddingLeft.px]="subMoveIndent(cat)">
+                <span class="sub-editor-label">Переместить в</span>
+                <select
+                  [value]="subMoveTarget()"
+                  (change)="subMoveTarget.set($any($event.target).value)"
+                >
+                  @for (option of subMoveOptions(cat); track option.id) {
+                    <option [value]="option.id">{{ option.label }}</option>
+                  }
+                </select>
+                <button class="btn btn-sm" type="button" (click)="saveMoveSub(cat)">Переместить</button>
+                <button class="btn btn-ghost btn-sm" type="button" (click)="cancelMoveSub()">Отмена</button>
               </div>
             }
 
