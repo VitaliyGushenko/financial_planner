@@ -342,7 +342,12 @@
                 @if (uncategorizedOnly() && tx.kind !== 'transfer') {
                   <div class="uncat-assign">
                     @if (bankMerchant(tx)) {
-                      <span class="uncat-merchant">{{ bankMerchant(tx) }}</span>
+                      <span class="uncat-merchant">
+                        {{ bankMerchant(tx) }}
+                        @if (similarCount(tx)) {
+                          <span class="uncat-similar">ещё {{ similarCount(tx) }}</span>
+                        }
+                      </span>
                     }
                     <select
                       [value]="pendingOf(tx.id).categoryId"

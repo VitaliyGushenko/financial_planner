@@ -367,6 +367,7 @@ export function parseBackupFile(text: string): BackupValidation {
       transactions: backup.transactions,
       recurring: Array.isArray(backup.recurring) ? backup.recurring : [],
       goals: Array.isArray(backup.goals) ? backup.goals : [],
+      bankRules: Array.isArray(backup.bankRules) ? backup.bankRules : undefined,
     },
     error: null,
   };

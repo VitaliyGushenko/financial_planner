@@ -1,4 +1,4 @@
-import { Account, Category, Goal, RecurringRule, Transaction } from './models';
+import { Account, BankRule, Category, Goal, RecurringRule, Transaction } from './models';
 import { subcategoryLabel } from './category-tree';
 
 /**
@@ -12,6 +12,8 @@ export interface BackupInput {
   transactions: Transaction[];
   recurring: RecurringRule[];
   goals: Goal[];
+  /** Правила банка необязательны: старые бэкапы их не содержат. */
+  bankRules?: BankRule[];
 }
 
 export interface Backup extends BackupInput {

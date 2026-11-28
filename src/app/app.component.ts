@@ -1,14 +1,20 @@
-import { Component, computed, effect, inject, signal } from '@angular/core';
+import { Component, computed, effect, inject, signal, untracked } from '@angular/core';
 import { toSignal } from '@angular/core/rxjs-interop';
 import { NavigationEnd, Router, RouterLink, RouterLinkActive, RouterOutlet } from '@angular/router';
 import { filter, map, startWith } from 'rxjs';
 
 import { AuthService } from './core/auth.service';
 import { AccountsService } from './core/accounts.service';
+import { BankRulesService } from './core/bank-rules.service';
+import { BackupService } from './core/backup.service';
+import { CategoriesService } from './core/categories.service';
 import { CurrencyService } from './core/currency.service';
+import { GoalsService } from './core/goals.service';
 import { PendingService } from './core/pending.service';
+import { RecurringService } from './core/recurring.service';
 import { RemindersService } from './core/reminders.service';
 import { ThemeService } from './core/theme.service';
+import { TransactionsService } from './core/transactions.service';
 import { NetworkService } from './core/network.service';
 import { ToastService } from './ui/toast.service';
 import { IconComponent } from './ui/icon.component';
@@ -29,6 +35,12 @@ import { UpdateBannerComponent } from './ui/update-banner.component';
 export class AppComponent {
   private readonly auth = inject(AuthService);
   private readonly accounts = inject(AccountsService);
+  private readonly categories = inject(CategoriesService);
+  private readonly transactions = inject(TransactionsService);
+  private readonly recurring = inject(RecurringService);
+  private readonly goals = inject(GoalsService);
+  private readonly bankRules = inject(BankRulesService);
+  private readonly backup = inject(BackupService);
   private readonly currency = inject(CurrencyService);
   private readonly router = inject(Router);
   private readonly pending = inject(PendingService);
@@ -82,6 +94,56 @@ export class AppComponent {
       this.reminders.setBadge(items.length);
       this.reminders.notifyPending(items);
     });
+
+    // Автобэкап раз в сутки: защищает от случайных удалений внутри приложения.
+    effect(() => {
+      if (!this.isAuthenticated()) {
+        return;
+      }
+      const transactions = this.transactions.transactions();
+      if (!transactions.length) {
+        return;
+      }
+      // Читаем остальные сигналы, чтобы бэкап был полным.
+      this.accounts.accounts();
+      this.categories.categories();
+      this.recurring.rules();
+      this.goals.goals();
+      this.bankRules.rules();
+      untracked(() => void this.runAutoBackup());
+    });
+  }
+
+  private autoBackupRunning = false;
+  private autoBackupTriedAt = 0;
+
+  private async runAutoBackup(): Promise<void> {
+    if (this.autoBackupRunning) {
+      return;
+    }
+    const day = 24 * 60 * 60 * 1000;
+    const info = this.backup.autoInfo();
+    if (info && Date.now() - new Date(info.savedAt).getTime() < day) {
+      return;
+    }
+    // Если не поместилось в localStorage — не долбим попытками каждую секунду.
+    if (Date.now() - this.autoBackupTriedAt < 60 * 60 * 1000) {
+      return;
+    }
+    this.autoBackupTriedAt = Date.now();
+    this.autoBackupRunning = true;
+    try {
+      this.backup.saveAuto({
+        accounts: this.accounts.accounts(),
+        categories: this.categories.categories(),
+        transactions: this.transactions.transactions(),
+        recurring: this.recurring.rules(),
+        goals: this.goals.goals(),
+        bankRules: this.bankRules.rules(),
+      });
+    } finally {
+      this.autoBackupRunning = false;
+    }
   }
 
   toggleMenu(): void {

@@ -5,7 +5,7 @@ import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 
 import { AccountsService } from '../../core/accounts.service';
 import { BankRulesService } from '../../core/bank-rules.service';
-import { keywordFromTransaction, planBulkCategorization } from '../../core/bank-rules';
+import { keywordFromTransaction, normalizeForMatch, planBulkCategorization } from '../../core/bank-rules';
 import { CategoriesService } from '../../core/categories.service';
 import { CurrencyService } from '../../core/currency.service';
 import { PendingService } from '../../core/pending.service';
@@ -632,6 +632,31 @@ export class OperationsComponent {
     return (tx.merchant || tx.note || '').trim();
   }
 
+  /** Ключ «похожести»: нормализованный мерчант или заметка. */
+  private merchantKey(tx: Transaction): string {
+    return normalizeForMatch(tx.merchant || tx.note || '');
+  }
+
+  /** Другие неразмеченные операции с тем же мерчантом. */
+  similarUncategorized(tx: Transaction): Transaction[] {
+    const key = this.merchantKey(tx);
+    if (!key) {
+      return [];
+    }
+    return this.transactions().filter(
+      (other) =>
+        other.id !== tx.id &&
+        other.applied !== false &&
+        other.kind === tx.kind &&
+        !other.categoryId &&
+        this.merchantKey(other) === key,
+    );
+  }
+
+  similarCount(tx: Transaction): number {
+    return this.similarUncategorized(tx).length;
+  }
+
   categoriesFor(tx: Transaction): Category[] {
     return tx.kind === 'income'
       ? this.categoriesService.incomeCategories()
@@ -685,10 +710,17 @@ export class OperationsComponent {
       return next;
     });
     navigator.vibrate?.(10);
+    const similar = this.similarUncategorized(tx).length;
     this.toast.show(`Категория: ${this.categoryLabelOf(pending.categoryId)}`, {
       action: {
-        label: 'Правило',
-        run: () => this.createRuleFor(tx, pending.categoryId, pending.subcategoryId || undefined),
+        label: similar ? `Правило + ${similar} похожих` : 'Правило',
+        run: () =>
+          this.createRuleFor(
+            tx,
+            pending.categoryId,
+            pending.subcategoryId || undefined,
+            true,
+          ),
       },
     });
   }
@@ -712,11 +744,12 @@ export class OperationsComponent {
     }
   }
 
-  /** Запомнить мерчанта как правило автокатегоризации. */
+  /** Запомнить мерчанта как правило и при желании разметить похожие операции. */
   async createRuleFor(
     tx: Transaction,
     categoryId: string,
     subcategoryId?: string,
+    applySimilar = false,
   ): Promise<void> {
     if (tx.kind === 'transfer') {
       return;
@@ -726,6 +759,7 @@ export class OperationsComponent {
       this.toast.show('У операции нет мерчанта — правило создать не из чего');
       return;
     }
+    const similar = applySimilar ? this.similarUncategorized(tx) : [];
     await this.bankRulesService.create({
       keywords: [keyword],
       kind: tx.kind,
@@ -734,8 +768,14 @@ export class OperationsComponent {
       priority: 20,
       enabled: true,
     });
+    if (similar.length) {
+      await this.transactionsService.setCategoriesBulk(
+        similar.map((item) => ({ id: item.id, categoryId, subcategoryId })),
+      );
+    }
     navigator.vibrate?.(12);
-    this.toast.show(`Правило: «${keyword}» → ${this.categoryLabelOf(categoryId)}`);
+    const suffix = similar.length ? ` · размечено похожих: ${similar.length}` : '';
+    this.toast.show(`Правило: «${keyword}» → ${this.categoryLabelOf(categoryId)}${suffix}`);
   }
 
   frequencyOf(rule: RecurringRule): string {

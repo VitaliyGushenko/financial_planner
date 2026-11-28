@@ -7,6 +7,7 @@ import { AccountsService } from '../../core/accounts.service';
 import { BankInboxService } from '../../core/bank-inbox.service';
 import { BankRulesService } from '../../core/bank-rules.service';
 import { BankSettingsService } from '../../core/bank-settings.service';
+import { latestBankMark, reconcileAccount, BankMark, Reconciliation } from '../../core/bank-balance';
 import { CategoriesService } from '../../core/categories.service';
 import { CurrencyService } from '../../core/currency.service';
 import { Account, AccountType, BankRule, Category, CategoryKind } from '../../core/models';
@@ -20,13 +21,15 @@ import { RecurringService } from '../../core/recurring.service';
 import { TransactionsService } from '../../core/transactions.service';
 import { buildBackup, downloadText, transactionsToCsv, Backup, BackupInput } from '../../core/export';
 import { ImportPlan, ParsedRow, parseBackupFile, parseTransactionsCsv, planImport } from '../../core/import';
-import { BackupService } from '../../core/backup.service';
+import { BackupService, AutoBackupInfo } from '../../core/backup.service';
 import { ToastService } from '../../ui/toast.service';
 import { todayKey } from '../../core/day-key';
 import { validatePasswordChange } from '../../core/password';
 import { firebaseErrorMessage } from '../../core/firebase-error-map';
 import { IconComponent, IconName } from '../../ui/icon.component';
 import { CATEGORY_ICONS, categoryIconName } from '../../ui/category-icons';
+
+type SettingsSection = 'profile' | 'accounts' | 'categories' | 'bank' | 'data' | 'look';
 
 @Component({
   selector: 'app-settings',
@@ -54,6 +57,127 @@ export class SettingsComponent {
   readonly total = computed(() => this.accountsService.total());
   readonly incomeCategories = this.categoriesService.incomeCategories;
   readonly expenseCategories = this.categoriesService.expenseCategories;
+
+  // ----- Разделы настроек -----
+
+  readonly settingsTabs: ReadonlyArray<{ id: SettingsSection; label: string }> = [
+    { id: 'profile', label: 'Профиль' },
+    { id: 'accounts', label: 'Счета' },
+    { id: 'categories', label: 'Категории' },
+    { id: 'bank', label: 'Банк' },
+    { id: 'data', label: 'Данные' },
+    { id: 'look', label: 'Оформление' },
+  ];
+  readonly settingsSection = signal<SettingsSection>('accounts');
+
+  // ----- Сверка с банком и автобэкап -----
+
+  readonly autoBackupInfo = signal<AutoBackupInfo | null>(this.backupService.autoInfo());
+
+  readonly bankChecks = computed(() => {
+    const transactions = this.transactionsService.transactions();
+    return this.accounts().map((account) => {
+      const mark = latestBankMark(transactions, account.id);
+      const result = mark
+        ? reconcileAccount(account.balance, mark, transactions, account.id)
+        : null;
+      return { account, mark, result };
+    });
+  });
+
+  formatBankMark(at: Date): string {
+    return new Intl.DateTimeFormat('ru-RU', {
+      day: '2-digit',
+      month: '2-digit',
+      hour: '2-digit',
+      minute: '2-digit',
+    }).format(at);
+  }
+
+  formatSavedAt(iso: string): string {
+    return new Intl.DateTimeFormat('ru-RU', {
+      day: '2-digit',
+      month: '2-digit',
+      hour: '2-digit',
+      minute: '2-digit',
+    }).format(new Date(iso));
+  }
+
+  async adjustToBank(account: Account, result: Reconciliation): Promise<void> {
+    if (Math.abs(result.drift) < 0.01) {
+      return;
+    }
+    const kind = result.drift > 0 ? 'expense' : 'income';
+    const amount = Math.abs(result.drift);
+    const prompt =
+      result.drift > 0
+        ? `В приложении на ${this.money(amount)} больше, чем должно быть. Создать расход «Сверка баланса»?`
+        : `В приложении на ${this.money(amount)} меньше, чем должно быть. Создать доход «Сверка баланса»?`;
+    if (!confirm(prompt)) {
+      return;
+    }
+    const category =
+      kind === 'expense'
+        ? this.expenseCategories().find((item) => item.name === 'Прочее')
+        : undefined;
+    await this.transactionsService.add({
+      kind,
+      amount,
+      accountId: account.id,
+      categoryId: category?.id,
+      date: todayKey(),
+      note: 'Сверка баланса',
+    });
+    this.toast.show(`Баланс «${account.name}» выровнен`);
+  }
+
+  private backupSnapshot(): BackupInput {
+    return {
+      accounts: this.accountsService.accounts(),
+      categories: this.categoriesService.categories(),
+      transactions: this.transactionsService.transactions(),
+      recurring: this.recurringService.rules(),
+      goals: this.goalsService.goals(),
+      bankRules: this.bankRulesService.rules(),
+    };
+  }
+
+  createAutoBackupNow(): void {
+    const info = this.backupService.saveAuto(this.backupSnapshot());
+    this.autoBackupInfo.set(info);
+    this.toast.show(
+      info ? 'Автобэкап создан' : 'Не удалось сохранить автобэкап: слишком много данных',
+    );
+  }
+
+  downloadAutoBackup(): void {
+    const backup = this.backupService.autoBackup();
+    if (!backup) {
+      this.toast.show('Автобэкап ещё не создавался');
+      return;
+    }
+    downloadText(
+      `financial-planner-auto-${backup.exportedAt.slice(0, 10)}.json`,
+      JSON.stringify(backup, null, 2),
+      'application/json',
+    );
+  }
+
+  async restoreAutoBackup(): Promise<void> {
+    const backup = this.backupService.autoBackup();
+    if (!backup) {
+      this.toast.show('Автобэкап ещё не создавался');
+      return;
+    }
+    if (!confirm('Восстановить данные из автобэкапа? Текущие данные будут заменены.')) {
+      return;
+    }
+    const snapshot = this.backupSnapshot();
+    await this.backupService.replaceAll(backup);
+    this.toast.show('Данные восстановлены из автобэкапа', {
+      action: { label: 'Отменить', run: () => this.backupService.replaceAll(snapshot) },
+    });
+  }
 
   // ----- Счета -----
   accountForm = { name: '', type: 'card' as AccountType, balance: null as number | null };
@@ -146,6 +270,7 @@ export class SettingsComponent {
       transactions: this.transactionsService.transactions(),
       recurring: this.recurringService.rules(),
       goals: this.goalsService.goals(),
+      bankRules: this.bankRulesService.rules(),
     });
     downloadText(
       `financial-planner-${todayKey()}.json`,
@@ -281,6 +406,7 @@ export class SettingsComponent {
           transactions: this.transactionsService.transactions(),
           recurring: this.recurringService.rules(),
           goals: this.goalsService.goals(),
+          bankRules: this.bankRulesService.rules(),
         };
         await this.backupService.replaceAll(backup.backup);
         this.backupPreview.set(null);

@@ -2,7 +2,19 @@
   <h1>Настройки</h1>
 </div>
 
-<div class="card">
+<nav class="settings-tabs" aria-label="Разделы настроек">
+  @for (tab of settingsTabs; track tab.id) {
+    <button
+      type="button"
+      [class.active]="settingsSection() === tab.id"
+      (click)="settingsSection.set(tab.id)"
+    >
+      {{ tab.label }}
+    </button>
+  }
+</nav>
+
+<div class="card" [class.settings-hidden]="settingsSection() !== 'accounts'">
   <h2 class="card-title">Счета</h2>
   <p class="muted small">
     Это ваши деньги «сейчас»: наличные и балансы карт. Баланс меняется от операций автоматически,
@@ -81,8 +93,51 @@
   }
 </div>
 
+<div class="card" [class.settings-hidden]="settingsSection() !== 'accounts'">
+  <h2 class="card-title">Сверка с банком</h2>
+  <p class="muted small">
+    Сравниваем баланс приложения с остатком OSTATOK из последнего уведомления. Если после него
+    были операции, они учитываются в ожидаемом остатке.
+  </p>
+  <div class="rows">
+    @for (row of bankChecks(); track row.account.id) {
+      <div class="row bank-check">
+        <div class="row-main">
+          <div class="row-title">{{ row.account.name }}</div>
+          @if (row.result; as result) {
+            <div class="row-sub">
+              Банк: {{ money(result.mark.amount) }} · {{ formatBankMark(result.mark.at) }} ·
+              в приложении: {{ money(result.current) }}
+            </div>
+            <div class="row-sub">
+              Ожидаемо с учётом операций после: {{ money(result.expected) }}
+              @if (result.sameDayAmbiguous) {
+                · есть операции в тот же день без времени
+              }
+            </div>
+          } @else {
+            <div class="row-sub">Нет банковских уведомлений с остатком.</div>
+          }
+        </div>
+        @if (row.result; as result) {
+          @if (result.drift) {
+            <span class="bank-drift" [class.negative]="result.drift < 0">
+              {{ result.drift > 0 ? '+' : '' }}{{ money(result.drift) }}
+            </span>
+            <button class="btn btn-sm" type="button" (click)="adjustToBank(row.account, result)">
+              Выровнять
+            </button>
+          } @else {
+            <span class="bank-ok">Сходится</span>
+          }
+        }
+      </div>
+    }
+  </div>
+</div>
+
 <!-- Автозаполнение из банка: маски карт, правила, проверка, входящие -->
-<div class="card bank-card">
+<div class="card bank-card" [class.settings-hidden]="settingsSection() !== 'bank'">
   <h2 class="card-title">Автозаполнение из банка</h2>
   <p class="muted small">
     Приложение-компаньон на Android присылает операции из пушей банка. Правила ниже
@@ -330,7 +385,7 @@
 </div>
 
 @for (section of categorySections(); track section.kind) {
-  <div class="card">
+  <div class="card" [class.settings-hidden]="settingsSection() !== 'categories'">
     <h2 class="card-title">{{ section.title }}</h2>
 
     @if (section.list().length) {
@@ -464,7 +519,7 @@
   </div>
 }
 
-<div class="card">
+<div class="card" [class.settings-hidden]="settingsSection() !== 'data'">
   <h2 class="card-title">Данные</h2>
   <p class="muted small">
     Резервная копия или таблица для Excel. CSV — операции с датами, счетами и категориями;
@@ -489,6 +544,36 @@
     Шаблон для заполнения:
     <button class="btn btn-ghost btn-sm" type="button" (click)="downloadCsvTemplate()">скачать CSV</button>
   </p>
+
+  <div class="auto-backup">
+    <div class="mask-title">Автобэкап</div>
+    @if (autoBackupInfo(); as info) {
+      <p class="muted small">
+        Последний: {{ formatSavedAt(info.savedAt) }} ·
+        операций: {{ info.counts.transactions }} · категорий: {{ info.counts.categories }} ·
+        правил: {{ info.counts.bankRules }}
+      </p>
+      <div class="form-actions">
+        <button class="btn btn-ghost btn-sm" type="button" (click)="downloadAutoBackup()">
+          Скачать автобэкап
+        </button>
+        <button class="btn btn-ghost btn-sm" type="button" (click)="restoreAutoBackup()">
+          Восстановить
+        </button>
+        <button class="btn btn-ghost btn-sm" type="button" (click)="createAutoBackupNow()">
+          Создать сейчас
+        </button>
+      </div>
+    } @else {
+      <p class="muted small">Ещё не создавался — появится автоматически после первых операций.</p>
+      <button class="btn btn-ghost btn-sm" type="button" (click)="createAutoBackupNow()">
+        Создать сейчас
+      </button>
+    }
+    <p class="muted small">
+      Хранится в этом браузере и защищает от случайных удалений. Для копии вне телефона скачайте JSON.
+    </p>
+  </div>
 
   @if (importError()) {
     <p class="form-error">{{ importError() }}</p>
@@ -557,7 +642,7 @@
   }
 </div>
 
-<div class="card">
+<div class="card" [class.settings-hidden]="settingsSection() !== 'look'">
   <h2 class="card-title">Оформление</h2>
   <p class="muted small">Тема интерфейса. «Как в системе» — подстраивается под настройку телефона или компьютера.</p>
   <div class="seg theme-seg">
@@ -567,7 +652,7 @@
   </div>
 </div>
 
-<div class="card">
+<div class="card" [class.settings-hidden]="settingsSection() !== 'look'">
   <h2 class="card-title">Напоминания</h2>
   <p class="muted small">
     Бейдж с числом платежей на иконке приложения и уведомление, когда есть что подтвердить.
@@ -585,7 +670,7 @@
   }
 </div>
 
-<div class="card">
+<div class="card" [class.settings-hidden]="settingsSection() !== 'profile'">
   <h2 class="card-title">Профиль</h2>
   <form (ngSubmit)="saveProfile()" class="form-row">
     <div class="field">
@@ -621,7 +706,7 @@
   </div>
 </div>
 
-<div class="card">
+<div class="card" [class.settings-hidden]="settingsSection() !== 'profile'">
   <h2 class="card-title">Безопасность</h2>
   <p class="muted small">
     Смена пароля для входа. Email: <strong>{{ email() }}</strong>. Если пароль забыт —

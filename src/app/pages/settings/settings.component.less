@@ -1,3 +1,67 @@
+.settings-tabs {
+  display: flex;
+  gap: 6px;
+  overflow-x: auto;
+  padding: 2px 2px 10px;
+  margin: 0 -2px 4px;
+  scrollbar-width: none;
+
+  &::-webkit-scrollbar {
+    display: none;
+  }
+
+  button {
+    flex: 0 0 auto;
+    border: 1px solid var(--border);
+    background: var(--surface);
+    color: var(--muted);
+    border-radius: 999px;
+    padding: 7px 14px;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    transition:
+      background var(--dur-fast),
+      color var(--dur-fast),
+      border-color var(--dur-fast);
+
+    &.active {
+      background: var(--primary);
+      border-color: var(--primary);
+      color: var(--on-primary);
+    }
+  }
+}
+
+.settings-hidden {
+  display: none;
+}
+
+.bank-check {
+  align-items: center;
+}
+
+.bank-drift {
+  font-weight: 700;
+  color: var(--expense);
+
+  &.negative {
+    color: var(--income);
+  }
+}
+
+.bank-ok {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--income);
+}
+
+.auto-backup {
+  margin-top: 16px;
+  padding-top: 14px;
+  border-top: 1px dashed var(--border);
+}
+
 .acc-icon {
   --icon-size: 20px;
   color: var(--muted);
