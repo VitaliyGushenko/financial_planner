@@ -63,7 +63,7 @@ export class ModalComponent {
       document.body.classList.toggle('modal-open', isOpen);
       if (isOpen) {
         this.previousFocus = document.activeElement as HTMLElement | null;
-        setTimeout(() => this.dialog()?.focus());
+        setTimeout(() => this.dialog()?.focus({ preventScroll: true }));
       } else {
         this.previousFocus?.focus?.();
         this.previousFocus = null;

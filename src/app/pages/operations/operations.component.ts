@@ -70,12 +70,17 @@ export class OperationsComponent {
         return;
       }
       if (openNew) {
-        this.openForm();
-        if (presetKind === 'expense' || presetKind === 'income') {
-          this.form.kind = presetKind;
-          this.form.categoryId = '';
-          this.form.subcategoryId = '';
-        }
+        const kind =
+          presetKind === 'expense' || presetKind === 'income' ? presetKind : null;
+        // Даём завершиться view-transition перехода, иначе шторка дёргается.
+        setTimeout(() => {
+          this.openForm();
+          if (kind) {
+            this.form.kind = kind;
+            this.form.categoryId = '';
+            this.form.subcategoryId = '';
+          }
+        }, 160);
       }
       if (showUncategorized) {
         this.uncategorizedOnly.set(true);

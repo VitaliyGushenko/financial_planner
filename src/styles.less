@@ -339,6 +339,12 @@ body {
   overflow-x: clip;
 }
 
+/* Резервируем место под скроллбар: при открытии модалки body получает
+   overflow: hidden, и без этого страница дёргается по ширине. */
+html {
+  scrollbar-gutter: stable;
+}
+
 body {
   background:
     radial-gradient(900px 600px at 6% -8%, var(--bg-glow-1), transparent 62%),
@@ -861,8 +867,9 @@ body.modal-open {
   width: 100%;
   max-width: 680px;
   padding: 18px 20px 20px;
-  animation: modal-in var(--dur-slow) var(--ease-spring) both;
-  transition: transform var(--dur-slow) var(--ease-spring);
+  animation: modal-in var(--dur-slow) var(--ease-out) both;
+  transition: transform var(--dur-slow) var(--ease-out);
+  will-change: transform, opacity;
 }
 
 /* Пока тянем шторку пальцем — анимация не должна «догонять» палец. */
@@ -1484,7 +1491,7 @@ app-icon {
     border-radius: 24px 24px 0 0;
     border-bottom: none;
     padding: 8px 16px calc(20px + env(safe-area-inset-bottom));
-    animation: sheet-in var(--dur-slow) var(--ease-spring) both;
+    animation: sheet-in var(--dur-slow) var(--ease-out) both;
     /* Длинные формы (например, с блоком повторения) скроллятся внутри шторки. */
     overflow-y: auto;
     overscroll-behavior: contain;
