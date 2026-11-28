@@ -101,12 +101,13 @@ export class AppComponent {
         return;
       }
       const transactions = this.transactions.transactions();
-      if (!transactions.length) {
+      const accounts = this.accounts.accounts();
+      const categories = this.categories.categories();
+      // Ждём, пока загрузятся основные коллекции, иначе бэкап будет неполным.
+      if (!transactions.length || !accounts.length || !categories.length) {
         return;
       }
       // Читаем остальные сигналы, чтобы бэкап был полным.
-      this.accounts.accounts();
-      this.categories.categories();
       this.recurring.rules();
       this.goals.goals();
       this.bankRules.rules();
@@ -123,11 +124,15 @@ export class AppComponent {
     }
     const day = 24 * 60 * 60 * 1000;
     const info = this.backup.autoInfo();
-    if (info && Date.now() - new Date(info.savedAt).getTime() < day) {
+    const rules = this.bankRules.rules();
+    // Если бэкап успел создаться до загрузки правил — перезапишем его.
+    const rulesMissing = Boolean(info && info.counts.bankRules === 0 && rules.length > 0);
+    if (info && !rulesMissing && Date.now() - new Date(info.savedAt).getTime() < day) {
       return;
     }
     // Если не поместилось в localStorage — не долбим попытками каждую секунду.
-    if (Date.now() - this.autoBackupTriedAt < 60 * 60 * 1000) {
+    // Но неполный бэкап без правил пробуем перезаписать сразу.
+    if (!rulesMissing && Date.now() - this.autoBackupTriedAt < 60 * 60 * 1000) {
       return;
     }
     this.autoBackupTriedAt = Date.now();
@@ -139,7 +144,7 @@ export class AppComponent {
         transactions: this.transactions.transactions(),
         recurring: this.recurring.rules(),
         goals: this.goals.goals(),
-        bankRules: this.bankRules.rules(),
+        bankRules: rules,
       });
     } finally {
       this.autoBackupRunning = false;
