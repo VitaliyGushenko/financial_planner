@@ -35,6 +35,8 @@ export interface Account {
 export interface Subcategory {
   id: string;
   name: string;
+  /** Вложенные подкатегории: глубина не ограничена. */
+  children?: Subcategory[];
 }
 
 export interface Category {

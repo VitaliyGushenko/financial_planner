@@ -1,6 +1,7 @@
 import { DayKey, addMonthsToKey } from './day-key';
 import { round2 } from './money';
 import { Category, CategoryKind, Transaction } from './models';
+import { flattenSubcategories } from './category-tree';
 
 /**
  * Сравнение двух месяцев: суммы, дельты, проценты и полный разбор
@@ -214,6 +215,12 @@ export function compareTwoMonths(input: DetailedCompareInput): DetailedMonthComp
   const savingsRateB = incomeB > 0 ? round2((incomeB - expenseB) / incomeB) : 0;
 
   const categoryById = new Map(input.categories.map((c) => [c.id, c]));
+  const subLabelById = new Map<string, string>();
+  for (const category of input.categories) {
+    for (const item of flattenSubcategories(category.subcategories)) {
+      subLabelById.set(item.node.id, item.fullPath);
+    }
+  }
 
   const buildItems = (
     buckets: Map<string, CategoryBucket>,
@@ -235,7 +242,6 @@ export function compareTwoMonths(input: DetailedCompareInput): DetailedMonthComp
       }
       const delta = round2(mB - mA);
       const cat = categoryById.get(categoryId);
-      const subNameById = new Map((cat?.subcategories ?? []).map((s) => [s.id, s.name]));
 
       const subcategories: SubcategoryComparisonItem[] = [];
       for (const [subId, subVal] of b.subcategories.entries()) {
@@ -244,7 +250,7 @@ export function compareTwoMonths(input: DetailedCompareInput): DetailedMonthComp
         if (sA === 0 && sB === 0) continue;
         subcategories.push({
           subcategoryId: subId,
-          title: subNameById.get(subId) ?? 'Подкатегория',
+          title: subLabelById.get(subId) ?? 'Подкатегория',
           monthA: sA,
           monthB: sB,
           delta: round2(sB - sA),

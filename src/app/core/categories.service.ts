@@ -1,7 +1,8 @@
 import { Injectable, computed } from '@angular/core';
-import { addDoc, arrayRemove, arrayUnion, deleteDoc, deleteField, updateDoc } from '@angular/fire/firestore';
+import { addDoc, deleteDoc, deleteField, updateDoc } from '@angular/fire/firestore';
 
 import { Category, CategoryKind, Subcategory } from './models';
+import { addSubcategoryNode, moveSubcategoryNode, removeSubcategoryNode, renameSubcategoryNode } from './category-tree';
 import { round2 } from './money';
 import { UserCollectionService } from './user-collection.service';
 
@@ -71,11 +72,33 @@ export class CategoriesService extends UserCollectionService<Category> {
     await updateDoc(this.docRef(categoryId), { icon: icon ?? deleteField() });
   }
 
-  async addSubcategory(categoryId: string, name: string): Promise<void> {    if (!this.isReady || !name.trim()) {
+  async addSubcategory(
+    categoryId: string,
+    name: string,
+    parentId: string | null = null,
+  ): Promise<void> {
+    if (!this.isReady || !name.trim()) {
+      return;
+    }
+    const category = this.byId().get(categoryId);
+    if (!category) {
       return;
     }
     const sub: Subcategory = { id: genId(), name: name.trim() };
-    await updateDoc(this.docRef(categoryId), { subcategories: arrayUnion(sub) });
+    const subcategories = addSubcategoryNode(category.subcategories, parentId, sub);
+    await updateDoc(this.docRef(categoryId), { subcategories });
+  }
+
+  async renameSubcategory(categoryId: string, subId: string, name: string): Promise<void> {
+    if (!this.isReady || !name.trim()) {
+      return;
+    }
+    const category = this.byId().get(categoryId);
+    if (!category) {
+      return;
+    }
+    const subcategories = renameSubcategoryNode(category.subcategories, subId, name.trim());
+    await updateDoc(this.docRef(categoryId), { subcategories });
   }
 
   async removeSubcategory(categoryId: string, subId: string): Promise<void> {
@@ -83,11 +106,28 @@ export class CategoriesService extends UserCollectionService<Category> {
       return;
     }
     const category = this.byId().get(categoryId);
-    const sub = category?.subcategories.find((s) => s.id === subId);
-    if (!sub) {
+    if (!category) {
       return;
     }
-    await updateDoc(this.docRef(categoryId), { subcategories: arrayRemove(sub) });
+    const subcategories = removeSubcategoryNode(category.subcategories, subId);
+    await updateDoc(this.docRef(categoryId), { subcategories });
+  }
+
+  /** Переместить подкатегорию (вместе с её детьми) к другому родителю. */
+  async moveSubcategory(
+    categoryId: string,
+    subId: string,
+    newParentId: string | null,
+  ): Promise<void> {
+    if (!this.isReady) {
+      return;
+    }
+    const category = this.byId().get(categoryId);
+    if (!category) {
+      return;
+    }
+    const subcategories = moveSubcategoryNode(category.subcategories, subId, newParentId);
+    await updateDoc(this.docRef(categoryId), { subcategories });
   }
 }
 

@@ -1,4 +1,5 @@
 import { Account, Category, OperationKind, RecurringRule, Transaction } from './models';
+import { subcategoryLabel } from './category-tree';
 import { DayKey, addDaysToKey, addMonthsToKey, addYearsToKey, pluralRu } from './day-key';
 import { round2 } from './money';
 
@@ -258,9 +259,9 @@ function categoryLabel(
     return '';
   }
   if (subcategoryId) {
-    const sub = category.subcategories.find((s) => s.id === subcategoryId);
+    const sub = subcategoryLabel(category.subcategories, subcategoryId, ' · ');
     if (sub) {
-      return `${category.name} · ${sub.name}`;
+      return `${category.name} · ${sub}`;
     }
   }
   return category.name;

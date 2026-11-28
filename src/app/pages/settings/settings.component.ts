@@ -9,7 +9,8 @@ import { BankRulesService } from '../../core/bank-rules.service';
 import { BankSettingsService } from '../../core/bank-settings.service';
 import { CategoriesService } from '../../core/categories.service';
 import { CurrencyService } from '../../core/currency.service';
-import { Account, AccountType, BankRule, Category, CategoryKind, Subcategory } from '../../core/models';
+import { Account, AccountType, BankRule, Category, CategoryKind } from '../../core/models';
+import { flattenSubcategories, findSubcategory, subcategoryLabel, FlatSubcategory } from '../../core/category-tree';
 import { pickBankRule, planBulkCategorization, parseKeywordsInput } from '../../core/bank-rules';
 import { round2 } from '../../core/money';
 import { ThemeService } from '../../core/theme.service';
@@ -316,7 +317,13 @@ export class SettingsComponent {
   // ----- Категории -----
 
   newCategory: Record<CategoryKind, string> = { income: '', expense: '' };
-  readonly subInputs = signal<Record<string, string>>({});
+
+  /** Дерево подкатегорий: добавление и переименование прямо в списке. */
+  readonly subDraft = signal('');
+  readonly subAdding = signal<{ categoryId: string; parentId: string | null } | null>(null);
+  readonly subEditing = signal<{ categoryId: string; subId: string } | null>(null);
+  readonly editingCategoryId = signal<string | null>(null);
+  readonly categoryDraft = signal('');
 
   /** Две секции категорий для шаблона. */
   readonly categorySections = computed(() => [
@@ -336,25 +343,92 @@ export class SettingsComponent {
     }
   }
 
-  async addSubcategory(category: Category): Promise<void> {
-    const name = (this.subInputs()[category.id] ?? '').trim();
+  startEditCategory(category: Category): void {
+    this.editingCategoryId.set(category.id);
+    this.categoryDraft.set(category.name);
+  }
+
+  cancelCategoryEdit(): void {
+    this.editingCategoryId.set(null);
+    this.categoryDraft.set('');
+  }
+
+  async saveCategoryName(category: Category): Promise<void> {
+    const name = this.categoryDraft().trim();
+    if (name) {
+      await this.categoriesService.rename(category.id, name);
+    }
+    this.cancelCategoryEdit();
+  }
+
+  flatSubs(category: Category): FlatSubcategory[] {
+    return flattenSubcategories(category.subcategories);
+  }
+
+  startAddSub(category: Category, parentId: string | null): void {
+    this.subEditing.set(null);
+    this.subAdding.set({ categoryId: category.id, parentId });
+    this.subDraft.set('');
+  }
+
+  startEditSub(category: Category, subId: string): void {
+    const node = findSubcategory(category.subcategories, subId);
+    if (!node) {
+      return;
+    }
+    this.subAdding.set(null);
+    this.subEditing.set({ categoryId: category.id, subId });
+    this.subDraft.set(node.node.name);
+  }
+
+  cancelSubEdit(): void {
+    this.subAdding.set(null);
+    this.subEditing.set(null);
+    this.subDraft.set('');
+  }
+
+  /** Отступ поля ввода: под тем узлом, куда добавляем/который правим. */
+  subEditorIndent(category: Category): number {
+    const editing = this.subEditing();
+    if (editing?.categoryId === category.id) {
+      const node = findSubcategory(category.subcategories, editing.subId);
+      return 12 + (node?.depth ?? 0) * 18;
+    }
+    const adding = this.subAdding();
+    if (adding?.categoryId === category.id && adding.parentId) {
+      const parent = findSubcategory(category.subcategories, adding.parentId);
+      return 12 + ((parent?.depth ?? 0) + 1) * 18;
+    }
+    return 12;
+  }
+
+  async saveSub(category: Category): Promise<void> {
+    const name = this.subDraft().trim();
     if (!name) {
       return;
     }
-    await this.categoriesService.addSubcategory(category.id, name);
-    this.subInputs.update((map) => ({ ...map, [category.id]: '' }));
+    const editing = this.subEditing();
+    if (editing?.categoryId === category.id) {
+      await this.categoriesService.renameSubcategory(category.id, editing.subId, name);
+    } else {
+      const adding = this.subAdding();
+      if (adding?.categoryId !== category.id) {
+        return;
+      }
+      await this.categoriesService.addSubcategory(category.id, name, adding.parentId);
+    }
+    this.cancelSubEdit();
   }
 
   async removeSubcategory(category: Category, subId: string): Promise<void> {
-    await this.categoriesService.removeSubcategory(category.id, subId);
-  }
-
-  subInput(category: Category): string {
-    return this.subInputs()[category.id] ?? '';
-  }
-
-  setSubInput(category: Category, value: string): void {
-    this.subInputs.update((map) => ({ ...map, [category.id]: value }));
+    const node = findSubcategory(category.subcategories, subId);
+    const nested = (node?.node.children?.length ?? 0) > 0;
+    const question = nested
+      ? `Удалить «${node?.node.name}» вместе со вложенными подкатегориями? Операции останутся без категории.`
+      : `Удалить подкатегорию «${node?.node.name ?? ''}»?`;
+    if (confirm(question)) {
+      await this.categoriesService.removeSubcategory(category.id, subId);
+    }
   }
 
   // ----- Автозаполнение из банка -----
@@ -430,8 +504,9 @@ export class SettingsComponent {
     return this.ruleForm.kind === 'income' ? this.incomeCategories() : this.expenseCategories();
   }
 
-  ruleSubcategories(): Subcategory[] {
-    return this.ruleCategories().find((c) => c.id === this.ruleForm.categoryId)?.subcategories ?? [];
+  ruleSubcategories(): FlatSubcategory[] {
+    const category = this.ruleCategories().find((c) => c.id === this.ruleForm.categoryId);
+    return flattenSubcategories(category?.subcategories);
   }
 
   onRuleKindChange(): void {
@@ -531,7 +606,7 @@ export class SettingsComponent {
       return '';
     }
     const category = this.categoriesService.byId().get(rule.categoryId);
-    return category?.subcategories.find((sub) => sub.id === rule.subcategoryId)?.name ?? '';
+    return subcategoryLabel(category?.subcategories, rule.subcategoryId);
   }
 
   /** Применить правила ко всем операциям без категории. */

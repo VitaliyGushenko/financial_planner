@@ -1,4 +1,5 @@
 import { Category, OperationKind, RecurringRule, Transaction } from './models';
+import { subcategoryLabel } from './category-tree';
 import { DayKey, addDaysToKey } from './day-key';
 import { occurrencesOfRule } from './projection';
 
@@ -42,8 +43,8 @@ export function collectPending(input: PendingInput): PendingItem[] {
     if (!category) {
       return '';
     }
-    const sub = category.subcategories.find((s) => s.id === subcategoryId);
-    return sub ? `${category.name} · ${sub.name}` : category.name;
+    const sub = subcategoryLabel(category.subcategories, subcategoryId, ' · ');
+    return sub ? `${category.name} · ${sub}` : category.name;
   };
   const fallbackTitle = (kind: OperationKind): string =>
     kind === 'income' ? 'Доход' : kind === 'expense' ? 'Расход' : 'Перевод';

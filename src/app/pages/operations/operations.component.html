@@ -125,8 +125,8 @@
               <label for="subcategory">Подкатегория</label>
               <select id="subcategory" name="subcategoryId" [(ngModel)]="form.subcategoryId">
                 <option value="">— не указывать —</option>
-                @for (sub of formSubcategories(); track sub.id) {
-                  <option [value]="sub.id">{{ sub.name }}</option>
+                @for (sub of formSubcategories(); track sub.node.id) {
+                  <option [value]="sub.node.id">{{ sub.label }}</option>
                 }
               </select>
             </div>
@@ -361,8 +361,8 @@
                         aria-label="Подкатегория"
                       >
                         <option value="">— подкатегория —</option>
-                        @for (sub of pendingSubcategories(tx); track sub.id) {
-                          <option [value]="sub.id">{{ sub.name }}</option>
+                        @for (sub of pendingSubcategories(tx); track sub.node.id) {
+                          <option [value]="sub.node.id">{{ sub.label }}</option>
                         }
                       </select>
                     }

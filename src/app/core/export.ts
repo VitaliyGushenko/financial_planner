@@ -1,4 +1,5 @@
 import { Account, Category, Goal, RecurringRule, Transaction } from './models';
+import { subcategoryLabel } from './category-tree';
 
 /**
  * Экспорт данных: CSV для Excel и полный JSON-бэкап.
@@ -57,7 +58,7 @@ export function transactionsToCsv(input: {
 
   const rows = input.transactions.map((tx) => {
     const category = tx.categoryId ? categories.get(tx.categoryId) : undefined;
-    const sub = category?.subcategories.find((item) => item.id === tx.subcategoryId);
+    const sub = subcategoryLabel(category?.subcategories, tx.subcategoryId);
     return [
       tx.date,
       KIND_LABELS[tx.kind],
@@ -65,7 +66,7 @@ export function transactionsToCsv(input: {
       accounts.get(tx.accountId)?.name ?? '',
       tx.toAccountId ? (accounts.get(tx.toAccountId)?.name ?? '') : '',
       category?.name ?? '',
-      sub?.name ?? '',
+      sub,
       tx.note ?? '',
       tx.applied === false ? 'нет' : 'да',
     ];

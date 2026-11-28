@@ -18,7 +18,8 @@ import { categoryIconName } from '../../ui/category-icons';
 import { ToastService } from '../../ui/toast.service';
 import { VoiceInputComponent } from '../../ui/voice-input.component';
 import { parseVoice, VoiceField } from '../../core/voice/parse-voice';
-import { Category, CustomUnit, Frequency, OperationKind, RecurringRule, Subcategory, Transaction, TransactionDraft } from '../../core/models';
+import { Category, CustomUnit, Frequency, OperationKind, RecurringRule, Transaction, TransactionDraft } from '../../core/models';
+import { flattenSubcategories, subcategoryLabel, FlatSubcategory } from '../../core/category-tree';
 import { DayKey, formatDayKeyRelative, formatDayKeyShort, todayKey } from '../../core/day-key';
 import { IconName } from '../../ui/icon.component';
 
@@ -320,8 +321,9 @@ export class OperationsComponent {
       : this.categoriesService.expenseCategories();
   }
 
-  formSubcategories(): Subcategory[] {
-    return this.formCategories().find((c) => c.id === this.form.categoryId)?.subcategories ?? [];
+  formSubcategories(): FlatSubcategory[] {
+    const category = this.formCategories().find((c) => c.id === this.form.categoryId);
+    return flattenSubcategories(category?.subcategories);
   }
 
   onKindChange(): void {
@@ -607,8 +609,8 @@ export class OperationsComponent {
     if (!category) {
       return this.kindLabels[tx.kind];
     }
-    const sub = category.subcategories.find((s) => s.id === tx.subcategoryId);
-    return sub ? `${category.name} · ${sub.name}` : category.name;
+    const sub = subcategoryLabel(category.subcategories, tx.subcategoryId);
+    return sub ? `${category.name} / ${sub}` : category.name;
   }
 
   private categoryLabelOf(categoryId: string | undefined): string {
@@ -642,9 +644,11 @@ export class OperationsComponent {
   }
 
   /** Подкатегории выбранной категории (пусто — подкатегорий нет). */
-  pendingSubcategories(tx: Transaction): Subcategory[] {
+  pendingSubcategories(tx: Transaction): FlatSubcategory[] {
     const categoryId = this.pendingOf(tx.id).categoryId;
-    return this.categoriesFor(tx).find((cat) => cat.id === categoryId)?.subcategories ?? [];
+    return flattenSubcategories(
+      this.categoriesFor(tx).find((cat) => cat.id === categoryId)?.subcategories,
+    );
   }
 
   setPendingCategory(tx: Transaction, categoryId: string): void {

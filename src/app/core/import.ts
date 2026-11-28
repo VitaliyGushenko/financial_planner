@@ -1,4 +1,5 @@
 import { Account, Category, CategoryKind, OperationKind, Transaction, TransactionDraft } from './models';
+import { findSubcategoryByPath } from './category-tree';
 import { DayKey } from './day-key';
 import { round2 } from './money';
 import { Backup } from './export';
@@ -295,9 +296,7 @@ export function planImport(input: PlanInput): ImportPlan {
       }
       categoryId = category.id;
       if (row.subcategoryName) {
-        subcategoryId = category.subcategories.find(
-          (item) => normalizeName(item.name) === normalizeName(row.subcategoryName),
-        )?.id;
+        subcategoryId = findSubcategoryByPath(category.subcategories, row.subcategoryName)?.node.id;
       }
     }
 

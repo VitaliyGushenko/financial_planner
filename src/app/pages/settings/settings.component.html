@@ -258,8 +258,8 @@
           <label for="ruleSub">Подкатегория</label>
           <select id="ruleSub" name="ruleSub" [ngModel]="ruleForm.subcategoryId" (ngModelChange)="ruleForm.subcategoryId = $event">
             <option value="">— любая —</option>
-            @for (sub of ruleSubcategories(); track sub.id) {
-              <option [value]="sub.id">{{ sub.name }}</option>
+            @for (sub of ruleSubcategories(); track sub.node.id) {
+              <option [value]="sub.node.id">{{ sub.label }}</option>
             }
           </select>
         </div>
@@ -339,15 +339,21 @@
           <div class="cat-row">
             <div class="cat-head">
               <div class="row-main">
-                <div class="row-title">{{ cat.name }}</div>
-                @if (cat.subcategories.length) {
-                  <div class="sub-chips">
-                    @for (sub of cat.subcategories; track sub.id) {
-                      <span class="badge sub-chip">
-                        {{ sub.name }}
-                        <button class="chip-x" (click)="removeSubcategory(cat, sub.id)" title="Удалить подкатегорию">×</button>
-                      </span>
-                    }
+                @if (editingCategoryId() === cat.id) {
+                  <div class="cat-rename">
+                    <input
+                      [value]="categoryDraft()"
+                      (input)="categoryDraft.set($any($event.target).value)"
+                      (keydown.enter)="saveCategoryName(cat)"
+                      aria-label="Название категории"
+                    />
+                    <button class="btn btn-sm" type="button" (click)="saveCategoryName(cat)">OK</button>
+                    <button class="btn btn-ghost btn-sm" type="button" (click)="cancelCategoryEdit()">Отмена</button>
+                  </div>
+                } @else {
+                  <div class="cat-title-row">
+                    <div class="row-title">{{ cat.name }}</div>
+                    <button class="icon-btn" type="button" (click)="startEditCategory(cat)" title="Переименовать категорию">✎</button>
                   </div>
                 }
                 @if (section.kind === 'expense') {
@@ -399,14 +405,38 @@
               </div>
               <button class="btn btn-danger btn-sm" (click)="removeCategory(cat)" title="Удалить категорию">Удалить</button>
             </div>
+
+            @if (flatSubs(cat).length) {
+              <div class="sub-tree">
+                @for (node of flatSubs(cat); track node.node.id) {
+                  <div class="sub-row" [style.paddingLeft.px]="12 + node.depth * 18">
+                    <span class="sub-name" [class.sub-root]="node.depth === 0">{{ node.node.name }}</span>
+                    <div class="sub-actions">
+                      <button class="icon-btn" type="button" (click)="startAddSub(cat, node.node.id)" title="Добавить вложенную">+</button>
+                      <button class="icon-btn" type="button" (click)="startEditSub(cat, node.node.id)" title="Переименовать">✎</button>
+                      <button class="icon-btn danger" type="button" (click)="removeSubcategory(cat, node.node.id)" title="Удалить">×</button>
+                    </div>
+                  </div>
+                }
+              </div>
+            }
+
+            @if (subAdding()?.categoryId === cat.id || subEditing()?.categoryId === cat.id) {
+              <div class="sub-editor" [style.paddingLeft.px]="subEditorIndent(cat)">
+                <input
+                  [name]="'sub-' + cat.id"
+                  [value]="subDraft()"
+                  (input)="subDraft.set($any($event.target).value)"
+                  (keydown.enter)="saveSub(cat)"
+                  placeholder="название подкатегории"
+                />
+                <button class="btn btn-sm" type="button" (click)="saveSub(cat)">Сохранить</button>
+                <button class="btn btn-ghost btn-sm" type="button" (click)="cancelSubEdit()">Отмена</button>
+              </div>
+            }
+
             <div class="sub-add">
-              <input
-                [name]="'sub-' + cat.id"
-                [value]="subInput(cat)"
-                (input)="setSubInput(cat, $any($event.target).value)"
-                placeholder="добавить подкатегорию"
-              />
-              <button class="btn btn-ghost btn-sm" (click)="addSubcategory(cat)">+ Подкатегория</button>
+              <button class="btn btn-ghost btn-sm" type="button" (click)="startAddSub(cat, null)">+ Подкатегория</button>
             </div>
           </div>
         }
