@@ -464,7 +464,16 @@
             @if (flatSubs(cat).length) {
               <div class="sub-tree">
                 @for (node of flatSubs(cat); track node.node.id) {
-                  <div class="sub-row" [style.paddingLeft.px]="12 + node.depth * 18">
+                  <div
+                    class="sub-row"
+                    [attr.data-category-id]="cat.id"
+                    [attr.data-sub-id]="node.node.id"
+                    [class.dragging]="dragSub()?.subId === node.node.id"
+                    [class.drop-before]="dropHint()?.targetId === node.node.id && dropHint()?.position === 'before'"
+                    [class.drop-after]="dropHint()?.targetId === node.node.id && dropHint()?.position === 'after'"
+                    [class.drop-inside]="dropHint()?.targetId === node.node.id && dropHint()?.position === 'inside'"
+                    [style.paddingLeft.px]="12 + node.depth * 18"
+                  >
                     <span class="sub-name" [class.sub-root]="node.depth === 0">
                       {{ node.node.name }}
                       @if (node.node.budget) {
@@ -475,13 +484,33 @@
                       @if (section.kind === 'expense') {
                         <button class="icon-btn" type="button" (click)="startEditSubBudget(cat, node.node.id)" title="Лимит" aria-label="Задать лимит подкатегории">₽</button>
                       }
-                      <button class="icon-btn" type="button" (click)="startMoveSub(cat, node.node.id)" title="Переместить" aria-label="Переместить подкатегорию">↕</button>
+                      <button
+                        class="drag-handle"
+                        type="button"
+                        (pointerdown)="startDragSub(cat, node.node.id, $event)"
+                        (click)="onGripClick(cat, node.node.id)"
+                        title="Перетащить или нажмите для точного выбора"
+                        aria-label="Переместить подкатегорию"
+                      >
+                        ⋮⋮
+                      </button>
                       <button class="icon-btn" type="button" (click)="startAddSub(cat, node.node.id)" title="Добавить вложенную" aria-label="Добавить вложенную подкатегорию">+</button>
                       <button class="icon-btn" type="button" (click)="startEditSub(cat, node.node.id)" title="Переименовать" aria-label="Переименовать подкатегорию">✎</button>
                       <button class="icon-btn danger" type="button" (click)="removeSubcategory(cat, node.node.id)" title="Удалить" aria-label="Удалить подкатегорию">×</button>
                     </div>
                   </div>
                 }
+              </div>
+            }
+
+            @if (dragSub()?.categoryId === cat.id) {
+              <div
+                class="drop-root"
+                data-drop-root
+                [attr.data-category-id]="cat.id"
+                [class.active]="dropHint()?.categoryId === cat.id && dropHint()?.position === 'root'"
+              >
+                Отпустите здесь, чтобы поднять на верхний уровень
               </div>
             }
 

@@ -4,6 +4,7 @@ import {
   findSubcategoryByPath,
   flattenSubcategories,
   moveSubcategoryNode,
+  moveSubcategoryRelative,
   removeSubcategoryNode,
   renameSubcategoryNode,
   subcategoryLabel,
@@ -68,5 +69,42 @@ describe('category-tree', () => {
   it('finds a node by a slash-separated path', () => {
     expect(findSubcategoryByPath(tree(), 'Одежда / Обувь')?.node.id).toBe('shoes');
     expect(findSubcategoryByPath(tree(), 'Одежда / Куртки')).toBeUndefined();
+  });
+
+  it('moves a node before, after and inside another', () => {
+    const base = [
+      { id: 'a', name: 'A' },
+      { id: 'b', name: 'B', children: [{ id: 'b1', name: 'B1' }] },
+      { id: 'c', name: 'C' },
+    ];
+
+    expect(moveSubcategoryRelative(base, 'c', 'a', 'before').map((x) => x.id)).toEqual([
+      'c',
+      'a',
+      'b',
+    ]);
+    expect(moveSubcategoryRelative(base, 'a', 'b', 'after').map((x) => x.id)).toEqual([
+      'b',
+      'a',
+      'c',
+    ]);
+
+    const inside = moveSubcategoryRelative(base, 'a', 'b', 'inside');
+    expect(inside.map((x) => x.id)).toEqual(['b', 'c']);
+    expect(inside[0].children?.map((x) => x.id)).toEqual(['b1', 'a']);
+
+    // Ребёнок переезжает на верхний уровень перед C, у B больше нет детей.
+    const promoted = moveSubcategoryRelative(base, 'b1', 'c', 'before');
+    expect(promoted.map((x) => x.id)).toEqual(['a', 'b', 'b1', 'c']);
+    expect(promoted.find((x) => x.id === 'b')?.children).toBeUndefined();
+  });
+
+  it('не позволяет перетащить узел в собственного потомка', () => {
+    const base = [
+      { id: 'parent', name: 'Родитель', children: [{ id: 'child', name: 'Ребёнок' }] },
+      { id: 'other', name: 'Другое' },
+    ];
+    expect(moveSubcategoryRelative(base, 'parent', 'child', 'inside')).toEqual(base);
+    expect(moveSubcategoryRelative(base, 'parent', 'child', 'before')).toEqual(base);
   });
 });

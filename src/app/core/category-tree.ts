@@ -211,6 +211,79 @@ export function updateSubcategoryNode(
   return walk(subs ?? []).items;
 }
 
+export type SubDropPosition = 'before' | 'after' | 'inside';
+
+/** Переместить узел относительно другого: до, после или внутрь. */
+export function moveSubcategoryRelative(
+  subs: readonly Subcategory[] | undefined,
+  id: string,
+  targetId: string,
+  position: SubDropPosition,
+): Subcategory[] {
+  const list = [...(subs ?? [])];
+  if (id === targetId) {
+    return list;
+  }
+  const node = findSubcategory(list, id);
+  const target = findSubcategory(list, targetId);
+  if (!node || !target) {
+    return list;
+  }
+  // Нельзя перетащить узел в себя или в собственного потомка.
+  if (target.pathIds.includes(id)) {
+    return list;
+  }
+  const without = removeSubcategoryNode(list, id);
+  if (position === 'inside') {
+    return addSubcategoryNode(without, targetId, node.node);
+  }
+  const parentId = target.pathIds[target.pathIds.length - 2] ?? null;
+  return insertRelative(without, parentId, targetId, position, node.node);
+}
+
+function insertRelative(
+  subs: readonly Subcategory[],
+  parentId: string | null,
+  targetId: string,
+  position: 'before' | 'after',
+  node: Subcategory,
+): Subcategory[] {
+  if (parentId === null) {
+    const index = subs.findIndex((item) => item.id === targetId);
+    if (index < 0) {
+      return [...subs];
+    }
+    const at = position === 'before' ? index : index + 1;
+    return [...subs.slice(0, at), node, ...subs.slice(at)];
+  }
+
+  let inserted = false;
+  const walk = (items: Subcategory[]): Subcategory[] => {
+    const index = items.findIndex((item) => item.id === targetId);
+    if (index >= 0) {
+      const at = position === 'before' ? index : index + 1;
+      inserted = true;
+      return [...items.slice(0, at), node, ...items.slice(at)];
+    }
+    let changed = false;
+    const out = items.map((item) => {
+      if (inserted || !item.children?.length) {
+        return item;
+      }
+      const children = walk(item.children);
+      if (inserted) {
+        changed = true;
+        return { ...item, children };
+      }
+      return item;
+    });
+    return changed ? out : items;
+  };
+
+  const result = walk([...subs]);
+  return inserted ? result : [...subs];
+}
+
 /** Найти узел по пути «Одежда / Обувь» (регистр не важен). */
 export function findSubcategoryByPath(
   subs: readonly Subcategory[] | undefined,

@@ -30,12 +30,23 @@ import { IconComponent, IconName } from '../../ui/icon.component';
 import { CATEGORY_ICONS, categoryIconName } from '../../ui/category-icons';
 
 type SettingsSection = 'profile' | 'accounts' | 'categories' | 'bank' | 'data' | 'look';
+type DropHint = {
+  categoryId: string;
+  targetId: string | null;
+  position: 'before' | 'after' | 'inside' | 'root';
+};
 
 @Component({
   selector: 'app-settings',
   imports: [FormsModule, IconComponent, RouterLink],
   templateUrl: './settings.component.html',
   styleUrl: './settings.component.less',
+  host: {
+    '(document:pointermove)': 'onPointerMove($event)',
+    '(document:pointerup)': 'onPointerUp($event)',
+    '(document:pointercancel)': 'cancelPointerDrag()',
+    '(document:keydown.escape)': 'cancelPointerDrag()',
+  },
 })
 export class SettingsComponent {
   private readonly auth = inject(AuthService);
@@ -452,6 +463,17 @@ export class SettingsComponent {
   readonly subBudgetDraft = signal('');
   readonly subMoving = signal<{ categoryId: string; subId: string } | null>(null);
   readonly subMoveTarget = signal('');
+  readonly dragSub = signal<{ categoryId: string; subId: string } | null>(null);
+  readonly dropHint = signal<DropHint | null>(null);
+  private pointerDrag: {
+    categoryId: string;
+    subId: string;
+    pointerId: number;
+    startX: number;
+    startY: number;
+    moved: boolean;
+  } | null = null;
+  private suppressNextGripClick = false;
   readonly editingCategoryId = signal<string | null>(null);
   readonly categoryDraft = signal('');
 
@@ -633,6 +655,140 @@ export class SettingsComponent {
     );
     this.cancelMoveSub();
     this.toast.show('Подкатегория перемещена');
+  }
+
+  // ----- Drag-and-drop подкатегорий -----
+
+  private categoryById(id: string): Category | undefined {
+    return [...this.expenseCategories(), ...this.incomeCategories()].find(
+      (category) => category.id === id,
+    );
+  }
+
+  startDragSub(category: Category, subId: string, event: PointerEvent): void {
+    if (!event.isPrimary) {
+      return;
+    }
+    if (event.pointerType === 'mouse' && event.button !== 0) {
+      return;
+    }
+    this.cancelSubEdit();
+    this.cancelSubBudget();
+    this.cancelMoveSub();
+    this.suppressNextGripClick = false;
+    this.pointerDrag = {
+      categoryId: category.id,
+      subId,
+      pointerId: event.pointerId,
+      startX: event.clientX,
+      startY: event.clientY,
+      moved: false,
+    };
+    this.dragSub.set({ categoryId: category.id, subId });
+    this.dropHint.set(null);
+    navigator.vibrate?.(8);
+  }
+
+  /** Клик по ручке без перетаскивания — точный выбор родителя (клавиатура/мышь). */
+  onGripClick(category: Category, subId: string): void {
+    if (this.suppressNextGripClick) {
+      this.suppressNextGripClick = false;
+      return;
+    }
+    this.startMoveSub(category, subId);
+  }
+
+  onPointerMove(event: PointerEvent): void {
+    const drag = this.pointerDrag;
+    if (!drag || event.pointerId !== drag.pointerId) {
+      return;
+    }
+    if (!drag.moved) {
+      if (Math.abs(event.clientX - drag.startX) + Math.abs(event.clientY - drag.startY) < 6) {
+        return;
+      }
+      drag.moved = true;
+    }
+
+    const margin = 70;
+    if (event.clientY < margin) {
+      window.scrollBy(0, -10);
+    } else if (event.clientY > window.innerHeight - margin) {
+      window.scrollBy(0, 10);
+    }
+
+    const element = document.elementFromPoint(event.clientX, event.clientY) as HTMLElement | null;
+    if (!element) {
+      this.dropHint.set(null);
+      return;
+    }
+
+    const rootZone = element.closest<HTMLElement>('[data-drop-root]');
+    if (rootZone) {
+      const categoryId = rootZone.dataset['categoryId'];
+      this.dropHint.set(
+        categoryId === drag.categoryId
+          ? { categoryId: drag.categoryId, targetId: null, position: 'root' }
+          : null,
+      );
+      return;
+    }
+
+    const row = element.closest<HTMLElement>('[data-sub-id]');
+    const categoryId = row?.dataset['categoryId'];
+    const targetId = row?.dataset['subId'];
+    if (!row || !categoryId || !targetId || categoryId !== drag.categoryId || targetId === drag.subId) {
+      this.dropHint.set(null);
+      return;
+    }
+
+    const category = this.categoryById(categoryId);
+    const target = category ? findSubcategory(category.subcategories, targetId) : undefined;
+    if (!category || target?.pathIds.includes(drag.subId)) {
+      this.dropHint.set(null);
+      return;
+    }
+
+    const rect = row.getBoundingClientRect();
+    const ratio = (event.clientY - rect.top) / rect.height;
+    const position = ratio < 0.28 ? 'before' : ratio > 0.72 ? 'after' : 'inside';
+    this.dropHint.set({ categoryId, targetId, position });
+  }
+
+  async onPointerUp(event: PointerEvent): Promise<void> {
+    const drag = this.pointerDrag;
+    if (!drag || event.pointerId !== drag.pointerId) {
+      return;
+    }
+    const hint = this.dropHint();
+    const moved = drag.moved;
+    this.suppressNextGripClick = moved;
+    this.endPointerDrag();
+    if (!moved || !hint || hint.categoryId !== drag.categoryId) {
+      return;
+    }
+    if (hint.position === 'root' || hint.targetId === null) {
+      await this.categoriesService.moveSubcategory(drag.categoryId, drag.subId, null);
+    } else {
+      await this.categoriesService.moveSubcategoryRelative(
+        drag.categoryId,
+        drag.subId,
+        hint.targetId,
+        hint.position,
+      );
+    }
+    this.toast.show('Подкатегория перемещена');
+    navigator.vibrate?.(10);
+  }
+
+  cancelPointerDrag(): void {
+    this.endPointerDrag();
+  }
+
+  private endPointerDrag(): void {
+    this.pointerDrag = null;
+    this.dragSub.set(null);
+    this.dropHint.set(null);
   }
 
   subNodeIndent(category: Category, subId: string): number {

@@ -2,7 +2,7 @@ import { Injectable, computed } from '@angular/core';
 import { addDoc, deleteDoc, deleteField, updateDoc } from '@angular/fire/firestore';
 
 import { Category, CategoryKind, Subcategory } from './models';
-import { addSubcategoryNode, moveSubcategoryNode, removeSubcategoryNode, renameSubcategoryNode, updateSubcategoryNode } from './category-tree';
+import { addSubcategoryNode, moveSubcategoryNode, moveSubcategoryRelative, removeSubcategoryNode, renameSubcategoryNode, updateSubcategoryNode, SubDropPosition } from './category-tree';
 import { round2 } from './money';
 import { UserCollectionService } from './user-collection.service';
 
@@ -127,6 +127,24 @@ export class CategoriesService extends UserCollectionService<Category> {
       return;
     }
     const subcategories = moveSubcategoryNode(category.subcategories, subId, newParentId);
+    await updateDoc(this.docRef(categoryId), { subcategories });
+  }
+
+  /** Переместить узел до/после другого или внутрь него (drag-and-drop). */
+  async moveSubcategoryRelative(
+    categoryId: string,
+    subId: string,
+    targetId: string,
+    position: SubDropPosition,
+  ): Promise<void> {
+    if (!this.isReady) {
+      return;
+    }
+    const category = this.byId().get(categoryId);
+    if (!category) {
+      return;
+    }
+    const subcategories = moveSubcategoryRelative(category.subcategories, subId, targetId, position);
     await updateDoc(this.docRef(categoryId), { subcategories });
   }
 
